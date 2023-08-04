@@ -1,44 +1,48 @@
+use std::collections::VecDeque;
+
+
 struct Word(char, f32);
 
 struct Instruction<'a> {
     letter: char,
     val: f32,
     params: Option<VecDeque<Word>>,
-    prev: Option<&'a Instruction>,
-    next: Option<&'a Instruction>,
+    prev: Option<&'a Instruction<'a>>,
+    next: Option<&'a Instruction<'a>>,
 }
 
 impl<'a> Instruction<'a> {
-    fn build(line: VecDeque<Word>, tail: Option<&'a Instruction>) -> Instruction {
+    fn build(line: VecDeque<Word>, tail: Option<&'a Instruction<'a>>) -> Instruction<'a> {
         let Word(letter, val) = line.pop_front().unwrap();
-        let mut node = Instruction(letter, value, params: line, prev: None, next: None);
+        let mut node = Instruction{ letter, val, params: Some(line), prev: None, next: None };
         if tail.is_none() {
             return node;
         }
 
 
-        node.prev = tail;
-        tail.next = node;
+        node.prev = Some(&tail.unwrap());
+        tail.unwrap().next = Some(&node);
         
         node
     }
 }
 
-struct ParsedPrint {
-    head: Instruction,
-    tail: Instruction,
+struct ParsedPrint<'a> {
+    head: Instruction<'a>,
+    tail: Instruction<'a>,
 }
 
-impl ParsedPrint {
-    build(path: &str) {
+impl<'a> ParsedPrint<'a> {
+    fn build(path: &str) -> ParsedPrint<'a>{
         let lines = parse_file(path);
-        let (first_line, lines) = (lines[0], lines[1..]);
-        let head = Instruction::build(first_line, None)
-        let tail = &head;
+        let (first_line, lines) = (&lines[0], &lines[1..]);
+        let first_line = read_line(&clean_line(first_line));
+        let head = Instruction::build(first_line, None);
+        let tail = head;
         for line in lines {
-            line = clean_line(line);
-            line = read_line(line);
-            ins = Instruction::build(line, &tail);
+            let line = clean_line(line);
+            let line = read_line(&line);
+            let ins = Instruction::build(line, Some(&tail));
             tail = ins;
         }
         ParsedPrint { head, tail }
