@@ -14,5 +14,6 @@ fn sub_test() {
     let mut gcode = ParsedGCode::from_str(input);
     let mut cursor = Cursor::build(&mut gcode);
     let instructions = cursor.subdivide_all(10);
-    //panic!("{:?}", gcode.instructions);
+    gcode.instructions = instructions;
+    panic!("{:?}", gcode.instructions);
 }

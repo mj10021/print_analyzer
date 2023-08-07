@@ -3,7 +3,7 @@ use crate::parse::{Instruction, Line, ParsedGCode, G1};
 use std::collections::{LinkedList, VecDeque};
 
 #[derive(Debug)]
-pub struct Cursor {
+pub struct Cursor<'a> {
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -35,8 +35,8 @@ fn dist_calc(
     (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
 }
 
-impl Cursor {
-    pub fn build(gcode: &'static mut ParsedGCode) -> Cursor {
+impl<'a> Cursor<'a> {
+    pub fn build(gcode: &'a mut ParsedGCode) -> Cursor {
         Cursor {
             x: -1.0,
             y: -1.0,
@@ -44,6 +44,11 @@ impl Cursor {
             e: -1.0,
             f: -1.0,
             cursor: gcode.instructions.cursor_front_mut(),
+        }
+    }
+    fn reset(&mut self) {
+        while self.cursor.peek_prev().is_some() {
+            self.cursor.move_prev();
         }
     }
     fn update(&mut self, g1: G1) {
@@ -89,9 +94,7 @@ impl Cursor {
             self.cursor.move_next();
         }
         // need to reset cursor to beginning after searching total dist
-        while self.cursor.peek_prev().is_some() {
-            self.cursor.move_prev();
-        }
+        self.reset();
         (dist, points)
     }
 
@@ -107,10 +110,11 @@ impl Cursor {
         let Some(&mut Line::G1(G1 { x, y, z, e, mut f })) = self.cursor.current() else {
             // if line is not G1, just add it back to the instruction stack
             // FIXME: right now this will not transform commands without x, y, z, or e
-
+            panic!("Adsf");
             out.push_back(self.cursor.current().unwrap().clone());
             return out;
         };
+
         if let Some(f) = f {} else {
             f = Some(0.0);
         };
@@ -211,15 +215,18 @@ impl Cursor {
 
     pub fn subdivide_all(&mut self, divisions: i32) -> LinkedList<Line> {
         let (tot_dist, points) = self.total_file_dist();
+
         let points = points * divisions;
         let points = points as f32;
         let seg_dist = tot_dist / points;
         let mut subdivided = LinkedList::new();
-        let instructions = self.cursor.split_after();
+        self.reset();
+
         while self.cursor.current().is_some() {
             subdivided.append(&mut self.subdiv_seg(seg_dist));
             self.cursor.move_next();
         }
+        panic!("{:?}", subdivided);
         subdivided
     }
 }
