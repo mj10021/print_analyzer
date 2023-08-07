@@ -51,6 +51,28 @@ impl<'a> Cursor<'a> {
             self.cursor.move_prev();
         }
     }
+    fn next(&mut self) {
+        if self.cursor.peek_next().is_some() {
+            self.cursor.move_next();
+            if let Some(&mut Line::G1(G1 {x, y, z, e, f })) = self.cursor.current() {
+                if let Some(x) = x {
+                    self.x = x;
+                }
+                if let Some(y) = y {
+                    self.y = y;
+                }
+                if let Some(z) = z {
+                    self.z = z;
+                }
+                if let Some(e) = e {
+                    self.e += e;
+                }
+                if let Some(f) = f {
+                    self.f = f;
+                }
+            }
+        }
+    }
     fn update(&mut self, g1: G1) {
         if let Some(x) = g1.x {
             self.x = x;
@@ -73,7 +95,7 @@ impl<'a> Cursor<'a> {
         let mut points = 0;
         let mut last: (Option<f32>, Option<f32>, Option<f32>) = (None, None, None);
 
-        while self.cursor.current().is_some() {
+        while self.cursor.peek_next().is_some() {
             let curr = self.cursor.current().unwrap();
             if let Line::G1(G1 {
                 x: xf,
@@ -91,7 +113,7 @@ impl<'a> Cursor<'a> {
             } else {
                 continue;
             }
-            self.cursor.move_next();
+            self.next();
         }
         // need to reset cursor to beginning after searching total dist
         self.reset();
@@ -183,7 +205,7 @@ impl<'a> Cursor<'a> {
         // each subdivided segment should be identical
 
         let mut i = 0.0;
-        panic!("{:?}_{:?}", i, count);
+        
         while i < count {
             let mut x = None;
             let mut y = None;
@@ -209,7 +231,6 @@ impl<'a> Cursor<'a> {
             out.push_back(Line::G1(g1));
             i += 1.0;
         }
-        panic!("{:?}", out);
         out
     }
 
@@ -221,10 +242,12 @@ impl<'a> Cursor<'a> {
         let seg_dist = tot_dist / points;
         let mut subdivided = LinkedList::new();
         self.reset();
-
-        while self.cursor.current().is_some() {
+        println!("b {:?}", self.cursor.current());
+        while self.cursor.peek_next().is_some() {
+            println!("{:?}", self.cursor.peek_next());
             subdivided.append(&mut self.subdiv_seg(seg_dist));
-            self.cursor.move_next();
+            println!("a {:?}", subdivided);
+            self.next();
         }
         panic!("{:?}", subdivided);
         subdivided
