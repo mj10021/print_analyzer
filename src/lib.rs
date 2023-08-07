@@ -1,9 +1,11 @@
 #![allow(unused)]
+#![feature(linked_list_cursors)]
 
-
+mod analysis;
 mod parse;
+mod transform;
 
-
+/*
 use std::collections::VecDeque;
 use std::env;
 use std::fmt::Display;
@@ -85,11 +87,11 @@ impl<'a> Layer<'a> {
         for line in self.lines {
             match line {
                 Instruction::Move(params) => {
-                    total_dist += cursor.update_pos(params, true); 
+                    total_dist += cursor.update_pos(params, true);
                 },
                 Instruction::NonMove(command) => todo!(),
             }
-        
+
         let avg_seg_dist = total_dist / count as f32;
 
 
@@ -98,7 +100,7 @@ impl<'a> Layer<'a> {
         // figure out the total distance travelled of the layer
         // figure out the total number of moves
         // panic if requested points is less than starting points
-        // 
+        //
     }
 
 
@@ -215,9 +217,9 @@ struct Command<'a> {
 }
 
 impl<'a> Command<'a> {
-   
 
- 
+
+
 }
 #[derive(Debug)]
 enum Instruction<'a> {
@@ -320,7 +322,7 @@ impl<'a> Move<'a> {
             };
             prev_node = &new_move;
             new_move.prev.next = &new_move;
-                        
+
         }
 
 
@@ -459,8 +461,8 @@ mod tests {
     #[test]
     fn update_cursor() {
         let mut output = String::new();
-        let code = 
-        "    G1 X1 Y1    Z1 F1000     \n    
+        let code =
+        "    G1 X1 Y1    Z1 F1000     \n
         G1 X2 Y2 Z2    E1\n
         G1 X2.111    Y2 Z2  E1\n
         G1 X2 Y200.1  Z2 E1\n";
@@ -487,7 +489,7 @@ mod tests {
         // figure out the total distance travelled of the layer
         // figure out the total number of moves
         // panic if requested points is less than starting points
-        // 
+        //
     }
 
     fn transform_points(fun: fn(f32), print: PrintModel) -> PrintModel {
@@ -499,3 +501,4 @@ mod tests {
         // also find vector from current to next move
     }
 }
+*/
