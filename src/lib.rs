@@ -1,5 +1,6 @@
 #![allow(unused)]
 #![feature(linked_list_cursors)]
+#![feature(let_chains)]
 
 mod analysis;
 mod parse;

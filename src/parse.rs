@@ -16,6 +16,7 @@ pub enum Line {
     Raw(String),
 }
 
+
 impl Emit for Line {
     fn emit(&self) -> String {
         match self {
