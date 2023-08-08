@@ -1,4 +1,4 @@
-use crate::parse::{Instruction, Line, ParsedGCode, G1};
+use crate::parse::{Instruction, Line, ParsedGCode, G1, Emit};
 
 use std::collections::{LinkedList, VecDeque};
 
@@ -34,27 +34,46 @@ fn dist_calc(
     };
     (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
 }
-
 impl<'a> Cursor<'a> {
     pub fn build(gcode: &'a mut ParsedGCode) -> Cursor {
+        let cursor = gcode.instructions.cursor_front_mut();
         Cursor {
             x: -1.0,
             y: -1.0,
             z: -1.0,
             e: -1.0,
             f: -1.0,
-            cursor: gcode.instructions.cursor_front_mut(),
+            cursor,
         }
     }
-    fn reset(&mut self) {
-        while self.cursor.peek_prev().is_some() {
-            self.cursor.move_prev();
+    fn at_front(&mut self) -> bool {
+        // if list is empty return true
+        if self.cursor.current() == None {
+            return true
+        }
+        let mut front = self.cursor.front_mut().unwrap().clone();
+        self.cursor.current().unwrap() == &front
+
+    }
+    fn at_end(&mut self) -> bool {
+        // if list is empty return true
+        if self.cursor.current() == None {
+            return true
+        }
+        let mut end = self.cursor.back_mut().unwrap().clone();
+        self.cursor.current().unwrap() == &end
+
+    }
+    fn reset_front(&mut self) {
+        while !self.at_front() {
+            self.prev();
         }
     }
     fn next(&mut self) {
-        if self.cursor.peek_next().is_some() {
+        let back = self.cursor.back().unwrap(); // only = None if list is empty, which should panic
+        if !self.at_end() {
             self.cursor.move_next();
-            if let Some(&mut Line::G1(G1 {x, y, z, e, f })) = self.cursor.current() {
+            if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
                 if let Some(x) = x {
                     self.x = x;
                 }
@@ -73,30 +92,40 @@ impl<'a> Cursor<'a> {
             }
         }
     }
-    fn update(&mut self, g1: G1) {
-        if let Some(x) = g1.x {
-            self.x = x;
-        }
-        if let Some(y) = g1.y {
-            self.y = y;
-        }
-        if let Some(z) = g1.z {
-            self.z = z;
-        }
-        if let Some(de) = g1.e {
-            self.e += de;
-        }
-        if let Some(f) = g1.f {
-            self.f = f;
-        }
+    fn prev(&mut self) {
+         if !self.at_front() {
+            self.cursor.move_prev();
+            if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+                if let Some(x) = x {
+                    self.x = x;
+                }
+                if let Some(y) = y {
+                    self.y = y;
+                }
+                if let Some(z) = z {
+                    self.z = z;
+                }
+                if let Some(e) = e {
+                    self.e += e;
+                }
+                if let Some(f) = f {
+                    self.f = f;
+                }
+            }
+        }       
     }
     pub fn total_file_dist(&mut self) -> (f32, i32) {
+        // FIXMEEEEEEEEEEEEEEEEEEee
         let mut dist = 0.0;
         let mut points = 0;
         let mut last: (Option<f32>, Option<f32>, Option<f32>) = (None, None, None);
 
-        while self.cursor.peek_next().is_some() {
-            let curr = self.cursor.current().unwrap();
+        while !self.at_end() {
+            let Some(curr) = self.cursor.current() else {
+
+                self.next();
+                continue;
+            };
             if let Line::G1(G1 {
                 x: xf,
                 y: yf,
@@ -116,7 +145,7 @@ impl<'a> Cursor<'a> {
             self.next();
         }
         // need to reset cursor to beginning after searching total dist
-        self.reset();
+        self.reset_front();
         (dist, points)
     }
 
@@ -129,25 +158,24 @@ impl<'a> Cursor<'a> {
         let mut out = LinkedList::new();
 
 
-        let Some(&mut Line::G1(G1 { x, y, z, e, mut f })) = self.cursor.current() else {
-            // if line is not G1, just add it back to the instruction stack
-            // FIXME: right now this will not transform commands without x, y, z, or e
-            panic!("Adsf");
+        let Some(&mut Line::G1(G1 { x: xf, y: yf, z: zf, e: de, mut f })) = self.cursor.peek_next() else {
+            // if we cant deconstruct the G1, push it back onto the stack
             out.push_back(self.cursor.current().unwrap().clone());
             return out;
         };
-
-        if let Some(f) = f {} else {
-            f = Some(0.0);
+        if let Some(f) = f {
+        } else {
+            f = Some(-1.0);
         };
-        // add check for if cursor position is not initialized (== -1.0)
+
+
         let mut dist_inner = 0.0;
         let mut dx = None;
         let mut dy = None;
         let mut dz = None;
-        if let Some(x) = x {
+        if let Some(xf) = xf {
             if xi > 0.0 {
-                dx = Some(x - xi);
+                dx = Some(xf - xi);
                 dist_inner += dx.unwrap().powf(2.0);
             } else {
                 // if this is the first move,
@@ -156,9 +184,9 @@ impl<'a> Cursor<'a> {
                 return out;
             }
         }
-        if let Some(y) = y {
+        if let Some(yf) = yf {
             if yi > 0.0 {
-                dy = Some(y - yi);
+                dy = Some(yf - yi);
                 dist_inner += dy.unwrap().powf(2.0);
             } else {
                 // if this is the first move,
@@ -167,9 +195,9 @@ impl<'a> Cursor<'a> {
                 return out;
             }
         }
-        if let Some(z) = z {
+        if let Some(zf) = zf {
             if zi > 0.0 {
-                dz = Some(z - zi);
+                dz = Some(zf - zi);
                 dist_inner += dz.unwrap().powf(2.0);
             } else {
                 // if this is the first move,
@@ -179,9 +207,9 @@ impl<'a> Cursor<'a> {
             }
         }
 
+        // BREAKING BECAUSE SEG_DIST IS ZERO!!!!!!!!1
         let dist = dist_inner.sqrt();
-
-        let count = (seg_dist / dist);
+        let count = (dist / seg_dist);
 
         let mut x_seg = None;
         if dx.is_some() {
@@ -197,16 +225,17 @@ impl<'a> Cursor<'a> {
         }
 
         let mut e_seg = None;
-        if e.is_some() {
-            e_seg = Some(e.unwrap() / count);
+        if de.is_some() {
+            e_seg = Some(de.unwrap() / count);
         }
 
         // since the parsed g1 moves are all relative
         // each subdivided segment should be identical
 
         let mut i = 0.0;
-        
         while i < count {
+            panic!("{:?}", count);
+            // THIS IS THE LOOP I AM STUCK IN BEACUSE COUNT IS INF!!!
             let mut x = None;
             let mut y = None;
             let mut z = None;
@@ -220,7 +249,7 @@ impl<'a> Cursor<'a> {
             if z_seg.is_some() {
                 z = Some(zi + (i * z_seg.unwrap()))
             }
-
+            println!("{:?}_{:?}_{:?}", x, y, z);
             let g1 = G1 {
                 x,
                 y,
@@ -231,25 +260,37 @@ impl<'a> Cursor<'a> {
             out.push_back(Line::G1(g1));
             i += 1.0;
         }
+        panic!("{:?}", out);
         out
     }
 
     pub fn subdivide_all(&mut self, divisions: i32) -> LinkedList<Line> {
-        let (tot_dist, points) = self.total_file_dist();
+        let (tot_dist, points) = self.total_file_dist(); // total dist is broken
+        panic!("{:?}", tot_dist);
 
         let points = points * divisions;
         let points = points as f32;
         let seg_dist = tot_dist / points;
         let mut subdivided = LinkedList::new();
-        self.reset();
+        self.reset_front();
         println!("b {:?}", self.cursor.current());
-        while self.cursor.peek_next().is_some() {
-            println!("{:?}", self.cursor.peek_next());
+        while self.cursor.current().is_some() {
             subdivided.append(&mut self.subdiv_seg(seg_dist));
-            println!("a {:?}", subdivided);
             self.next();
         }
         panic!("{:?}", subdivided);
         subdivided
     }
+
+    pub fn emit(&mut self) -> String {
+        let mut out = String::new();
+        self.reset_front();
+        while self.cursor.current().is_some() {
+            let ins = self.cursor.current().unwrap();
+            out += &ins.emit();
+            self.next();
+        }
+        out
+    }
+
 }

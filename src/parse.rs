@@ -2,20 +2,28 @@ use std::collections::{LinkedList, VecDeque};
 
 use crate::analysis::Cursor;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32);
 
-trait Emit {
+pub trait Emit {
     fn emit(&self) -> String;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     G1(G1),
     Instruction(Instruction),
     Raw(String),
 }
 
+impl Line {
+    fn is_g1(&self) -> bool {
+        match self {
+            Line::G1(_) => true,
+            _ => false,
+        }
+    }
+}
 
 impl Emit for Line {
     fn emit(&self) -> String {
@@ -27,7 +35,7 @@ impl Emit for Line {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
     pub letter: char,
     pub val: u8,
@@ -58,7 +66,7 @@ impl Emit for Instruction {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct G1 {
     pub x: Option<f32>,
     pub y: Option<f32>,
