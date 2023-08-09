@@ -47,22 +47,12 @@ impl<'a> Cursor<'a> {
         }
     }
     fn at_front(&mut self) -> bool {
-        // if list is empty return true
-        if self.cursor.current() == None {
-            return true
-        }
-        let mut front = self.cursor.front_mut().unwrap().clone();
-        self.cursor.current().unwrap() == &front
-
+        // this will panic on an empty list but i don't care
+        self.cursor.current().unwrap() as *const Line == self.cursor.front().unwrap() as *const Line
     }
     fn at_end(&mut self) -> bool {
-        // if list is empty return true
-        if self.cursor.current() == None {
-            return true
-        }
-        let mut end = self.cursor.back_mut().unwrap().clone();
-        self.cursor.current().unwrap() == &end
-
+        // this will panic on an empty list but i don't care
+        self.cursor.current().unwrap() as *const Line == self.cursor.back().unwrap() as *const Line
     }
     fn reset_front(&mut self) {
         while !self.at_front() {
@@ -70,7 +60,6 @@ impl<'a> Cursor<'a> {
         }
     }
     fn next(&mut self) {
-        let back = self.cursor.back().unwrap(); // only = None if list is empty, which should panic
         if !self.at_end() {
             self.cursor.move_next();
             if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
@@ -117,32 +106,47 @@ impl<'a> Cursor<'a> {
     pub fn total_file_dist(&mut self) -> (f32, i32) {
         // FIXMEEEEEEEEEEEEEEEEEEee
         let mut dist = 0.0;
-        let mut points = 0;
-        let mut last: (Option<f32>, Option<f32>, Option<f32>) = (None, None, None);
-
-        while !self.at_end() {
-            let Some(curr) = self.cursor.current() else {
-
-                self.next();
-                continue;
-            };
-            if let Line::G1(G1 {
+        let mut points = 1;
+        let mut last: [Option<f32>; 3] = [Some(self.x), Some(self.y), Some(self.z)];
+        for mut num in last {
+            if num.unwrap() < 0.0 {
+                num = None;
+            }
+        }
+        self.reset_front(); // just to make sure the cursor is at the front
+        loop {
+            let curr = self.cursor.current().unwrap();
+            if let &mut Line::G1(G1 {
                 x: xf,
                 y: yf,
                 z: zf,
                 ..
-            }) = curr
+            }) = curr // check if the cursor is at a G1 move
             {
-                let xi = last.0;
-                let yi = last.1;
-                let zi = last.2;
-                dist += dist_calc(xi, *xf, yi, *yf, zi, *zf);
-                last = (*xf, *yf, *zf);
+                let xi = last[0];
+                let yi = last[1];
+                let zi = last[2];
+                dist += dist_calc(xi, xf, yi, yf, zi, zf);
+                
+                last = [xf, yf, zf];            
+             
                 points += 1;
+
+
+                if self.at_end() {
+                    break;
+                }
+                self.next();
             } else {
+                if self.at_end() {
+                    break;
+                }
+                self.next();
                 continue;
             }
-            self.next();
+            if self.at_end() {
+                break;
+            }
         }
         // need to reset cursor to beginning after searching total dist
         self.reset_front();
@@ -151,12 +155,11 @@ impl<'a> Cursor<'a> {
 
     // assumes abs xyz and relative e
     fn subdiv_seg(&mut self, seg_dist: f32) -> LinkedList<Line> {
-        let xi = self.x;
-        let yi = self.y;
-        let zi = self.z;
+        let [xi, yi, zi] = [self.x, self.y, self.z];
 
         let mut out = LinkedList::new();
 
+        // REWRITE THIS TO USE THE DIST_CALC FUNCTION
 
         let Some(&mut Line::G1(G1 { x: xf, y: yf, z: zf, e: de, mut f })) = self.cursor.peek_next() else {
             // if we cant deconstruct the G1, push it back onto the stack
@@ -207,7 +210,6 @@ impl<'a> Cursor<'a> {
             }
         }
 
-        // BREAKING BECAUSE SEG_DIST IS ZERO!!!!!!!!1
         let dist = dist_inner.sqrt();
         let count = (dist / seg_dist);
 
@@ -266,16 +268,17 @@ impl<'a> Cursor<'a> {
 
     pub fn subdivide_all(&mut self, divisions: i32) -> LinkedList<Line> {
         let (tot_dist, points) = self.total_file_dist(); // total dist is broken
-        panic!("{:?}", tot_dist);
-
         let points = points * divisions;
         let points = points as f32;
         let seg_dist = tot_dist / points;
         let mut subdivided = LinkedList::new();
         self.reset_front();
         println!("b {:?}", self.cursor.current());
-        while self.cursor.current().is_some() {
+        loop {
             subdivided.append(&mut self.subdiv_seg(seg_dist));
+            if self.at_end() {
+                break;
+            }
             self.next();
         }
         panic!("{:?}", subdivided);
@@ -293,4 +296,12 @@ impl<'a> Cursor<'a> {
         out
     }
 
+}
+
+#[cfg(test)]
+
+#[test]
+
+fn dist() {
+    assert_eq!(dist_calc(Some(1.0), Some(10.0), Some(1.0), Some(10.0), Some(1.0), Some(10.0)), (9.0_f32.powf(2.0) * 3.0).sqrt())
 }
