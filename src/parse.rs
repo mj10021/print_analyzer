@@ -96,28 +96,6 @@ impl G1 {
         }
         G1 { x, y, z, e, f }
     }
-
-    fn to_rel_xyz(&mut self, cursor: &Cursor) {
-        let xi = cursor.x;
-        let yi = cursor.y;
-        let zi = cursor.z;
-
-        if self.x.is_some() {
-            self.x = Some(self.x.unwrap() - xi);
-        } else {
-            self.x = Some(0.0)
-        }
-        if self.y.is_some() {
-            self.y = Some(self.y.unwrap() - yi);
-        } else {
-            self.x = Some(0.0)
-        }
-        if self.z.is_some() {
-            self.z = Some(self.z.unwrap() - zi);
-        } else {
-            self.x = Some(0.0)
-        }
-    }
 }
 
 impl Emit for G1 {
