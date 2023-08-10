@@ -195,12 +195,12 @@ impl<'a> Cursor<'a> {
         de / dist
     }
     fn calc_next_flow(&mut self) -> f32 {
-
+        todo!();
     }
 
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) { //TO BE CONTINUED
         // translating from the current position of the cursor, which is the
-        let Some(&mut Line::G1(mut curr)) = self.cursor.current() else { 
+        let Line::G1(mut curr) = self.cursor.current().unwrap().clone() else { 
             panic!("translating non-g1 move");
         };
         let mut prev = self.find_prev_g1();
@@ -217,7 +217,7 @@ impl<'a> Cursor<'a> {
         curr.y = opt_add(prev.y, dy);
         curr.z = opt_add(prev.z, dz);
         let new_dist = opt_dist_calc(prev.x, curr.x, prev.y, curr.y, prev.z, curr.z);
-        let dist_ratio = new_dist / init_dist;
+        let dist_ratio = new_dist / prev_dist;
         let new_flow = prev_flow * dist_ratio;
         prev.e = Some(new_flow);
         //NEED TO INSERT NEW prev G1 here
@@ -338,9 +338,12 @@ impl<'a> Cursor<'a> {
     pub fn emit(&mut self) -> String {
         let mut out = String::new();
         self.reset_front();
-        while self.cursor.current().is_some() {
+        loop {
             let ins = self.cursor.current().unwrap();
             out += &ins.emit();
+            if self.at_end() {
+                break;
+            }
             self.next();
         }
         out

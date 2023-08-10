@@ -4,7 +4,7 @@ use crate::parse::{Instruction, Line, ParsedGCode, G1};
 use std::collections::LinkedList;
 
 #[cfg(test)]
-#[test]
+// #[test]
 // fn sub_test() {
 //     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
 //     G1 X10 Y10 Z10 E10\n
