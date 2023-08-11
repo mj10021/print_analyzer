@@ -17,6 +17,27 @@ pub enum Line {
 }
 
 impl Line {
+    fn build(mut line: VecDeque<Word>) -> Line {
+        let Word(letter, num) = line[0];
+        let num = num as u8;
+        match (letter, num, letter.is_ascii_alphabetic()) {
+            ('G', 1, _) => Line::G1(G1::build(line)),
+            ('N', _, _) => {
+                line.pop_front();
+                line.pop_front();
+                Line::build(line)
+            }
+            (_, _, true) => Line::Instruction(Instruction::build(line)),
+            (_, _, false) => {
+                let mut raw_line = String::new();
+                for word in line {
+                    let Word(letter, num) = word;
+                    raw_line += format!("{letter}{num}").as_str();
+                }
+                Line::Raw(raw_line)
+            }
+        }
+    }
     fn is_g1(&self) -> bool {
         match self {
             Line::G1(_) => true,
@@ -154,12 +175,19 @@ pub struct ParsedGCode {
 
 impl ParsedGCode {
     pub fn from_str(str: &str) -> ParsedGCode {
+        if str.len() < 1 {
+            return ParsedGCode {
+                instructions: LinkedList::new(),
+                rel_xyz: false,
+                rel_e: false,
+            }
+        }
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
         let mut rel_e = true;
         let lines = parse_str(str);
-        for line in lines {
-            let line = clean_line(&line);
+        for raw_line in lines {
+            let line = clean_line(&raw_line);
             let line = read_line(&line);
             if line.len() < 1 {
                 continue;
@@ -173,13 +201,7 @@ impl ParsedGCode {
                 ('M', 83) => rel_e = true,
                 _ => (),
             }
-            let ins;
-            if letter == 'G' && num == 1 {
-                ins = Line::G1(G1::build(line));
-            } else {
-                ins = Line::Instruction(Instruction::build(line));
-            }
-            parsed.push_back(ins)
+            parsed.push_back(Line::build(line));
         }
 
         ParsedGCode {
@@ -193,8 +215,8 @@ impl ParsedGCode {
         let mut rel_xyz = false;
         let mut rel_e = true;
         let lines = parse_file(path);
-        for line in lines {
-            let line = clean_line(&line);
+        for raw_line in lines {
+            let line = clean_line(&raw_line);
             let line = read_line(&line);
             let Word(letter, num) = line[0];
             let num = num as u8;
@@ -205,13 +227,7 @@ impl ParsedGCode {
                 ('M', 83) => rel_e = true,
                 _ => (),
             }
-            let ins;
-            if letter == 'G' && num == 1 {
-                ins = Line::G1(G1::build(line));
-            } else {
-                ins = Line::Instruction(Instruction::build(line));
-            }
-            parsed.push_back(ins)
+            parsed.push_back(Line::build(line));
         }
 
         ParsedGCode {
@@ -271,8 +287,8 @@ fn read_line(line: &Vec<char>) -> VecDeque<Word> {
     if line.len() < 2 {
         return VecDeque::new();
     }
-    if line[0..=1] == ['G', '1'] {
-        let mut output = VecDeque::new();
+    let mut output = VecDeque::new();
+    if line[0].is_alphabetic() && line[1].is_numeric() {
         let mut temp_list: Vec<Vec<char>> = Vec::new();
         let mut word: Vec<char> = Vec::new();
         let mut has_letter = false;
@@ -304,16 +320,42 @@ fn read_line(line: &Vec<char>) -> VecDeque<Word> {
                     .expect("invalid word value"),
             ));
         }
-        return output;
     } else {
-        return VecDeque::new();
+        for char in line {
+            output.push_back(Word(*char, 0.0));
+        }
     }
+    output
 }
 
 #[cfg(test)]
 #[test]
-fn asdf() {
-    // TODO: read an entire stl and
-    // parse into g1 and other commands
-    todo!();
+fn parse_line() {
+    let line = "M200 S1234 F129384.1234";
+    let line: Vec<char> = clean_line(line);
+    let line = read_line(&line);
+    let ins = Line::build(line);
+    let params = VecDeque::from([Word('S', 1234.0), Word('F', 129384.1234)]);
+    assert_eq!(
+        ins,
+        Line::Instruction(Instruction {
+            letter: 'M',
+            val: 200,
+            params: Some(params),
+        })
+    );
+}
+
+#[test]
+fn parse_random() {
+    let line = "alksdhfbilwyfboqi3471bf049837gfo1bi4ubf1ilkh34bf";
+    let mut test = VecDeque::new();
+    for char in line.chars() {
+        test.push_back(Word(char.to_ascii_uppercase(), 0.0));
+    }
+
+    let line = clean_line(line);
+    let line = read_line(&line);
+
+    assert_eq!(test, line);
 }

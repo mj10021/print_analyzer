@@ -2,9 +2,9 @@
 #![feature(linked_list_cursors)]
 #![feature(let_chains)]
 
-mod analysis;
-mod parse;
-mod transform;
+pub mod analysis;
+pub mod parse;
+pub mod transform;
 
 /*
 use std::collections::VecDeque;
