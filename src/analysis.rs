@@ -2,6 +2,8 @@ use crate::parse::{Emit, Instruction, Line, ParsedGCode, G1};
 
 use std::collections::{LinkedList, VecDeque};
 
+/// A cursor tracking a linked list of nodes where each node represents a line of gcode
+/// x, y, z, and e represent absolute coordinates, f is the last specified feedrate, or none if default 
 #[derive(Debug)]
 pub struct Cursor<'a> {
     pub x: Option<f32>,
@@ -85,7 +87,7 @@ impl<'a> Cursor<'a> {
     }
 
     /// moves cursor to head of linked list
-    /// ```
+    /// ``` rust
     /// #![feature(linked_list_cursors)]
     /// extern crate print_analyzer;
     /// use print_analyzer::parse::{ParsedGCode, Line, G1};
@@ -102,7 +104,38 @@ impl<'a> Cursor<'a> {
             self.prev();
         }
     }
-    fn update(&mut self) {
+    /// set cursor values to current node
+    /// ```
+    /// extern crate print_analyzer;
+    /// use print_analyzer::parse::{ParsedGCode, Line, G1};
+    /// use print_analyzer::analysis::Cursor;
+    /// let gcode = "G1 X1\nM200 S100\nG1 E1234.1234";
+    /// let mut gcode = ParsedGCode::from_str(gcode);
+    /// let mut cursor = Cursor::build(&mut gcode);
+    /// cursor.initialize();
+    /// assert_eq!(cursor.x, Some(1.0));
+    /// ```
+    /// 
+    pub fn initialize(&mut self) {
+         if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+            if x.is_some() {
+                self.x = x;
+            }
+            if y.is_some() {
+                self.y = y;
+            }
+            if z.is_some() {
+                self.z = z;
+            }
+            if e.is_some() {
+                self.e = e;
+            }
+            if f.is_some() {
+                self.f = f;
+            }
+        }       
+    }
+    fn update_next(&mut self) {
         if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
@@ -125,6 +158,22 @@ impl<'a> Cursor<'a> {
             }
         }
     }
+    fn update_prev(&mut self) {
+         if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+            if x.is_some() {
+                self.x = x;
+            }
+            if y.is_some() {
+                self.y = y;
+            }
+            if z.is_some() {
+                self.z = z;
+            }
+            if f.is_some() {
+                self.f = f;
+            }
+        }       
+    }
     fn unhome(&mut self) {
         self.x = None;
         self.y = None;
@@ -132,19 +181,39 @@ impl<'a> Cursor<'a> {
         self.e = None;
         self.f = None;
     }
+    /// move the cursor one line forward in g-code and update values if g1
+    /// ``` rust
+    /// extern crate print_analyzer;
+    /// use print_analyzer::parse::{ParsedGCode, Line, G1};
+    /// use print_analyzer::analysis::Cursor;
+    /// let gcode = "G1 X1 E1\nG1 z100 e21\nG1 E1234.1234";
+    /// let mut gcode = ParsedGCode::from_str(gcode);
+    /// let mut cursor = Cursor::build(&mut gcode);
+    /// 
+    /// cursor.initialize();
+    /// let ei = cursor.e;
+    /// cursor.next();
+    /// cursor.prev();
+    /// assert_eq!(ei, cursor.e);
+    /// ```
     pub fn next(&mut self) {
         if self.at_end() {
             panic!("moving past end of list");
         }
         self.cursor.move_next();
-        self.update();
+        self.update_next();
     }
     pub fn prev(&mut self) {
         if self.at_front() {
             panic!("moving past front of list");
         }
+        if self.is_g1() {
+            if let Some(&mut Line::G1( G1{x: _, y: _, z: _, e: Some(de), f: _})) = self.cursor.current() {
+                self.e = Some((self.e.unwrap() - de));
+            }
+        }
         self.cursor.move_prev();
-        self.update();
+        self.update_prev();
     }
     pub fn seek_to_front(&mut self, target: *const Line) {
         if let Some(curr) = self.cursor.current() {
@@ -211,7 +280,8 @@ impl<'a> Cursor<'a> {
         }
     }
     fn calc_prev_flow(&mut self) -> f32 {
-        self.update();
+        self.unhome();
+        self.update_next();
         if !self.is_g1() {
             panic!("flow calc from non-g1 node");
         }
@@ -235,7 +305,7 @@ impl<'a> Cursor<'a> {
         };
         let mut prev = self.find_prev_g1();
         let prev_dist = opt_dist_calc(prev.x, curr.x, prev.y, curr.y, prev.z, curr.z);
-        let init_de = match self.e {
+        let init_de = match curr.e {
             Some(de) => de,
             _ => 0.0,
         };
@@ -250,14 +320,14 @@ impl<'a> Cursor<'a> {
         curr.z = opt_add(curr.z, dz);
 
         let new_prev_dist = opt_dist_calc(prev.x, curr.x, prev.y, curr.y, prev.z, curr.z);
-        let prev_dist_ratio = new_prev_dist / prev_dist;
-        let new_flow = init_de * prev_dist_ratio;
+        let new_flow = (init_de / prev_dist) * new_prev_dist;
         curr.e = Some(new_flow);
 
         let new_next_dist = opt_dist_calc(curr.x, next.x, curr.y, next.y, curr.z, next.z);
         let next_dist_ratio = new_next_dist / next_dist;
-        let new_flow = next_de * next_dist_ratio;
+        let new_flow = (next_de / next_dist) * new_next_dist;
         next.e = Some(new_flow);
+        panic!("{:#?} {:#?} {:#?}", prev, curr, next);
 
         // now i need to put the new nodes back into the list
         // self.cursor.current() = Some(&mut Line::G1(curr));
@@ -274,7 +344,7 @@ impl<'a> Cursor<'a> {
 
         // make sure the cursor values are correct for the first node
         self.unhome();
-        self.update();
+        self.update_next();
 
         let [mut xi, mut yi, mut zi] = [self.x, self.y, self.z];
 
@@ -451,9 +521,12 @@ fn trans_test() {
         G1 X3 E1\n";
     let mut gcode = ParsedGCode::from_str(input);
     let mut cursor = Cursor::build(&mut gcode);
+    cursor.initialize();
+
     while cursor.x != Some(2.0) {
         cursor.next();
     }
+
     cursor.translate(0.5, 0.0, 0.0);
 
     let t0 = G1 {
