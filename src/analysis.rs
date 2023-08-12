@@ -1,6 +1,29 @@
 use crate::parse::{Emit, Instruction, Line, ParsedGCode, G1};
 
-use std::collections::{LinkedList, VecDeque};
+use std::{collections::{LinkedList, VecDeque, HashMap}, f32::NEG_INFINITY};
+
+#[derive(Clone, Debug)]
+pub struct State {
+    x: f32,
+    y: f32,
+    z: f32,
+    e: f32,
+    f: f32,
+    line_hash: Option<f64>,
+}
+
+impl State {
+    pub fn new() -> State {
+        State {
+            x: NEG_INFINITY,
+            y: NEG_INFINITY,
+            z: NEG_INFINITY,
+            e: NEG_INFINITY,
+            f: NEG_INFINITY,
+            line_hash: None,
+        }
+    }
+}
 
 /// A cursor tracking a linked list of nodes where each node represents a line of gcode
 /// x, y, z, and e represent absolute coordinates, f is the last specified feedrate, or none if default 
@@ -11,7 +34,7 @@ pub struct Cursor<'a> {
     pub z: Option<f32>,
     pub e: Option<f32>,
     pub f: Option<f32>,
-    pub cursor: std::collections::linked_list::CursorMut<'a, Line>,
+    pub cursor: std::collections::linked_list::CursorMut<'a, (Line, State)>,
 }
 fn opt_sub(xi: Option<f32>, xf: Option<f32>) -> f32 {
     if xi.is_none() || xf.is_none() {
@@ -75,7 +98,7 @@ impl<'a> Cursor<'a> {
     /// ```
     pub fn is_g1(&mut self) -> bool {
         match self.cursor.current() {
-            Some(&mut Line::G1(_)) => true,
+            Some(&mut (Line::G1(_), _)) => true,
             _ => false,
         }
     }
@@ -117,7 +140,7 @@ impl<'a> Cursor<'a> {
     /// ```
     /// 
     pub fn initialize(&mut self) {
-         if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+         if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
             }
@@ -136,7 +159,7 @@ impl<'a> Cursor<'a> {
         }       
     }
     fn update_next(&mut self) {
-        if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+        if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
             }
@@ -159,7 +182,7 @@ impl<'a> Cursor<'a> {
         }
     }
     fn update_prev(&mut self) {
-         if let Some(&mut Line::G1(G1 { x, y, z, e, f })) = self.cursor.current() {
+         if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
             }
@@ -208,35 +231,35 @@ impl<'a> Cursor<'a> {
             panic!("moving past front of list");
         }
         if self.is_g1() {
-            if let Some(&mut Line::G1( G1{x: _, y: _, z: _, e: Some(de), f: _})) = self.cursor.current() {
+            if let Some(&mut (Line::G1( G1{x: _, y: _, z: _, e: Some(de), f: _}), _)) = self.cursor.current() {
                 self.e = Some((self.e.unwrap() - de));
             }
         }
         self.cursor.move_prev();
         self.update_prev();
     }
-    pub fn seek_to_front(&mut self, target: *const Line) {
+    pub fn seek_to_front(&mut self, target: *const (Line, State)) {
         if let Some(curr) = self.cursor.current() {
-            if curr as *const Line == target {
+            if curr as *const (Line, State) == target {
                 return;
             }
         }
         self.next();
     }
-    fn seek_to_back(&mut self, target: *const Line) {
+    fn seek_to_back(&mut self, target: *const (Line, State)) {
         if let Some(curr) = self.cursor.current() {
-            if curr as *const Line == target {
+            if curr as *const (Line, State) == target {
                 return;
             }
         }
         self.prev();
     }
     fn move_prev_g1(&mut self) {
-        let init = self.cursor.current().unwrap() as *const Line;
+        let init = self.cursor.current().unwrap() as *const (Line, State);
         self.prev();
         while !self.is_g1() {
             if let Some(cur) = self.cursor.current() {
-                if cur as *const Line == init {
+                if cur as *const (Line, State) == init {
                     panic!("no prev g1 found");
                 }
             }
@@ -249,16 +272,28 @@ impl<'a> Cursor<'a> {
             panic! {"called find prev g1 from non-g1 node"};
         }
 
-        let curr = self.cursor.current().unwrap() as *const Line;
+        let curr = self.cursor.current().unwrap() as *const (Line, State);
         self.prev();
         while !self.is_g1() {
             self.prev();
         }
-        if let Line::G1(g1) = self.cursor.current().unwrap().clone() {
+        if let (Line::G1(g1), _) = self.cursor.current().unwrap().clone() {
             self.seek_to_front(curr);
             return g1;
         } else {
             panic!("asdf")
+        }
+    }
+    fn move_next_g1(&mut self) {
+        let init = self.cursor.current().unwrap() as *const (Line, State);
+        self.next();
+        while !self.is_g1() {
+            if let Some(cur) = self.cursor.current() {
+                if cur as *const (Line, State) == init {
+                    panic!("no prev g1 found");
+                }
+            }
+            self.next();
         }
     }
     fn find_next_g1(&mut self) -> G1 {
@@ -267,12 +302,12 @@ impl<'a> Cursor<'a> {
             panic! {"called find prev g1 from non-g1 node"};
         }
 
-        let curr = self.cursor.current().unwrap() as *const Line;
+        let curr = self.cursor.current().unwrap() as *const (Line, State);
         self.next();
         while !self.is_g1() {
             self.next();
         }
-        if let Line::G1(g1) = self.cursor.current().unwrap().clone() {
+        if let (Line::G1(g1), _) = self.cursor.current().unwrap().clone() {
             self.seek_to_back(curr);
             return g1;
         } else {
@@ -300,7 +335,7 @@ impl<'a> Cursor<'a> {
 
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         // translating from the current position of the cursor, which is the
-        let Line::G1(mut curr) = self.cursor.current().unwrap().clone() else {
+        let (Line::G1(mut curr), _) = self.cursor.current().unwrap().clone() else {
             panic!("translating non-g1 move");
         };
         let mut prev = self.find_prev_g1();
@@ -327,12 +362,29 @@ impl<'a> Cursor<'a> {
         let next_dist_ratio = new_next_dist / next_dist;
         let new_flow = (next_de / next_dist) * new_next_dist;
         next.e = Some(new_flow);
-        panic!("{:#?} {:#?} {:#?}", prev, curr, next);
 
-        // now i need to put the new nodes back into the list
-        // self.cursor.current() = Some(&mut Line::G1(curr));
-        // self.next();
-        // self.cursor.current() = Some(Line::G1(next));
+        // start: adsf -> *G1 (curr) -> asdf -> asdf -> G1 (next) -> None
+        // remove current node: asdf -> *asdf -> adsf -> G1 (next) -> None
+        // insert_before(new curr): asdf -> G1 (new_curr) -> *asdf -> asdf -> G1(next) -> None
+        // move_prev : asdf -> *G1 (new_curr) -> asdf -> asdf -> G1(next) -> None
+        // move_next_g1(): asdf -> G1 (new_curr) -> asdf -> asdf -> *G1(next) -> None
+        // remove current: asdf -> G1 (new_curr) -> *asdf -> asdf -> *None
+        // insert before(new_next): asdf -> G1 (new_curr) -> asdf -> asdf -> G1(new_next) -> *None
+        // move prev: asdf -> G1 (new_curr) -> asdf -> asdf -> *G1(new_next) -> None
+        // move_prev_g1():: asdf -> *G1 (new_curr) -> asdf -> asdf -> G1(new_next) -> None
+
+        // NEED TO ADD CASE FOR TRANSLATING LAST NODE!!!
+
+        let new_curr = (Line::G1( curr ), State::new());
+        let new_next = (Line::G1( next ), State::new());
+        let _ = self.cursor.remove_current();
+        self.cursor.insert_before(new_curr);
+        self.cursor.move_prev();
+        self.move_next_g1();
+        let _ = self.cursor.remove_current();
+        self.cursor.insert_before(new_next);
+        self.cursor.move_prev();
+        self.move_prev_g1();
     }
     pub fn total_file_dist(&mut self) -> (f32, i32) {
         // FIXMEEEEEEEEEEEEEEEEEEee
@@ -349,13 +401,13 @@ impl<'a> Cursor<'a> {
         let [mut xi, mut yi, mut zi] = [self.x, self.y, self.z];
 
         while self.cursor.peek_next().is_some() {
-            if let Some(&mut Line::G1(G1 {
+            if let Some(&mut (Line::G1(G1 {
                 x: xf,
                 y: yf,
                 z: zf,
                 e: de,
                 f,
-            })) = self.cursor.peek_next()
+            }), _)) = self.cursor.peek_next()
             {
                 dist += opt_dist_calc(xi, xf, yi, yf, zi, zf);
                 xi = xf;
@@ -372,32 +424,19 @@ impl<'a> Cursor<'a> {
             panic!("can't subdivide non g1 move: {:?}", self.cursor.current());
         }
         // store pointer to initial g1 move and and find previous move
-        let init = self.cursor.current().unwrap() as *const Line;
-        self.prev();
-        while !self.is_g1() {
-            self.prev();
-        }
-        let xi = self.x;
-        let yi = self.y;
-        let zi = self.z;
-        let tot_e = match self.e {
-            Some(de) => de,
-            None => 0.0,
-        };
+        let init = self.cursor.current().unwrap() as *const (Line, State);
+        let G1 { x: xi, y: yi, z: zi, e: _, f: _ } = self.find_prev_g1();
 
-        // return to initial move
-        while self.cursor.current().unwrap() as *const Line != init {
-            self.next(); // I NEED TO TEST THIS
-        }
         let mut new_pts: Vec<Line> = Vec::new();
-        let dx = self.x.unwrap() - xi.unwrap();
-        let dy = self.y.unwrap() - yi.unwrap();
-        let dz = self.z.unwrap() - zi.unwrap();
-
-        let dist = opt_dist_calc(xi, self.x, yi, self.y, zi, self.z);
+        let dx = opt_sub(xi, self.x);
+        let dy = opt_sub(yi, self.y);
+        let dz = opt_sub(zi, self.z);
+        let tot_e = self.e.unwrap_or(0.0);
+        let dist = (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt();
 
         let count = (dist / seg_dist);
         let mut i = 1.0;
+
         while i < count {
             let x = Some(xi.unwrap() + (dx * i));
             let y = Some(yi.unwrap() + (dy * i));
@@ -415,7 +454,7 @@ impl<'a> Cursor<'a> {
         }
         while new_pts.len() > 0 {
             let pt = new_pts.pop().unwrap();
-            self.cursor.insert_before(pt);
+            self.cursor.insert_before((pt, State::new()));
         }
     }
     //    pub fn subdivide_all(&mut self, divisions: i32) -> LinkedList<Line> {
@@ -441,7 +480,7 @@ impl<'a> Cursor<'a> {
         let mut out = String::new();
         self.reset_front();
         loop {
-            let ins = self.cursor.current().unwrap();
+            let (ins, _) = self.cursor.current().unwrap();
             out += &ins.emit();
             if self.at_end() {
                 break;
@@ -527,7 +566,9 @@ fn trans_test() {
         cursor.next();
     }
 
-    cursor.translate(0.5, 0.0, 0.0);
+    cursor.translate(0.5, 0.0, 1.1);
+    cursor.reset_front();
+    cursor.initialize();
 
     let t0 = G1 {
         x: Some(0.0),
@@ -561,8 +602,8 @@ fn trans_test() {
 
     cursor.reset_front();
     let mut i = 0;
-    while i < test.len() {
-        let Line::G1(curr) = cursor.cursor.current().unwrap().clone() else {
+    while !cursor.at_end() {
+        let (Line::G1(curr), _) = cursor.cursor.current().unwrap().clone() else {
             panic!("asdf");
         };
         assert_eq!(curr, test[i]);

@@ -1,6 +1,6 @@
 use std::collections::{LinkedList, VecDeque};
 
-use crate::analysis::Cursor;
+use crate::analysis::{Cursor, State};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32);
@@ -147,7 +147,7 @@ fn is_new_layer(line: Line) -> bool {
 }
 
 pub struct Layer {
-    lines: LinkedList<Line>,
+    lines: LinkedList<(Line, State)>,
 }
 impl Layer {
     fn new() -> Layer {
@@ -160,7 +160,7 @@ impl Layer {
 impl Emit for Layer {
     fn emit(&self) -> String {
         let mut out = String::new();
-        for line in &self.lines {
+        for (line, _) in &self.lines {
             out += &line.emit();
         }
         out
@@ -168,7 +168,7 @@ impl Emit for Layer {
 }
 #[derive(Debug)]
 pub struct ParsedGCode {
-    pub instructions: LinkedList<Line>,
+    pub instructions: LinkedList<(Line, State)>,
     pub rel_xyz: bool,
     pub rel_e: bool,
 }
@@ -201,7 +201,7 @@ impl ParsedGCode {
                 ('M', 83) => rel_e = true,
                 _ => (),
             }
-            parsed.push_back(Line::build(line));
+            parsed.push_back((Line::build(line), State::new()));
         }
 
         ParsedGCode {
@@ -227,7 +227,7 @@ impl ParsedGCode {
                 ('M', 83) => rel_e = true,
                 _ => (),
             }
-            parsed.push_back(Line::build(line));
+            parsed.push_back((Line::build(line), State::new()));
         }
 
         ParsedGCode {
@@ -241,7 +241,7 @@ impl ParsedGCode {
 impl Emit for ParsedGCode {
     fn emit(&self) -> String {
         let mut out = String::new();
-        for line in &self.instructions {
+        for (line, _) in &self.instructions {
             out += &line.emit();
         }
         out
