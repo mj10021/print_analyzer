@@ -1,3 +1,4 @@
+use core::num::dec2flt::parse;
 use std::collections::{LinkedList, VecDeque};
 
 use crate::analysis::{Cursor, State};
@@ -142,45 +143,26 @@ impl Emit for G1 {
     }
 }
 
-fn is_new_layer(line: Line) -> bool {
-    todo!();
-}
 
-pub struct Layer {
-    lines: LinkedList<(Line, State)>,
-}
-impl Layer {
-    fn new() -> Layer {
-        Layer {
-            lines: LinkedList::new(),
-        }
-    }
-}
-
-impl Emit for Layer {
-    fn emit(&self) -> String {
-        let mut out = String::new();
-        for (line, _) in &self.lines {
-            out += &line.emit();
-        }
-        out
-    }
-}
 #[derive(Debug)]
-pub struct ParsedGCode {
+pub struct ParsedGCode<'a> {
     pub instructions: LinkedList<(Line, State)>,
     pub rel_xyz: bool,
     pub rel_e: bool,
+    pub cur: std::collections::linked_list::CursorMut<'a, (Line, State)>
 }
 
-impl ParsedGCode {
+impl<'a> ParsedGCode<'a> {
     pub fn from_str(str: &str) -> ParsedGCode {
         if str.len() < 1 {
-            return ParsedGCode {
-                instructions: LinkedList::new(),
+            let mut ins = LinkedList::new();
+            let gcode = ParsedGCode {
+                instructions: ins,
                 rel_xyz: false,
                 rel_e: false,
-            }
+                cur: ins.cursor_front_mut(),
+            };
+            return gcode
         }
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -208,6 +190,7 @@ impl ParsedGCode {
             instructions: parsed,
             rel_xyz,
             rel_e,
+            cur: parsed.cursor_front_mut(),
         }
     }
     fn build(path: &str) -> ParsedGCode {
@@ -234,11 +217,12 @@ impl ParsedGCode {
             instructions: parsed,
             rel_xyz,
             rel_e,
+            cur: parsed.cursor_front_mut(),
         }
     }
 }
 
-impl Emit for ParsedGCode {
+impl<'a> Emit for ParsedGCode<'a> {
     fn emit(&self) -> String {
         let mut out = String::new();
         for (line, _) in &self.instructions {

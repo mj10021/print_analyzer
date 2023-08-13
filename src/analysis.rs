@@ -9,7 +9,7 @@ pub struct State {
     z: f32,
     e: f32,
     f: f32,
-    line_hash: Option<f64>,
+    hash: Option<f64>,
 }
 
 impl State {
@@ -20,7 +20,7 @@ impl State {
             z: NEG_INFINITY,
             e: NEG_INFINITY,
             f: NEG_INFINITY,
-            line_hash: None,
+            hash: None,
         }
     }
 }
