@@ -1,6 +1,9 @@
 use crate::parse::{Emit, Instruction, Line, ParsedGCode, G1};
 
-use std::{collections::{LinkedList, VecDeque, HashMap}, f32::NEG_INFINITY};
+use std::{
+    collections::{HashMap, LinkedList, VecDeque},
+    f32::NEG_INFINITY,
+};
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -26,7 +29,7 @@ impl State {
 }
 
 /// A cursor tracking a linked list of nodes where each node represents a line of gcode
-/// x, y, z, and e represent absolute coordinates, f is the last specified feedrate, or none if default 
+/// x, y, z, and e represent absolute coordinates, f is the last specified feedrate, or none if default
 #[derive(Debug)]
 pub struct Cursor<'a> {
     pub x: Option<f32>,
@@ -138,9 +141,9 @@ impl<'a> Cursor<'a> {
     /// cursor.initialize();
     /// assert_eq!(cursor.x, Some(1.0));
     /// ```
-    /// 
+    ///
     pub fn initialize(&mut self) {
-         if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
+        if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
             }
@@ -156,7 +159,7 @@ impl<'a> Cursor<'a> {
             if f.is_some() {
                 self.f = f;
             }
-        }       
+        }
     }
     fn update_next(&mut self) {
         if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
@@ -182,7 +185,7 @@ impl<'a> Cursor<'a> {
         }
     }
     fn update_prev(&mut self) {
-         if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
+        if let Some(&mut (Line::G1(G1 { x, y, z, e, f }), _)) = self.cursor.current() {
             if x.is_some() {
                 self.x = x;
             }
@@ -195,7 +198,7 @@ impl<'a> Cursor<'a> {
             if f.is_some() {
                 self.f = f;
             }
-        }       
+        }
     }
     fn unhome(&mut self) {
         self.x = None;
@@ -212,7 +215,7 @@ impl<'a> Cursor<'a> {
     /// let gcode = "G1 X1 E1\nG1 z100 e21\nG1 E1234.1234";
     /// let mut gcode = ParsedGCode::from_str(gcode);
     /// let mut cursor = Cursor::build(&mut gcode);
-    /// 
+    ///
     /// cursor.initialize();
     /// let ei = cursor.e;
     /// cursor.next();
@@ -231,7 +234,17 @@ impl<'a> Cursor<'a> {
             panic!("moving past front of list");
         }
         if self.is_g1() {
-            if let Some(&mut (Line::G1( G1{x: _, y: _, z: _, e: Some(de), f: _}), _)) = self.cursor.current() {
+            if let Some(&mut (
+                Line::G1(G1 {
+                    x: _,
+                    y: _,
+                    z: _,
+                    e: Some(de),
+                    f: _,
+                }),
+                _,
+            )) = self.cursor.current()
+            {
                 self.e = Some((self.e.unwrap() - de));
             }
         }
@@ -375,8 +388,8 @@ impl<'a> Cursor<'a> {
 
         // NEED TO ADD CASE FOR TRANSLATING LAST NODE!!!
 
-        let new_curr = (Line::G1( curr ), State::new());
-        let new_next = (Line::G1( next ), State::new());
+        let new_curr = (Line::G1(curr), State::new());
+        let new_next = (Line::G1(next), State::new());
         let _ = self.cursor.remove_current();
         self.cursor.insert_before(new_curr);
         self.cursor.move_prev();
@@ -401,13 +414,16 @@ impl<'a> Cursor<'a> {
         let [mut xi, mut yi, mut zi] = [self.x, self.y, self.z];
 
         while self.cursor.peek_next().is_some() {
-            if let Some(&mut (Line::G1(G1 {
-                x: xf,
-                y: yf,
-                z: zf,
-                e: de,
-                f,
-            }), _)) = self.cursor.peek_next()
+            if let Some(&mut (
+                Line::G1(G1 {
+                    x: xf,
+                    y: yf,
+                    z: zf,
+                    e: de,
+                    f,
+                }),
+                _,
+            )) = self.cursor.peek_next()
             {
                 dist += opt_dist_calc(xi, xf, yi, yf, zi, zf);
                 xi = xf;
@@ -425,7 +441,13 @@ impl<'a> Cursor<'a> {
         }
         // store pointer to initial g1 move and and find previous move
         let init = self.cursor.current().unwrap() as *const (Line, State);
-        let G1 { x: xi, y: yi, z: zi, e: _, f: _ } = self.find_prev_g1();
+        let G1 {
+            x: xi,
+            y: yi,
+            z: zi,
+            e: _,
+            f: _,
+        } = self.find_prev_g1();
 
         let mut new_pts: Vec<Line> = Vec::new();
         let dx = opt_sub(xi, self.x);

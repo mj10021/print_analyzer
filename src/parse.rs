@@ -1,7 +1,13 @@
-use core::num::dec2flt::parse;
 use std::collections::{LinkedList, VecDeque};
+use std::f32::NEG_INFINITY;
 
-use crate::analysis::{Cursor, State};
+fn opt_add(opt: Option<f32>, num: f32) -> Option<f32> {
+    if opt.is_none() {
+        return None;
+    } else {
+        return Some(opt.unwrap() + num);
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32);
@@ -15,6 +21,47 @@ pub enum Line {
     G1(G1),
     Instruction(Instruction),
     Raw(String),
+}
+
+#[derive(Clone, Debug)]
+pub struct State {
+    x: f32,
+    y: f32,
+    z: f32,
+    e: f32,
+    f: f32,
+    hash: f32,
+}
+
+impl State {
+    pub fn new() -> State {
+        State {
+            x: NEG_INFINITY,
+            y: NEG_INFINITY,
+            z: NEG_INFINITY,
+            e: NEG_INFINITY,
+            f: NEG_INFINITY,
+            hash: NEG_INFINITY,
+        }
+    }
+    fn dist(&self, init: &State) -> f32 {
+        let dx = self.x - init.x;
+        let dy = self.y - init.y;
+        let dz = self.z - init.z;
+        (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
+    }
+    fn get_hash(&mut self, g1: &G1) {
+        let x_key = 1.1;
+        let y_key = 1.2;
+        let z_key = 1.3;
+        let e_key = 1.4;
+        let f_key = 1.5;
+        self.hash = g1.x.unwrap_or(x_key).powf(x_key)
+        * g1.y.unwrap_or(y_key).powf(y_key)
+        * g1.z.unwrap_or(z_key).powf(z_key)
+        * g1.e.unwrap_or(e_key).powf(e_key)
+        * g1.f.unwrap_or(f_key).powf(f_key); 
+    }
 }
 
 impl Line {
@@ -143,13 +190,12 @@ impl Emit for G1 {
     }
 }
 
-
 #[derive(Debug)]
 pub struct ParsedGCode<'a> {
     pub instructions: LinkedList<(Line, State)>,
     pub rel_xyz: bool,
     pub rel_e: bool,
-    pub cur: std::collections::linked_list::CursorMut<'a, (Line, State)>
+    pub cur: std::collections::linked_list::CursorMut<'a, (Line, State)>,
 }
 
 impl<'a> ParsedGCode<'a> {
@@ -162,7 +208,7 @@ impl<'a> ParsedGCode<'a> {
                 rel_e: false,
                 cur: ins.cursor_front_mut(),
             };
-            return gcode
+            return gcode;
         }
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -218,6 +264,175 @@ impl<'a> ParsedGCode<'a> {
             rel_xyz,
             rel_e,
             cur: parsed.cursor_front_mut(),
+        }
+    }
+    fn at_end(&mut self) -> bool {
+        self.cur.peek_next().is_none() && self.cur.current().is_some()
+    }
+    fn at_front(&mut self) -> bool {
+        self.cur.peek_prev().is_none() && self.cur.current().is_some()
+    }
+    fn at_g1(&mut self) -> bool {
+        match self.cur.current() {
+            Some((Line::G1(_), _)) => true,
+            _ => false,
+        }
+    }
+    // move cursor forward without wrapping
+    fn next(&mut self) {
+        if self.at_end() {
+            panic!("moving past end of list");
+        }
+        self.cur.move_next();
+    }
+    fn next_g1(&mut self) {
+        if !self.at_g1() {
+            panic!("called from non-g1 node");
+        }
+        self.next();
+        while !self.at_g1() {
+            self.next()
+        }
+    }
+    fn prev(&mut self) {
+        if self.at_front() {
+            panic!("moving past front of list");
+        }
+        self.cur.move_prev();
+    }
+    fn prev_g1(&mut self) {
+        if !self.at_g1() {
+            panic!("called from non-g1 node");
+        }
+        self.prev();
+        while !self.at_g1() {
+            self.prev()
+        }
+    }
+    fn is_first_g1(&mut self) -> bool {
+        if !self.at_g1() {
+            panic!("called from non-g1 node");
+        }
+        let init = self.cur.current().unwrap() as *const (Line, State);
+        while !self.at_front() {
+            self.prev();
+            if self.at_g1() {
+                return false;
+            }
+        }
+        // return to start node
+        while self.cur.current().unwrap() as *const (Line, State) != init {
+            self.next();
+        }
+        true
+    }
+    fn is_last_g1(&mut self) -> bool {
+        if !self.at_g1() {
+            panic!("called from non-g1 node");
+        }
+        let init = self.cur.current().unwrap() as *const (Line, State);
+        while !self.at_end() {
+            self.next();
+            if self.at_g1() {
+                return false;
+            }
+        }
+        while self.cur.current().unwrap() as *const (Line, State) != init {
+            self.prev();
+        }
+        true
+    }
+    fn update_state(&mut self) {
+        if !self.at_front() {
+            // this should be if first g1 not if at front
+            self.prev_g1();
+            if let Some((Line::G1(prev_g1), prev_state)) = self.cur.current() {
+                self.next_g1();
+                if let Some((Line::G1(curr_g1), curr_state)) = self.cur.current() {
+                    if curr_g1.x.is_some() {
+                        curr_state.x = curr_g1.x.unwrap();
+                    } else {
+                        curr_state.x = prev_state.x;
+                    }
+                    if curr_g1.y.is_some() {
+                        curr_state.y = curr_g1.y.unwrap();
+                    } else {
+                        curr_state.y = prev_state.y;
+                    }
+                    if curr_g1.z.is_some() {
+                        curr_state.z = curr_g1.z.unwrap();
+                    } else {
+                        curr_state.z = prev_state.z;
+                    }
+                    curr_state.e = prev_state.e;
+                    if curr_g1.e.is_some() {
+                        curr_state.e += curr_g1.e.unwrap();
+                    }
+                    if curr_g1.f.is_some() {
+                        curr_state.f = curr_g1.f.unwrap();
+                    } else {
+                        curr_state.f = prev_state.f;
+                    }
+                    curr_state.get_hash(curr_g1)
+                }
+            }
+        } else if self.at_g1() {
+            let Some((Line::G1(g1), state)) = self.cur.current();
+            if g1.x.is_some() {
+                state.x = g1.x.unwrap();
+            }
+            if g1.y.is_some() {
+                state.y = g1.y.unwrap();
+            }
+            if g1.z.is_some() {
+                state.z = g1.z.unwrap();
+            }
+            if g1.e.is_some() {
+                state.e = g1.e.unwrap();
+            }
+            if g1.f.is_some() {
+                state.f = g1.f.unwrap();
+            }
+        } else {
+            return;
+        }
+    }
+    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32) {
+        // not 100% sure about first g1 esp. extrusion
+        if self.is_first_g1() {
+            if let Some((Line::G1(g1), state)) = self.cur.current() {
+                // not sure if i should transform None values or leave as none
+                g1.x = opt_add(g1.x, dx);
+                g1.y = opt_add(g1.y, dy);
+                g1.z = opt_add(g1.z, dz);
+            }
+        } else {
+            if !self.at_g1() {
+                panic!("called from non-g1 node");
+            }
+            if let Some((Line::G1(curr_g1), curr_state)) = self.cur.current() {
+                self.prev_g1();
+                if let Some((Line::G1(prev_g1), prev_state)) = self.cur.current() {
+                    let init_dist = prev_state.dist(&curr_state);
+                    self.next_g1();
+                    curr_g1.x = opt_add(curr_g1.x, dx);
+                    curr_g1.y = opt_add(curr_g1.y, dy);
+                    curr_g1.z = opt_add(curr_g1.z, dz);
+                    self.update_state();
+                    let new_dist = curr_state.dist(&prev_state);
+                    if let Some(de) = curr_g1.e {
+                        curr_g1.e = Some(de * (new_dist / init_dist));
+                    }
+                    self.update_state();
+                }
+                if !self.is_last_g1() {
+                    self.next_g1();
+                    if let Some((Line::G1(next_g1), next_state)) = self.cur.current() {
+                        todo!();
+                    }
+                    // NEED TO CHECK NEXT DIST BEFORE I PERFORM THE TRANSFORMATION
+                }
+            }
         }
     }
 }
