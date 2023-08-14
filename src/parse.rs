@@ -1,30 +1,22 @@
 use std::collections::{LinkedList, linked_list::CursorMut, VecDeque};
 use std::f32::NEG_INFINITY;
 
-fn opt_add(opt: Option<f32>, num: f32) -> Option<f32> {
-    if opt.is_none() {
-        return None;
-    } else {
-        return Some(opt.unwrap() + num);
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
-pub struct Word(pub char, pub f32);
+struct Word(pub char, pub f32);
 
-pub trait Emit {
+trait Emit {
     fn emit(&self) -> String;
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Line {
+enum Line {
     G1(G1),
     Instruction(Instruction),
     Raw(String),
 }
 
 #[derive(Clone, Debug)]
-pub struct State {
+struct State {
     x: f32,
     y: f32,
     z: f32,
@@ -34,7 +26,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> State {
+    fn new() -> State {
         State {
             x: NEG_INFINITY,
             y: NEG_INFINITY,
@@ -108,10 +100,10 @@ impl Emit for Line {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Instruction {
-    pub letter: char,
-    pub val: u8,
-    pub params: Option<VecDeque<Word>>,
+struct Instruction {
+    letter: char,
+    val: u8,
+    params: Option<VecDeque<Word>>,
 }
 
 impl Instruction {
@@ -139,19 +131,19 @@ impl Emit for Instruction {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct G1 {
+struct G1 {
     move_count: i32,
-    pub x: Option<f32>,
-    pub y: Option<f32>,
-    pub z: Option<f32>,
-    pub e: Option<f32>,
-    pub f: Option<f32>,
+    x: Option<f32>,
+    y: Option<f32>,
+    z: Option<f32>,
+    e: Option<f32>,
+    f: Option<f32>,
 }
 
 impl G1 {
     // all gcode moves should be relative and all
     // cursor positions should be absolute
-    pub fn build(params: VecDeque<Word>, move_count: i32) -> G1 {
+    fn build(params: VecDeque<Word>, move_count: i32) -> G1 {
         let mut x = None;
         let mut y = None;
         let mut z = None;
@@ -195,22 +187,43 @@ impl Emit for G1 {
 }
 
 #[derive(Debug)]
-pub struct ParsedGCode {
-    pub instructions: LinkedList<(Line, State)>,
-    pub g1_moves: i32,
-    pub rel_xyz: bool,
-    pub rel_e: bool,
+struct ParsedGCode {
+    instructions: LinkedList<(Line, State)>,
+    g1_moves: i32,
+    rel_xyz: bool,
+    rel_e: bool,
 }
 
 impl ParsedGCode {
     fn set_states(&mut self) {
         let mut cursor = self.instructions.cursor_front_mut();
-        while cursor.peek_next().is_some() {
+        loop {
             cursor.update_state(self.g1_moves);
+            if cursor.peek_next().is_none() {
+                break;
+            }
             cursor.move_next();
         }
     }
-    pub fn from_str(str: &str) -> ParsedGCode {
+    fn tot_dist(&mut self) -> f32 {
+        let mut out = 0.0;
+        let mut cursor = self.instructions.cursor_front_mut();
+        while !cursor.at_g1() {
+            cursor.next();
+        }
+        let (_, init_state) = cursor.current().unwrap();
+        let mut last = init_state.clone();
+        while !cursor.at_end() {
+            cursor.move_next_g1();
+            let (_, curr) = cursor.current().unwrap();
+            out += last.dist(curr);
+            last = curr.clone();
+        }
+        out
+
+
+    }
+    fn from_str(str: &str) -> ParsedGCode {
         if str.len() < 1 {
             let mut ins = LinkedList::new();
             let gcode = ParsedGCode {
@@ -317,6 +330,7 @@ trait Curse {
     fn is_last_g1(&mut self, g1_count: i32) -> bool;
     fn update_state(&mut self, g1_count: i32);
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32);
+    fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32);
 
 }
 impl<'a> Curse for CursorMut<'a, (Line, State)> {
@@ -494,6 +508,46 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
         self.update_state(g1_count);
         self.move_prev_g1();
     }
+    fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32) {
+        assert!(self.at_g1());
+        assert!(!self.is_first_g1());
+        let (prev_g1, prev_state) = self.get_prev_g1(g1_count).unwrap();
+        let mut dx = 0.0;
+        let mut dy = 0.0;
+        let mut dz = 0.0;
+        let mut de = 0.0;
+        let mut seg_count = 0.0;
+        let mut f: Option<f32> = None;
+        if let Some((Line::G1(curr_g1), curr_state)) = self.current() {
+            let init_dx = curr_state.x - prev_state.x;
+            let init_dy = curr_state.y - prev_state.y;
+            let init_dz = curr_state.z - prev_state.z;
+            let init_dist = curr_state.dist(&prev_state);
+            seg_count = (init_dist / seg_len).trunc();
+            dx = curr_state.x / seg_count;
+            dy = curr_state.y / seg_count;
+            dz = curr_state.z / seg_count;
+            de = curr_g1.e.unwrap_or(0.0) / seg_count;
+            curr_g1.e = Some(de);
+            f = curr_g1.f;
+        }
+        let mut i = 1.0;
+        while i < seg_count {
+            let new_g1 = G1 {
+                move_count: -1,
+                x: Some(prev_state.x + (dx * i)),
+                y: Some(prev_state.y + (dy * i)),
+                z: Some(prev_state.z + (dz * i)),
+                e: Some(de),
+                f,
+            };
+            self.insert_before((Line::G1(new_g1), State::new()));
+            self.prev();
+            self.update_state(g1_count);
+            self.next();
+            i += 1.0;
+        }
+    }
 }
 
 fn parse_file(path: &str) -> Vec<String> {
@@ -632,17 +686,7 @@ fn dist_test() {
         (9.0_f32.powf(2.0) * 3.0).sqrt()
     )
 }
-#[test]
-// fn prev_flow() {
-//     let input = "G1 X1 Y0 Z0 E10;asdfasdfasdf \n
-//     G1 X20 Y0 Z0 E0\n
-//     ;asdfasdfasdf\n";
-//     let mut gcode = ParsedGCode::from_str(input);
-//     let mut cursor = gcode.instructions.cursor_front_mut();
-//     cursor.next();
-//     assert_eq!(10.0 / 19.0, cursor.calc_prev_flow());
-// }
-// #[test]
+//#[test]
 // fn total_dist_test() {
 //     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
 //     G1 X20 Y20 Z11 E10\n
@@ -727,4 +771,28 @@ fn trans_test() {
         cursor.next();
         i += 1;
     }
+}
+#[test]
+fn sub_seg_test() {
+    // the coordinates are wrong
+    let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
+    G1 X20 Y20 Z11 E10\n
+    ;asdfasdfasdf\n";
+    let mut gcode = ParsedGCode::from_str(input);
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    cursor.next();
+    let seg_dist = 5.0;
+    cursor.subdiv_seg(seg_dist, gcode.g1_moves);
+    panic!("{:#?}", gcode);
+}
+#[test]
+fn tot_dist_test() {
+    let input = "G1 X0 Y0 Z0\n
+    G1 X1 Y0 Z0 \n
+    G1 X1 Y1 Z0 \n
+    G1 X1 Y1 Z1 \n
+    G1 X10 Y1 Z1\n";
+    let mut gcode = ParsedGCode::from_str(input);
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    assert_eq!(12.0, gcode.tot_dist());
 }
