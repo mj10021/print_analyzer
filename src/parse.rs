@@ -14,6 +14,65 @@ enum Line {
     Instruction(Instruction),
     Raw(String),
 }
+impl Line {
+    fn build(mut line: VecDeque<Word>, g1_count: Option<i32>) -> Line {
+        let Word(letter, num, _) = line[0];
+        let num = num as i32;
+        match (letter, num, letter.is_ascii_alphabetic()) {
+            ('G', 1, _) => {
+                let g1_count = g1_count.unwrap();
+                Line::G1(G1::build(line, g1_count))
+            }
+            ('N', _, _) => {
+                line.pop_front();
+                line.pop_front();
+                Line::build(line, None)
+            }
+            (_, _, true) => Line::Instruction(Instruction::build(line)),
+            (_, _, false) => {
+                let mut raw_line = String::new();
+                for word in line {
+                    let Word(letter, num, _) = word;
+                    raw_line += format!("{letter}{num}").as_str();
+                }
+                Line::Raw(raw_line)
+            }
+        }
+    }
+}
+
+impl Emit for Line {
+    fn emit(&self) -> String {
+        match self {
+            Line::G1(g1) => g1.emit(),
+            Line::Instruction(ins) => ins.emit(),
+            Line::Raw(string) => string.clone(),
+        }
+    }
+}
+const X_KEY: f32 = 1.1;
+const Y_KEY: f32 = 1.2;
+const Z_KEY: f32 = 1.3;
+const E_KEY: f32 = 1.4;
+const F_KEY: f32 = 1.5;
+
+
+
+trait DumbHash {
+    fn get_x(&self, key: f32) -> f32;
+    fn get_y(&self, key: f32) -> f32;
+    fn get_z(&self, key: f32) -> f32;
+    fn get_e(&self, key: f32) -> f32;
+    fn get_f(&self, key: f32) -> f32;
+    fn get_hash(&self) -> f32 {
+        self.get_x(X_KEY).powf(X_KEY)
+            * self.get_y(Y_KEY).powf(Y_KEY)
+            * self.get_z(Z_KEY).powf(Z_KEY)
+            * self.get_e(E_KEY).powf(E_KEY)
+            * self.get_f(F_KEY).powf(F_KEY)
+    }
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 struct State {
@@ -43,61 +102,11 @@ impl State {
         (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
     }
     fn get_hash(&mut self, g1: &G1) {
-        let x_key = 1.1;
-        let y_key = 1.2;
-        let z_key = 1.3;
-        let e_key = 1.4;
-        let f_key = 1.5;
-        self.hash = g1.x.unwrap_or(x_key).powf(x_key)
-            * g1.y.unwrap_or(y_key).powf(y_key)
-            * g1.z.unwrap_or(z_key).powf(z_key)
-            * g1.e.unwrap_or(e_key).powf(e_key)
-            * g1.f.unwrap_or(f_key).powf(f_key);
+        self.hash = g1.get_hash();
     }
 }
 
-impl Line {
-    fn build(mut line: VecDeque<Word>, g1_count: Option<i32>) -> Line {
-        let Word(letter, num, _) = line[0];
-        let num = num as i32;
-        match (letter, num, letter.is_ascii_alphabetic()) {
-            ('G', 1, _) => {
-                let g1_count = g1_count.unwrap();
-                Line::G1(G1::build(line, g1_count))
-            }
-            ('N', _, _) => {
-                line.pop_front();
-                line.pop_front();
-                Line::build(line, None)
-            }
-            (_, _, true) => Line::Instruction(Instruction::build(line)),
-            (_, _, false) => {
-                let mut raw_line = String::new();
-                for word in line {
-                    let Word(letter, num, _) = word;
-                    raw_line += format!("{letter}{num}").as_str();
-                }
-                Line::Raw(raw_line)
-            }
-        }
-    }
-    fn is_g1(&self) -> bool {
-        match self {
-            Line::G1(_) => true,
-            _ => false,
-        }
-    }
-}
 
-impl Emit for Line {
-    fn emit(&self) -> String {
-        match self {
-            Line::G1(g1) => g1.emit(),
-            Line::Instruction(ins) => ins.emit(),
-            Line::Raw(string) => string.clone(),
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 struct Instruction {
@@ -141,10 +150,24 @@ struct G1 {
     e: Option<f32>,
     f: Option<f32>,
 }
-
+impl DumbHash for G1 {
+    fn get_x(&self, key: f32) -> f32 {
+        self.x.unwrap_or(key)
+    }
+    fn get_y(&self, key: f32) -> f32 {
+        self.y.unwrap_or(key)
+    }
+    fn get_z(&self, key: f32) -> f32 {
+        self.z.unwrap_or(key)
+    }
+    fn get_e(&self, key: f32) -> f32 {
+        self.e.unwrap_or(key)
+    }
+    fn get_f(&self, key: f32) -> f32 {
+        self.f.unwrap_or(key)
+    }
+}
 impl G1 {
-    // all gcode moves should be relative and all
-    // cursor positions should be absolute
     fn build(params: VecDeque<Word>, move_count: i32) -> G1 {
         let mut x = None;
         let mut y = None;
@@ -206,7 +229,6 @@ struct ParsedGCode {
 impl ParsedGCode {
     fn set_states(&mut self) {
         let mut cursor = self.instructions.cursor_front_mut();
-        cursor.next();
         loop {
             cursor.update_state(self.g1_moves);
             if cursor.peek_next().is_none() {
@@ -439,6 +461,24 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
         false
     }
     fn update_state(&mut self, g1_count: i32) {
+        if let Some((Line::G1(g1), state)) = self.current() {
+            if g1.get_hash() == state.hash {
+                return;
+            }
+        }
+        if self.at_front() {
+            if self.at_g1() {
+                if let (Line::G1(g1), curr) = self.current().unwrap() {
+                    curr.x = g1.x.unwrap_or(NEG_INFINITY);
+                    curr.y = g1.y.unwrap_or(NEG_INFINITY);
+                    curr.z = g1.z.unwrap_or(NEG_INFINITY);
+                    curr.e = g1.e.unwrap_or(NEG_INFINITY);
+                    curr.f = g1.f.unwrap_or(NEG_INFINITY);
+                    curr.get_hash(&g1);
+                    return;
+                }
+            }
+        }
         if !self.at_g1() {
             let (_, prev) = self.peek_prev().unwrap();
             let x = prev.x;
@@ -452,6 +492,7 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
             curr.z = z;
             curr.e = e;
             curr.f = f;
+            curr.hash = NEG_INFINITY;
             return;
         }
         if !self.at_front() {
@@ -773,6 +814,40 @@ fn dist_test() {
 
     assert_eq!(a.dist(&b), (9.0_f32.powf(2.0) * 3.0).sqrt())
 }
+#[test]
+fn init_state() {
+    let input = "G1 X0 Y0 Z0";
+    let gcode = ParsedGCode::from_str(input);
+    let Some((Line::G1(g1), state)) = gcode.instructions.front() else {
+        panic!("asdf");
+    };
+    let blah = [state.x, state.y, state.z, state.e, state.f];
+    let test = [0.0, 0.0, 0.0, NEG_INFINITY, NEG_INFINITY];
+    assert_eq!(blah, test);
+}
+#[test]
+fn check_state() {
+    let input = "G1 X0 Y0 Z0 E0 F1000\n
+    G1 X1 Y2 Z3 E4 F2000\n
+    G1 X2 Y2 Z2 E-1.1 F1000\n
+    F1 X0 Y0 Z0 E100 F1\n";
+    let a = [[0.0, 0.0, 0.0, 0.0, 1000.0], [1.0, 2.0, 3.0, 4.0, 2000.0], [2.0, 2.0, 2.0, 2.9, 1000.0], [0.0, 0.0, 0.0, 102.9, 1.0]];
+    let mut i = 0;
+    let mut gcode = ParsedGCode::from_str(input);
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    while !cursor.at_end() {
+        let Some((Line::G1(g1), state)) = cursor.current() else {
+            panic!("asdf");
+        };
+        assert_eq!(a[i][0], state.x);
+        assert_eq!(a[i][1], state.y);
+        assert_eq!(a[i][2], state.z);
+        assert_eq!(a[i][3], state.e);
+        assert_eq!(a[i][4], state.f);
+        i+=1;
+        cursor.next();       
+    }
+}
 //#[test]
 // fn total_dist_test() {
 //     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
@@ -866,6 +941,7 @@ fn parse_m() {
     let line = read_line(line);
     assert_eq!(line, VecDeque::from([Word('M', 123.0, None)]));
 }
+#[test]
 fn sub_seg_test() {
     // the coordinates are wrong
     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
@@ -899,7 +975,17 @@ fn read_and_emit_test() {
     let out = gcode.emit();
     let mut file = File::create("test_output.gcode").unwrap();
     file.write_all(out.as_bytes());
-    let test_gcode = ParsedGCode::build("test_output.gcode");
-    panic!("adsf");
-    assert_eq!(gcode, test_gcode);
+    let test_gcode = ParsedGCode::build("test_output.gcode").emit();
+    let test_gcode = test_gcode.lines().map(|s| s.to_string()).collect::<Vec<String>>();
+    let out = out.lines().map(|s| s.to_string()).collect::<Vec<String>>();
+    let mut testy: Vec<String> = Vec::new();
+    for i in 0..100 {//out.len() - 1 {
+        if out[i+1] != test_gcode[i] {
+            testy.push(format!("{}_{}", out[i+1].clone(), test_gcode[i].clone()));
+        }
+    }
+    panic!("{:?}_{:?}_{:?}",out[out.len() - 1], test_gcode[test_gcode.len() - 1], testy);
+
+
+    //assert_eq!(gcode, test_gcode);
 }
