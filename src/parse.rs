@@ -231,7 +231,7 @@ struct ParsedGCode {
 impl ParsedGCode {
     fn set_states(&mut self) {
         let mut cursor = self.instructions.cursor_front_mut();
-        loop {
+        loop { // this is the loop i am stuck in
             cursor.update_state(self.g1_moves);
             if cursor.peek_next().is_none() {
                 break;
@@ -398,7 +398,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn move_next_g1(&mut self) -> Result<(), CursorError> {
         self.at_g1()?;
         self.next()?;
-        while let Ok(()) = self.at_g1() {
+        while let Err(_) = self.at_g1() {
             self.next()?
         }
         Ok(())
@@ -425,7 +425,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     }
     fn move_prev_g1(&mut self) -> Result<(), CursorError> {
         self.at_g1()?;
-        self.prev();
+        self.prev()?;
         while let Err(e) = self.at_g1() {
             self.prev()?;
         }
@@ -433,13 +433,16 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     }
     fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
         self.at_g1()?;
+        let init = self.current().unwrap() as *const (Line, State);
         if self.is_first_g1() {
-            return Err(CursorError::PastEnd);
+            return Err(CursorError::PastFront);
         }
         self.move_prev_g1()?;
         let line = self.current().unwrap().clone();
         self.move_next_g1()?;
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
         if let (Line::G1(g1), state) = line {
+
             return Ok((g1, state));
         }
         Err(CursorError::Unknown)
@@ -699,6 +702,7 @@ asdfafasdf\n
 
 #[test]
 fn check_g1_index() {
+    // this one frozen
     let mut gcode = ParsedGCode::build(TEST_INPUT);
     assert_eq!(gcode.g1_moves, 5);
     let mut cursor = gcode.instructions.cursor_front_mut();
@@ -825,13 +829,13 @@ fn check_state() {
     }
 }
 #[test]
-fn sub_all_test() { // THIS ONE IS STUCK IN LOOP
+fn sub_all_test() { // this one frozen
     let mut gcode = ParsedGCode::build(TEST_INPUT);
     gcode.subdivide(2);
     panic!("{:?}", gcode.instructions.len());
 }
 #[test]
-fn trans_test() {
+fn trans_test() { // this one frozen
     let input = "G1 X0 Y1 Z1\n
         G1 X1 E1\n
         G1 X2 E1\n
@@ -914,7 +918,7 @@ fn sub_seg_test() {
     panic!("{:#?}", gcode);
 }
 #[test]
-fn tot_dist_test() {
+fn tot_dist_test() { // this one frozen
     let input = "G1 X0 Y0 Z0\n
     G1 X1 Y0 Z0 \n
     G1 X1 Y1 Z0 \n
@@ -927,7 +931,7 @@ fn tot_dist_test() {
 use std::fs::File;
 use std::io::prelude::*;
 #[test]
-fn read_and_emit_test() {
+fn read_and_emit_test() { // this one frozen
     let path = "test.gcode";
     let gcode = ParsedGCode::build(path);
     let out = gcode.emit();
