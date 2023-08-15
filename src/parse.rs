@@ -59,7 +59,7 @@ impl State {
 impl Line {
     fn build(mut line: VecDeque<Word>, g1_count: Option<i32>) -> Line {
         let Word(letter, num, _) = line[0];
-        let num = num as u8;
+        let num = num as i32;
         match (letter, num, letter.is_ascii_alphabetic()) {
             ('G', 1, _) => {
                 let g1_count = g1_count.unwrap();
@@ -280,6 +280,7 @@ impl ParsedGCode {
         out
     }
     fn build(path: &str) -> ParsedGCode {
+        // G90 IS MISSING FROM PARSED GCODE
         let mut g1_moves = -1;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -301,11 +302,19 @@ impl ParsedGCode {
             let Word(letter, num, _) = line[0];
             let num = num as u8;
             match (letter, num) {
-                ('G', 90) => rel_xyz = false,
-                ('G', 91) => rel_xyz = true,
-                ('M', 82) => rel_e = false,
-                ('M', 83) => rel_e = true,
-                _ => (),
+                ('G', 90) => {
+                    rel_xyz = false;
+                }
+                ('G', 91) => { 
+                    rel_xyz = true;
+                }
+                ('M', 82) => {
+                    rel_e = false;
+                }
+                ('M', 83) => {
+                    rel_e = true;
+                }
+                _ => {}
             }
             parsed.push_back((Line::build(line, Some(g1_moves)), State::new()));
         }
