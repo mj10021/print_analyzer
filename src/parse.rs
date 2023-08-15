@@ -121,7 +121,7 @@ impl Emit for Instruction {
         if string.is_some() {
             return string.clone().unwrap();
         }
-        let mut out = format!("{}{}", letter, *num as u8);
+        let mut out = format!("{}{}", letter, *num as i32);
         if let Some(params) = &self.params {
             for Word(letter, val, _) in params {
                 out += &format!(" {}{}", letter, val);
@@ -900,5 +900,6 @@ fn read_and_emit_test() {
     let mut file = File::create("test_output.gcode").unwrap();
     file.write_all(out.as_bytes());
     let test_gcode = ParsedGCode::build("test_output.gcode");
+    panic!("adsf");
     assert_eq!(gcode, test_gcode);
 }
