@@ -4,7 +4,7 @@ use std::f32::NEG_INFINITY;
 #[derive(Clone, Debug, PartialEq)]
 struct Word(char, f32, Option<String>);
 
-trait Emit {
+pub trait Emit {
     fn emit(&self) -> String;
 }
 
@@ -131,7 +131,7 @@ impl Emit for Instruction {
             return string.clone().unwrap();
         }
         let mut out = format!("{}{}", letter, *num as i32);
-        if let Some(params) = &self.params {
+        if let Some(params) = params {
             for Word(letter, val, _) in params {
                 out += &format!(" {}{}", letter, val);
             }
@@ -262,7 +262,7 @@ impl ParsedGCode {
         // this is really just for running the tests
         let lines = match parse_file(path) {
             Ok(str) => str,
-            Err(e) => parse_str(path),
+            Err(_) => parse_str(path),
         };
         for raw_line in lines {
             let line = clean_line(&raw_line);
@@ -523,14 +523,13 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) {
         assert!(self.at_g1());
         if self.is_first_g1() || self.is_last_g1(g1_count) {
-            panic!("asdf"); // THIS IS FIRING AND SHOULDN'T BE
             return;
         }
         let mut init_next_de = 0.0;
         let mut new_next_dist = 0.0;
         let mut init_next_dist = 0.0;
 
-        let (prev_g1, prev_state) = self.get_prev_g1(g1_count).unwrap();
+        let (_, prev_state) = self.get_prev_g1(g1_count).unwrap();
         let (next_g1, next_state) = self.get_next_g1(g1_count).unwrap();
         if let Some((Line::G1(curr_g1), curr_state)) = self.current() {
             let init_prev_dist = curr_state.dist(&prev_state);
@@ -747,17 +746,6 @@ fn check_line_test() {
         ]))
     );
 }
-//#[test]
-//fn asdf() {
-//    let asdf = parse_file("test.gcode");
-//    let mut out = Vec::new();
-//    for line in asdf {
-//        if !check_line(&clean_line(&line)) {
-//            out.push(line.clone());
-//        }
-//    }
-//    panic!("{:#?}",out);
-//}
 #[test]
 fn parse_line() {
     let line = "M200 S1234 F129384.1234";
@@ -853,35 +841,11 @@ fn check_state() {
         cursor.next();
     }
 }
-//#[test]
-// fn total_dist_test() {
-//     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
-//     G1 X20 Y20 Z11 E10\n
-//     ;asdfasdfasdf\n";
-//     let mut gcode = ParsedGCode::from_str(input);
-//     let mut cursor = Cursor::build(&mut gcode);
-//     assert_eq!(
-//         cursor.total_file_dist(),
-//         (
-//             opt_dist_calc(
-//                 Some(1.0),
-//                 Some(20.0),
-//                 Some(1.0),
-//                 Some(20.0),
-//                 Some(1.0),
-//                 Some(11.0)
-//             ),
-//             2
-//         )
-//     );
-// }
-//
 #[test]
-fn sub_all_test() {
+fn sub_all_test() { // THIS ONE IS STUCK IN LOOP
     let mut gcode = ParsedGCode::build(TEST_INPUT);
     gcode.subdivide(10);
     panic!("{:#?}", gcode);
-
 }
 #[test]
 fn trans_test() {
@@ -903,7 +867,7 @@ fn trans_test() {
     cursor = gcode.instructions.cursor_front_mut();
 
     let t0 = G1 {
-        move_id: 0,
+        move_id: 1,
         x: Some(0.0),
         y: Some(1.0),
         z: Some(1.0),
@@ -911,7 +875,7 @@ fn trans_test() {
         f: None,
     };
     let t1 = G1 {
-        move_id: 1,
+        move_id: 2,
         x: Some(1.0),
         y: None,
         z: None,
@@ -919,7 +883,7 @@ fn trans_test() {
         f: None,
     };
     let t2 = G1 {
-        move_id: 2,
+        move_id: 3,
         x: Some(2.5),
         y: Some(1.0),
         z: Some(1.0),
@@ -927,7 +891,7 @@ fn trans_test() {
         f: None,
     };
     let t3 = G1 {
-        move_id: 3,
+        move_id: 4,
         x: Some(3.0),
         y: None,
         z: None,
@@ -981,12 +945,11 @@ use std::fs::File;
 use std::io::prelude::*;
 #[test]
 fn read_and_emit_test() {
-    use std::fs::*;
     let path = "test.gcode";
     let gcode = ParsedGCode::build(path);
     let out = gcode.emit();
     let mut file = File::create("test_output.gcode").unwrap();
-    file.write_all(out.as_bytes());
+    let _ = file.write_all(out.as_bytes());
     let test_gcode = ParsedGCode::build("test_output.gcode").emit();
     let test_gcode = test_gcode
         .lines()
