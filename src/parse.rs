@@ -121,6 +121,7 @@ impl Instruction {
 }
 
 impl Emit for Instruction {
+    // I NEED TO CHECK THIS
     fn emit(&self) -> String {
         let Instruction {
             first_word: Word(letter, num, string),
@@ -142,7 +143,7 @@ impl Emit for Instruction {
 
 #[derive(Clone, Debug, PartialEq)]
 struct G1 {
-    move_count: i32,
+    move_id: i32,
     x: Option<f32>,
     y: Option<f32>,
     z: Option<f32>,
@@ -167,7 +168,7 @@ impl DumbHash for G1 {
     }
 }
 impl G1 {
-    fn build(params: VecDeque<Word>, move_count: i32) -> G1 {
+    fn build(params: VecDeque<Word>, move_id: i32) -> G1 {
         let mut x = None;
         let mut y = None;
         let mut z = None;
@@ -184,7 +185,7 @@ impl G1 {
             }
         }
         G1 {
-            move_count,
+            move_id,
             x,
             y,
             z,
@@ -244,7 +245,7 @@ impl ParsedGCode {
         }
         let (_, init_state) = cursor.current().unwrap();
         let mut last = init_state.clone();
-        while !cursor.at_end() {
+        while !cursor.is_last_g1(self.g1_moves) {
             cursor.move_next_g1();
             let (_, curr) = cursor.current().unwrap();
             out += last.dist(curr);
@@ -252,61 +253,17 @@ impl ParsedGCode {
         }
         out
     }
-    fn from_str(str: &str) -> ParsedGCode {
-        if str.len() < 1 {
-            let mut ins = LinkedList::new();
-            let gcode = ParsedGCode {
-                instructions: ins,
-                rel_xyz: false,
-                rel_e: false,
-                g1_moves: 0,
-            };
-            return gcode;
-        }
-        let mut g1_moves = -1;
-        let mut parsed = LinkedList::new();
-        let mut rel_xyz = false;
-        let mut rel_e = true;
-        let lines = parse_str(str);
-        for raw_line in lines {
-            let line = clean_line(&raw_line);
-            if line.len() < 1 {
-                continue;
-            }
-
-            let line = read_line(line);
-            if line.front() == Some(&Word('G', 1.0, None)) {
-                g1_moves += 1;
-            }
-
-            let Word(letter, num, _) = line[0];
-            let num = num as u8;
-            match (letter, num) {
-                ('G', 90) => rel_xyz = false,
-                ('G', 91) => rel_xyz = true,
-                ('M', 82) => rel_e = false,
-                ('M', 83) => rel_e = true,
-                _ => (),
-            }
-            parsed.push_back((Line::build(line, Some(g1_moves)), State::new()));
-        }
-
-        let mut out = ParsedGCode {
-            instructions: parsed,
-            rel_xyz,
-            rel_e,
-            g1_moves,
-        };
-        out.set_states();
-        out
-    }
     fn build(path: &str) -> ParsedGCode {
-        // G90 IS MISSING FROM PARSED GCODE
-        let mut g1_moves = -1;
+        let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
         let mut rel_e = true;
-        let lines = parse_file(path);
+        // tries reading the input as g code if file parse error,
+        // this is really just for running the tests
+        let lines = match parse_file(path) {
+            Ok(str) => str,
+            Err(e) => parse_str(path),
+        };
         for raw_line in lines {
             let line = clean_line(&raw_line);
             if line.len() < 1 {
@@ -349,11 +306,23 @@ impl ParsedGCode {
         out.set_states();
         out
     }
+    fn subdivide(&mut self, count: u32) {
+        let tot_dist = self.tot_dist();
+        let mut cursor = self.instructions.cursor_front_mut();
+        while !cursor.at_g1() {
+            cursor.next();
+        }
+        let seg_len = tot_dist / self.g1_moves as f32;
+        cursor.move_next_g1();
+        while !cursor.is_last_g1(self.g1_moves) {
+            cursor.subdiv_seg(seg_len, self.g1_moves)
+        }
+    }
 }
 
 impl Emit for ParsedGCode {
     fn emit(&self) -> String {
-        let mut out = String::new();
+        let mut out = format!("; emitting gcode from print-analyzer");
         for (line, _) in &self.instructions {
             out += &line.emit();
         }
@@ -361,7 +330,7 @@ impl Emit for ParsedGCode {
     }
 }
 
-trait Curse {
+trait GCursor {
     fn at_end(&mut self) -> bool;
     fn at_front(&mut self) -> bool;
     fn at_g1(&mut self) -> bool;
@@ -377,7 +346,7 @@ trait Curse {
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32);
     fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32);
 }
-impl<'a> Curse for CursorMut<'a, (Line, State)> {
+impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn at_end(&mut self) -> bool {
         self.peek_next().is_none() && self.current().is_some()
     }
@@ -447,15 +416,15 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
     }
     fn is_first_g1(&mut self) -> bool {
         assert!(self.at_g1());
-        if let Some(&mut (Line::G1(G1 { move_count, .. }), _)) = self.current() {
-            return move_count == 0;
+        if let Some(&mut (Line::G1(G1 { move_id, .. }), _)) = self.current() {
+            return move_id == 0;
         }
         false
     }
     fn is_last_g1(&mut self, g1_count: i32) -> bool {
         assert!(self.at_g1());
-        if let Some(&mut (Line::G1(G1 { move_count, .. }), _)) = self.current() {
-            return move_count == g1_count;
+        if let Some(&mut (Line::G1(G1 { move_id, .. }), _)) = self.current() {
+            return move_id == g1_count;
         }
         false
     }
@@ -617,7 +586,7 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
         let mut i = 1.0;
         while i < seg_count {
             let new_g1 = G1 {
-                move_count: -1,
+                move_id: -1,
                 x: Some(prev_state.x + (dx * i)),
                 y: Some(prev_state.y + (dy * i)),
                 z: Some(prev_state.z + (dz * i)),
@@ -633,14 +602,15 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
     }
 }
 
-fn parse_file(path: &str) -> Vec<String> {
-    String::from_utf8(std::fs::read(path).unwrap())
+fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
         .split("\n")
         .map(|s| s.split(';').nth(0).unwrap()) // ignore any ';' comments
         .map(str::to_string)
         .filter(|s| s.len() > 0)
-        .collect()
+        .collect();
+    Ok(out)
 }
 
 fn parse_str(str: &str) -> Vec<String> {
@@ -734,6 +704,33 @@ fn read_line(mut line: VecDeque<char>) -> VecDeque<Word> {
 }
 
 #[cfg(test)]
+
+const TEST_INPUT: &str = "G1 X0 Y0 Z0 E0 F0\n
+G1 X10\n
+G1 Z10\n
+M324 S2345 Y245\n
+G1 E10\n
+G1 X5\n
+asdfasdfasdf\n
+asdfafasdf\n
+";
+
+#[test]
+fn check_g1_index() {
+    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    assert_eq!(gcode.g1_moves, 5);
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    let mut count = 0;
+    while !cursor.at_end() {
+        if let Some((Line::G1(g1), _)) = cursor.current() {
+            count += 1;
+            assert_eq!(count, g1.move_id);
+        }
+        cursor.next();
+    }
+    assert_eq!(gcode.g1_moves, count);
+}
+
 #[test]
 fn check_line_test() {
     assert_eq!(false, check_line(&VecDeque::from(['A', 'A', 'A'])));
@@ -820,7 +817,7 @@ fn dist_test() {
 #[test]
 fn init_state() {
     let input = "G1 X0 Y0 Z0";
-    let gcode = ParsedGCode::from_str(input);
+    let gcode = ParsedGCode::build(input);
     let Some((Line::G1(g1), state)) = gcode.instructions.front() else {
         panic!("asdf");
     };
@@ -841,7 +838,7 @@ fn check_state() {
         [0.0, 0.0, 0.0, 102.9, 1.0],
     ];
     let mut i = 0;
-    let mut gcode = ParsedGCode::from_str(input);
+    let mut gcode = ParsedGCode::build(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
     while !cursor.at_end() {
         let Some((Line::G1(g1), state)) = cursor.current() else {
@@ -880,12 +877,19 @@ fn check_state() {
 // }
 //
 #[test]
+fn sub_all_test() {
+    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    gcode.subdivide(10);
+    panic!("{:#?}", gcode);
+
+}
+#[test]
 fn trans_test() {
     let input = "G1 X0 Y1 Z1\n
         G1 X1 E1\n
         G1 X2 E1\n
         G1 X3 E1\n";
-    let mut gcode = ParsedGCode::from_str(input);
+    let mut gcode = ParsedGCode::build(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
 
     while let Some((line, state)) = cursor.current() {
@@ -899,7 +903,7 @@ fn trans_test() {
     cursor = gcode.instructions.cursor_front_mut();
 
     let t0 = G1 {
-        move_count: 0,
+        move_id: 0,
         x: Some(0.0),
         y: Some(1.0),
         z: Some(1.0),
@@ -907,7 +911,7 @@ fn trans_test() {
         f: None,
     };
     let t1 = G1 {
-        move_count: 1,
+        move_id: 1,
         x: Some(1.0),
         y: None,
         z: None,
@@ -915,7 +919,7 @@ fn trans_test() {
         f: None,
     };
     let t2 = G1 {
-        move_count: 2,
+        move_id: 2,
         x: Some(2.5),
         y: Some(1.0),
         z: Some(1.0),
@@ -923,7 +927,7 @@ fn trans_test() {
         f: None,
     };
     let t3 = G1 {
-        move_count: 3,
+        move_id: 3,
         x: Some(3.0),
         y: None,
         z: None,
@@ -955,7 +959,7 @@ fn sub_seg_test() {
     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
     G1 X20 Y20 Z11 E10\n
     ;asdfasdfasdf\n";
-    let mut gcode = ParsedGCode::from_str(input);
+    let mut gcode = ParsedGCode::build(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
     cursor.next();
     let seg_dist = 5.0;
@@ -969,7 +973,7 @@ fn tot_dist_test() {
     G1 X1 Y1 Z0 \n
     G1 X1 Y1 Z1 \n
     G1 X10 Y1 Z1\n";
-    let mut gcode = ParsedGCode::from_str(input);
+    let mut gcode = ParsedGCode::build(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
     assert_eq!(12.0, gcode.tot_dist());
 }
