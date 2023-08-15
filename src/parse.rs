@@ -1,8 +1,9 @@
-use std::collections::{LinkedList, linked_list::CursorMut, VecDeque};
+use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
 #[derive(Clone, Debug, PartialEq)]
-struct Word(pub char, pub f32);
+struct Word(char, f32, Option<String>);
+
 
 trait Emit {
     fn emit(&self) -> String;
@@ -49,22 +50,22 @@ impl State {
         let e_key = 1.4;
         let f_key = 1.5;
         self.hash = g1.x.unwrap_or(x_key).powf(x_key)
-        * g1.y.unwrap_or(y_key).powf(y_key)
-        * g1.z.unwrap_or(z_key).powf(z_key)
-        * g1.e.unwrap_or(e_key).powf(e_key)
-        * g1.f.unwrap_or(f_key).powf(f_key); 
+            * g1.y.unwrap_or(y_key).powf(y_key)
+            * g1.z.unwrap_or(z_key).powf(z_key)
+            * g1.e.unwrap_or(e_key).powf(e_key)
+            * g1.f.unwrap_or(f_key).powf(f_key);
     }
 }
 
 impl Line {
     fn build(mut line: VecDeque<Word>, g1_count: Option<i32>) -> Line {
-        let Word(letter, num) = line[0];
+        let Word(letter, num, _) = line[0];
         let num = num as u8;
         match (letter, num, letter.is_ascii_alphabetic()) {
             ('G', 1, _) => {
                 let g1_count = g1_count.unwrap();
                 Line::G1(G1::build(line, g1_count))
-            },
+            }
             ('N', _, _) => {
                 line.pop_front();
                 line.pop_front();
@@ -74,7 +75,7 @@ impl Line {
             (_, _, false) => {
                 let mut raw_line = String::new();
                 for word in line {
-                    let Word(letter, num) = word;
+                    let Word(letter, num, _) = word;
                     raw_line += format!("{letter}{num}").as_str();
                 }
                 Line::Raw(raw_line)
@@ -101,17 +102,15 @@ impl Emit for Line {
 
 #[derive(Clone, Debug, PartialEq)]
 struct Instruction {
-    letter: char,
-    val: u8,
+    first_word: Word,
     params: Option<VecDeque<Word>>,
 }
 
 impl Instruction {
     fn build(mut line: VecDeque<Word>) -> Instruction {
-        let Word(letter, val) = line.pop_front().unwrap();
+        let first_word = line.pop_front().unwrap();
         Instruction {
-            letter,
-            val: val as u8,
+            first_word,
             params: Some(line),
         }
     }
@@ -119,9 +118,9 @@ impl Instruction {
 
 impl Emit for Instruction {
     fn emit(&self) -> String {
-        let mut out = format!("{}{}", self.letter, self.val);
+        let mut out = format!("{:?}", self.first_word);
         if let Some(params) = &self.params {
-            for Word(letter, val) in params {
+            for Word(letter, val, _) in params {
                 out += &format!(" {}{}", letter, val);
             }
         }
@@ -159,7 +158,14 @@ impl G1 {
                 _ => (),
             }
         }
-        G1 { move_count, x, y, z, e, f }
+        G1 {
+            move_count,
+            x,
+            y,
+            z,
+            e,
+            f,
+        }
     }
 }
 
@@ -220,8 +226,6 @@ impl ParsedGCode {
             last = curr.clone();
         }
         out
-
-
     }
     fn from_str(str: &str) -> ParsedGCode {
         if str.len() < 1 {
@@ -244,12 +248,12 @@ impl ParsedGCode {
             if line.len() < 1 {
                 continue;
             }
-            if line[0..=1] == ['G','1'] {
+            if line[0..=1] == ['G', '1'] {
                 g1_moves += 1;
             }
-            let line = read_line(&line);
+            let line = read_line(line);
 
-            let Word(letter, num) = line[0];
+            let Word(letter, num, _) = line[0];
             let num = num as u8;
             match (letter, num) {
                 ('G', 90) => rel_xyz = false,
@@ -278,11 +282,17 @@ impl ParsedGCode {
         let lines = parse_file(path);
         for raw_line in lines {
             let line = clean_line(&raw_line);
-            if line[0..=1] == ['G','1'] {
+            if line.len() < 1 {
+                continue;
+            }
+            if line[0..=1] == ['G', '1'] {
                 g1_moves += 1;
             }
-            let line = read_line(&line);
-            let Word(letter, num) = line[0];
+            let line = read_line(line);
+            if line.len() < 1 {
+                continue;
+            }
+            let Word(letter, num, _) = line[0];
             let num = num as u8;
             match (letter, num) {
                 ('G', 90) => rel_xyz = false,
@@ -304,7 +314,6 @@ impl ParsedGCode {
         out
     }
 }
-
 
 impl Emit for ParsedGCode {
     fn emit(&self) -> String {
@@ -331,10 +340,8 @@ trait Curse {
     fn update_state(&mut self, g1_count: i32);
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32);
     fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32);
-
 }
 impl<'a> Curse for CursorMut<'a, (Line, State)> {
-
     fn at_end(&mut self) -> bool {
         self.peek_next().is_none() && self.current().is_some()
     }
@@ -371,8 +378,9 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
         self.move_prev_g1();
         if let (Line::G1(g1), state) = line {
             return Some((g1, state));
-        } else { panic!("asdf") }
-
+        } else {
+            panic!("asdf")
+        }
     }
     fn prev(&mut self) {
         assert!(self.at_g1());
@@ -395,19 +403,20 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
         self.move_next_g1();
         if let (Line::G1(g1), state) = line {
             return Some((g1, state));
-        } else { panic!("asdf") }
+        } else {
+            panic!("asdf")
+        }
     }
     fn is_first_g1(&mut self) -> bool {
         assert!(self.at_g1());
-        if let Some(&mut (Line::G1( G1 {move_count, .. }), _)) = self.current() {
+        if let Some(&mut (Line::G1(G1 { move_count, .. }), _)) = self.current() {
             return move_count == 0;
         }
         false
-
     }
     fn is_last_g1(&mut self, g1_count: i32) -> bool {
         assert!(self.at_g1());
-        if let Some(&mut (Line::G1( G1 { move_count, ..}), _)) = self.current() {
+        if let Some(&mut (Line::G1(G1 { move_count, .. }), _)) = self.current() {
             return move_count == g1_count;
         }
         false
@@ -446,7 +455,9 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
                 }
             }
         } else if self.at_g1() {
-            let Some((Line::G1(g1), state)) = self.current() else { panic!("adsf") };
+            let Some((Line::G1(g1), state)) = self.current() else {
+                panic!("adsf")
+            };
             if g1.x.is_some() {
                 state.x = g1.x.unwrap();
             }
@@ -497,13 +508,12 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
             };
             let new_prev_dist = temp_state.dist(&prev_state);
             new_next_dist = temp_state.dist(&next_state);
-            curr_g1.e = Some(init_curr_de * (new_prev_dist/init_prev_dist));
+            curr_g1.e = Some(init_curr_de * (new_prev_dist / init_prev_dist));
         }
         self.update_state(g1_count);
         self.move_next_g1();
         if let Some((Line::G1(next_g1), next_state)) = self.current() {
             next_g1.e = Some(init_next_de * (new_next_dist / init_next_dist));
-
         }
         self.update_state(g1_count);
         self.move_prev_g1();
@@ -585,64 +595,77 @@ fn clean_line(line: &str) -> Vec<char> {
     temp_line
 }
 
-fn read_line(line: &Vec<char>) -> VecDeque<Word> {
-    if line.len() < 2 {
-        return VecDeque::new();
+fn check_line(line: &Vec<char>) -> bool {
+    if !line[0].is_ascii_alphabetic() || line[line.len() - 1].is_ascii_alphabetic() {
+        return false;
     }
-    let mut output = VecDeque::new();
-    if line[0].is_alphabetic() && line[1].is_numeric() {
-        let mut temp_list: Vec<Vec<char>> = Vec::new();
-        let mut word: Vec<char> = Vec::new();
-        let mut has_letter = false;
-        for i in 0..line.len() {
-            if line[i].is_alphabetic() {
-                if has_letter {
-                    temp_list.push(word.clone());
-                    word = vec![line[i]];
-                } else {
-                    word.push(line[i]);
-                    has_letter = true;
-                }
+    let mut letter = false;
+    let mut number = true;
+    for char in line {
+        if !char.is_ascii_alphanumeric() && *char != '.' {
+            return false;
+        }
+        if char.is_ascii_alphabetic(){
+            if letter || !number {
+                return false;
             } else {
-                word.push(line[i]);
+                letter = true;
+                number = false;
             }
-        }
-        if word.len() > 0 {
-            temp_list.push(word.clone());
-        }
-
-        for word in temp_list {
-            assert!(word.len() > 1);
-            output.push_back(Word(
-                word[0],
-                word[1..]
-                    .into_iter()
-                    .collect::<String>()
-                    .parse::<f32>()
-                    .expect("invalid word value"),
-            ));
-        }
-    } else {
-        for char in line {
-            output.push_back(Word(*char, 0.0));
+        } else {
+            letter = false;
+            number = true;
         }
     }
-    output
+    true
+}
+
+fn split_line(mut line: Vec<char>) -> VecDeque<Word> {
+    let mut temp: Vec<char> = Vec::new();
+    let mut out = VecDeque::new();
+    temp.push(line.pop().unwrap());
+    while line.len() > 0 { 
+        while !line[0].is_ascii_alphabetic() {
+            temp.push(line.pop().unwrap());
+        }
+        out.push_back(Word(temp[0], temp[1..].iter().collect::<String>().parse::<f32>().unwrap(), None));
+        if line.len() > 0 {
+            temp = vec!(line.pop().unwrap());
+        }
+    }
+    out
+
+
+}
+
+fn read_line(mut line: Vec<char>) -> VecDeque<Word> {
+    // here i rly want to check if there is a character that doesn't make sense
+    // and just pass the raw string through if that's the case
+    if !check_line(&line) {
+        let word = Word('X', 0.0, Some(line.iter().collect()));
+        return VecDeque::from([word]);
+    }
+    split_line(line)
 }
 
 #[cfg(test)]
 #[test]
+fn check_line_test() {
+    assert_eq!(false, check_line(&vec!('A','A','A')));
+    assert_eq!(true, check_line(&vec!('G','1','X','1','.','1','Z','2')));
+    assert_eq!(false, check_line(&vec!('G','1','X','1','.','1','Z','2','A')));
+}
+#[test]
 fn parse_line() {
     let line = "M200 S1234 F129384.1234";
     let line: Vec<char> = clean_line(line);
-    let line = read_line(&line);
+    let line = read_line(line);
     let ins = Line::build(line, None);
-    let params = VecDeque::from([Word('S', 1234.0), Word('F', 129384.1234)]);
+    let params = VecDeque::from([Word('S', 1234.0, None), Word('F', 129384.1234, None)]);
     assert_eq!(
         ins,
         Line::Instruction(Instruction {
-            letter: 'M',
-            val: 200,
+            first_word: Word('M', 200.0, None),
             params: Some(params),
         })
     );
@@ -653,11 +676,11 @@ fn parse_random() {
     let line = "alksdhfbilwyfboqi3471bf049837gfo1bi4ubf1ilkh34bf";
     let mut test = VecDeque::new();
     for char in line.chars() {
-        test.push_back(Word(char.to_ascii_uppercase(), 0.0));
+        test.push_back(Word(char.to_ascii_uppercase(), 0.0, None));
     }
 
     let line = clean_line(line);
-    let line = read_line(&line);
+    let line = read_line(line);
 
     assert_eq!(test, line);
 }
@@ -682,9 +705,7 @@ fn dist_test() {
         hash: 0.0,
     };
 
-    assert_eq!(a.dist(&b),
-        (9.0_f32.powf(2.0) * 3.0).sqrt()
-    )
+    assert_eq!(a.dist(&b), (9.0_f32.powf(2.0) * 3.0).sqrt())
 }
 //#[test]
 // fn total_dist_test() {
@@ -708,7 +729,7 @@ fn dist_test() {
 //         )
 //     );
 // }
-// 
+//
 #[test]
 fn trans_test() {
     let input = "G1 X0 Y1 Z1\n
@@ -773,6 +794,12 @@ fn trans_test() {
     }
 }
 #[test]
+fn parse_m() {
+    let line = " M 123 ; asdkfhalk ";
+    let line = clean_line(line);
+    let line = read_line(line);
+    assert_eq!(line, VecDeque::from([Word('M', 123.0, None)]));
+}
 fn sub_seg_test() {
     // the coordinates are wrong
     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
@@ -795,4 +822,11 @@ fn tot_dist_test() {
     let mut gcode = ParsedGCode::from_str(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
     assert_eq!(12.0, gcode.tot_dist());
+}
+#[test]
+fn read_and_emit_test() {
+    let path = "test.gcode";
+    let gcode = ParsedGCode::build(path);
+    let out = gcode.emit();
+    panic!("{}", out);
 }

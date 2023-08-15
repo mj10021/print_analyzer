@@ -1,8 +1,6 @@
 #![allow(unused)]
 #![feature(linked_list_cursors)]
-#![feature(let_chains)]
-
-// pub mod analysis;
+pub mod analysis;
 pub mod parse;
 //pub mod transform;
 
