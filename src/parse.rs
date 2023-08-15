@@ -50,13 +50,12 @@ impl Emit for Line {
         }
     }
 }
+
 const X_KEY: f32 = 1.1;
 const Y_KEY: f32 = 1.2;
 const Z_KEY: f32 = 1.3;
 const E_KEY: f32 = 1.4;
 const F_KEY: f32 = 1.5;
-
-
 
 trait DumbHash {
     fn get_x(&self, key: f32) -> f32;
@@ -73,7 +72,6 @@ trait DumbHash {
     }
 }
 
-
 #[derive(Clone, Debug, PartialEq)]
 struct State {
     x: f32,
@@ -81,7 +79,7 @@ struct State {
     z: f32,
     e: f32,
     f: f32,
-    hash: f32,
+    g1_hash: f32,
 }
 
 impl State {
@@ -92,7 +90,7 @@ impl State {
             z: NEG_INFINITY,
             e: NEG_INFINITY,
             f: NEG_INFINITY,
-            hash: NEG_INFINITY,
+            g1_hash: NEG_INFINITY,
         }
     }
     fn dist(&self, init: &State) -> f32 {
@@ -102,11 +100,9 @@ impl State {
         (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
     }
     fn get_hash(&mut self, g1: &G1) {
-        self.hash = g1.get_hash();
+        self.g1_hash = g1.get_hash();
     }
 }
-
-
 
 #[derive(Clone, Debug, PartialEq)]
 struct Instruction {
@@ -126,7 +122,10 @@ impl Instruction {
 
 impl Emit for Instruction {
     fn emit(&self) -> String {
-        let Instruction { first_word: Word(letter, num, string), params} = self;
+        let Instruction {
+            first_word: Word(letter, num, string),
+            params,
+        } = self;
         if string.is_some() {
             return string.clone().unwrap();
         }
@@ -276,7 +275,7 @@ impl ParsedGCode {
             }
 
             let line = read_line(line);
-            if line.front() == Some(&Word('G',1.0, None)) {
+            if line.front() == Some(&Word('G', 1.0, None)) {
                 g1_moves += 1;
             }
 
@@ -327,7 +326,7 @@ impl ParsedGCode {
                 ('G', 90) => {
                     rel_xyz = false;
                 }
-                ('G', 91) => { 
+                ('G', 91) => {
                     rel_xyz = true;
                 }
                 ('M', 82) => {
@@ -462,7 +461,7 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
     }
     fn update_state(&mut self, g1_count: i32) {
         if let Some((Line::G1(g1), state)) = self.current() {
-            if g1.get_hash() == state.hash {
+            if g1.get_hash() == state.g1_hash {
                 return;
             }
         }
@@ -492,7 +491,7 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
             curr.z = z;
             curr.e = e;
             curr.f = f;
-            curr.hash = NEG_INFINITY;
+            curr.g1_hash = NEG_INFINITY;
             return;
         }
         if !self.at_front() {
@@ -578,7 +577,7 @@ impl<'a> Curse for CursorMut<'a, (Line, State)> {
                 z: curr_state.z + dz,
                 e: 0.0,
                 f: 0.0,
-                hash: 0.0,
+                g1_hash: 0.0,
             };
             let new_prev_dist = temp_state.dist(&prev_state);
             new_next_dist = temp_state.dist(&next_state);
@@ -740,11 +739,15 @@ fn check_line_test() {
     assert_eq!(false, check_line(&VecDeque::from(['A', 'A', 'A'])));
     assert_eq!(
         true,
-        check_line(&VecDeque::from(['G', '1', 'X', '-', '1', '.', '1', 'Z', '2']))
+        check_line(&VecDeque::from([
+            'G', '1', 'X', '-', '1', '.', '1', 'Z', '2'
+        ]))
     );
     assert_eq!(
         false,
-        check_line(&VecDeque::from(['G', '1', 'X', '1', '.', '1', 'Z', '2', 'A']))
+        check_line(&VecDeque::from([
+            'G', '1', 'X', '1', '.', '1', 'Z', '2', 'A'
+        ]))
     );
 }
 //#[test]
@@ -764,7 +767,7 @@ fn parse_line() {
     let line = clean_line(line);
 
     let line = read_line(line);
-    
+
     let ins = Line::build(line, None);
     let params = VecDeque::from([Word('S', 1234.0, None), Word('F', 129384.1234, None)]);
     assert_eq!(
@@ -801,7 +804,7 @@ fn dist_test() {
         z: 1.0,
         e: 0.0,
         f: 0.0,
-        hash: 0.0,
+        g1_hash: 0.0,
     };
     let b = State {
         x: 10.0,
@@ -809,7 +812,7 @@ fn dist_test() {
         z: 10.0,
         e: 0.0,
         f: 0.0,
-        hash: 0.0,
+        g1_hash: 0.0,
     };
 
     assert_eq!(a.dist(&b), (9.0_f32.powf(2.0) * 3.0).sqrt())
@@ -831,7 +834,12 @@ fn check_state() {
     G1 X1 Y2 Z3 E4 F2000\n
     G1 X2 Y2 Z2 E-1.1 F1000\n
     F1 X0 Y0 Z0 E100 F1\n";
-    let a = [[0.0, 0.0, 0.0, 0.0, 1000.0], [1.0, 2.0, 3.0, 4.0, 2000.0], [2.0, 2.0, 2.0, 2.9, 1000.0], [0.0, 0.0, 0.0, 102.9, 1.0]];
+    let a = [
+        [0.0, 0.0, 0.0, 0.0, 1000.0],
+        [1.0, 2.0, 3.0, 4.0, 2000.0],
+        [2.0, 2.0, 2.0, 2.9, 1000.0],
+        [0.0, 0.0, 0.0, 102.9, 1.0],
+    ];
     let mut i = 0;
     let mut gcode = ParsedGCode::from_str(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
@@ -844,8 +852,8 @@ fn check_state() {
         assert_eq!(a[i][2], state.z);
         assert_eq!(a[i][3], state.e);
         assert_eq!(a[i][4], state.f);
-        i+=1;
-        cursor.next();       
+        i += 1;
+        cursor.next();
     }
 }
 //#[test]
@@ -976,16 +984,24 @@ fn read_and_emit_test() {
     let mut file = File::create("test_output.gcode").unwrap();
     file.write_all(out.as_bytes());
     let test_gcode = ParsedGCode::build("test_output.gcode").emit();
-    let test_gcode = test_gcode.lines().map(|s| s.to_string()).collect::<Vec<String>>();
+    let test_gcode = test_gcode
+        .lines()
+        .map(|s| s.to_string())
+        .collect::<Vec<String>>();
     let out = out.lines().map(|s| s.to_string()).collect::<Vec<String>>();
     let mut testy: Vec<String> = Vec::new();
-    for i in 0..100 {//out.len() - 1 {
-        if out[i+1] != test_gcode[i] {
-            testy.push(format!("{}_{}", out[i+1].clone(), test_gcode[i].clone()));
+    for i in 0..100 {
+        //out.len() - 1 {
+        if out[i + 1] != test_gcode[i] {
+            testy.push(format!("{}_{}", out[i + 1].clone(), test_gcode[i].clone()));
         }
     }
-    panic!("{:?}_{:?}_{:?}",out[out.len() - 1], test_gcode[test_gcode.len() - 1], testy);
-
+    panic!(
+        "{:?}_{:?}_{:?}",
+        out[out.len() - 1],
+        test_gcode[test_gcode.len() - 1],
+        testy
+    );
 
     //assert_eq!(gcode, test_gcode);
 }
