@@ -1,5 +1,7 @@
 use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
+use std::error::Error;
 use std::f32::NEG_INFINITY;
+
 
 #[derive(Clone, Debug, PartialEq)]
 struct Word(char, f32, Option<String>);
@@ -240,7 +242,7 @@ impl ParsedGCode {
     fn tot_dist(&mut self) -> f32 {
         let mut out = 0.0;
         let mut cursor = self.instructions.cursor_front_mut();
-        while !cursor.at_g1() {
+        while let Ok(()) = cursor.at_g1() {
             cursor.next();
         }
         let (_, init_state) = cursor.current().unwrap();
@@ -306,16 +308,15 @@ impl ParsedGCode {
         out.set_states();
         out
     }
-    fn subdivide(&mut self, count: u32) {
-        let tot_dist = self.tot_dist();
+    fn subdivide(&mut self, count: i32) {
         let mut cursor = self.instructions.cursor_front_mut();
-        while !cursor.at_g1() {
+        while let Ok(()) = cursor.at_g1() {
             cursor.next();
         }
-        let seg_len = tot_dist / self.g1_moves as f32;
         cursor.move_next_g1();
         while !cursor.is_last_g1(self.g1_moves) {
-            cursor.subdiv_seg(seg_len, self.g1_moves)
+            cursor.subdiv_seg(count, self.g1_moves);
+            cursor.move_next_g1();
         }
     }
 }
@@ -329,22 +330,49 @@ impl Emit for ParsedGCode {
         out
     }
 }
-
+enum CursorError {
+    PastEnd,
+    PastFront,
+    ExpectedG1,
+    Unknown,
+}
+impl std::fmt::Display for CursorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            CursorError::PastEnd => "past end",
+            CursorError::PastFront => "past front",
+            CursorError::ExpectedG1 => "expected g1",
+            CursorError::Unknown => "unknown... spooky",
+        };
+        write!(f, "{}", msg)
+    }
+}
+impl std::fmt::Debug for CursorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            CursorError::PastEnd => "past end",
+            CursorError::PastFront => "past front",
+            CursorError::ExpectedG1 => "expected g1",
+            CursorError::Unknown => "unknown... spooky",
+        };
+        write!(f, "{}", msg)
+    }
+}
 trait GCursor {
     fn at_end(&mut self) -> bool;
     fn at_front(&mut self) -> bool;
-    fn at_g1(&mut self) -> bool;
-    fn next(&mut self);
-    fn prev(&mut self);
-    fn move_next_g1(&mut self);
-    fn get_next_g1(&mut self, g1_count: i32) -> Option<(G1, State)>;
-    fn move_prev_g1(&mut self);
-    fn get_prev_g1(&mut self, g1_count: i32) -> Option<(G1, State)>;
+    fn at_g1(&mut self) -> Result<(), CursorError>;
+    fn next(&mut self) -> Result<(), CursorError>;
+    fn prev(&mut self) -> Result<(), CursorError>;
+    fn move_next_g1(&mut self) -> Result<(), CursorError>;
+    fn get_next_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
+    fn move_prev_g1(&mut self) -> Result<(), CursorError>;
+    fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
     fn is_first_g1(&mut self) -> bool;
     fn is_last_g1(&mut self, g1_count: i32) -> bool;
     fn update_state(&mut self, g1_count: i32);
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32);
-    fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32);
+    fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32);
 }
 impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn at_end(&mut self) -> bool {
@@ -353,175 +381,130 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn at_front(&mut self) -> bool {
         self.peek_prev().is_none() && self.current().is_some()
     }
-    fn at_g1(&mut self) -> bool {
-        match self.current() {
-            Some((Line::G1(_), _)) => true,
-            _ => false,
+    fn at_g1(&mut self) -> Result<(), CursorError> {
+        if let Some((Line::G1(_), _)) = self.current() {
+            return Ok(());
         }
+        Err(CursorError::ExpectedG1)
     }
     // move cursor forward without wrapping
-    fn next(&mut self) {
+    fn next(&mut self) -> Result<(), CursorError>{
         if self.at_end() {
-            panic!("moving past end of list");
+            return Err(CursorError::PastEnd);
         }
         self.move_next();
+        Ok(())
     }
-    fn move_next_g1(&mut self) {
-        assert!(self.at_g1());
-        self.next();
-        while !self.at_g1() {
-            self.next()
+    fn move_next_g1(&mut self) -> Result<(), CursorError> {
+        self.at_g1()?;
+        self.next()?;
+        while let Ok(()) = self.at_g1() {
+            self.next()?
         }
+        Ok(())
     }
-    fn get_next_g1(&mut self, g1_count: i32) -> Option<(G1, State)> {
-        assert!(self.at_g1());
+    fn get_next_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
+        self.at_g1()?;
         if self.is_last_g1(g1_count) {
-            return None;
-        }
-        self.move_next_g1();
+            return Err(CursorError::PastEnd);
+        };
+        self.move_next_g1()?;
         let line = self.current().unwrap().clone();
-        self.move_prev_g1();
+        self.move_prev_g1()?;
         if let (Line::G1(g1), state) = line {
-            return Some((g1, state));
-        } else {
-            panic!("asdf")
+            return Ok((g1, state));
         }
+        Err(CursorError::Unknown)
     }
-    fn prev(&mut self) {
+    fn prev(&mut self) -> Result<(), CursorError> {
         if self.at_front() {
-            panic!("moving past front of list");
+            return Err(CursorError::PastFront);
         }
         self.move_prev();
+        Ok(())
     }
-    fn move_prev_g1(&mut self) {
-        assert!(self.at_g1());
+    fn move_prev_g1(&mut self) -> Result<(), CursorError> {
+        self.at_g1()?;
         self.prev();
-        while !self.at_g1() {
-            self.prev()
+        while let Err(e) = self.at_g1() {
+            self.prev()?;
         }
+        Ok(())
     }
-    fn get_prev_g1(&mut self, g1_count: i32) -> Option<(G1, State)> {
-        assert!(self.at_g1());
+    fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
+        self.at_g1()?;
         if self.is_first_g1() {
-            return None;
+            return Err(CursorError::PastEnd);
         }
-        self.move_prev_g1();
+        self.move_prev_g1()?;
         let line = self.current().unwrap().clone();
-        self.move_next_g1();
+        self.move_next_g1()?;
         if let (Line::G1(g1), state) = line {
-            return Some((g1, state));
-        } else {
-            panic!("asdf")
+            return Ok((g1, state));
         }
+        Err(CursorError::Unknown)
     }
     fn is_first_g1(&mut self) -> bool {
-        assert!(self.at_g1());
+        if let Err(e) = self.at_g1() {
+            panic!("call from non-g1");
+        };
         if let Some(&mut (Line::G1(G1 { move_id, .. }), _)) = self.current() {
             return move_id == 0;
         }
         false
     }
     fn is_last_g1(&mut self, g1_count: i32) -> bool {
-        assert!(self.at_g1());
+        if let Err(e) = self.at_g1() {
+            panic!("call from non-g1");
+        };
         if let Some(&mut (Line::G1(G1 { move_id, .. }), _)) = self.current() {
             return move_id == g1_count;
         }
         false
     }
     fn update_state(&mut self, g1_count: i32) {
+
+        // if the state "hash" is from the current G1, update nothing
         if let Some((Line::G1(g1), state)) = self.current() {
             if g1.get_hash() == state.g1_hash {
                 return;
             }
         }
-        if self.at_front() {
-            if self.at_g1() {
-                if let (Line::G1(g1), curr) = self.current().unwrap() {
-                    curr.x = g1.x.unwrap_or(NEG_INFINITY);
-                    curr.y = g1.y.unwrap_or(NEG_INFINITY);
-                    curr.z = g1.z.unwrap_or(NEG_INFINITY);
-                    curr.e = g1.e.unwrap_or(NEG_INFINITY);
-                    curr.f = g1.f.unwrap_or(NEG_INFINITY);
-                    curr.get_hash(&g1);
-                    return;
-                }
+        if let Ok((prev_g1, prev_state)) = self.get_prev_g1(g1_count) {
+            match self.current() {
+                Some((Line::G1(g1), state)) => {
+                    state.x = g1.x.unwrap_or(prev_state.x);
+                    state.y = g1.y.unwrap_or(prev_state.y);
+                    state.z = g1.z.unwrap_or(prev_state.z);
+                    state.e = prev_state.e + g1.e.unwrap_or(0.0);
+                    state.f = g1.f.unwrap_or(prev_state.f);
+                    state.g1_hash = g1.get_hash();
+                },
+                Some((_, state)) => {
+                    state.x = prev_state.x;
+                    state.y = prev_state.y;
+                    state.z = prev_state.z;
+                    state.e = prev_state.e;
+                    state.f = prev_state.f;
+                    state.g1_hash = NEG_INFINITY;                   
+                },
+                None => { panic!("uh oh"); }
             }
-        }
-        if !self.at_g1() {
-            let (_, prev) = self.peek_prev().unwrap();
-            let x = prev.x;
-            let y = prev.y;
-            let z = prev.z;
-            let e = prev.e;
-            let f = prev.f;
-            let (_, curr) = self.current().unwrap();
-            curr.x = x;
-            curr.y = y;
-            curr.z = z;
-            curr.e = e;
-            curr.f = f;
-            curr.g1_hash = NEG_INFINITY;
-            return;
-        }
-        if !self.at_front() {
-            assert!(self.at_g1());
-            // this should be if first g1 not if at front
-            let prev = self.get_prev_g1(g1_count);
-            if let Some((prev_g1, prev_state)) = prev {
-                if let Some((Line::G1(curr_g1), curr_state)) = self.current() {
-                    if curr_g1.x.is_some() {
-                        curr_state.x = curr_g1.x.unwrap();
-                    } else {
-                        curr_state.x = prev_state.x;
-                    }
-                    if curr_g1.y.is_some() {
-                        curr_state.y = curr_g1.y.unwrap();
-                    } else {
-                        curr_state.y = prev_state.y;
-                    }
-                    if curr_g1.z.is_some() {
-                        curr_state.z = curr_g1.z.unwrap();
-                    } else {
-                        curr_state.z = prev_state.z;
-                    }
-                    curr_state.e = prev_state.e;
-                    if curr_g1.e.is_some() {
-                        curr_state.e += curr_g1.e.unwrap();
-                    }
-                    if curr_g1.f.is_some() {
-                        curr_state.f = curr_g1.f.unwrap();
-                    } else {
-                        curr_state.f = prev_state.f;
-                    }
-                    curr_state.get_hash(curr_g1)
-                }
-            }
-        } else if self.at_g1() {
-            let Some((Line::G1(g1), state)) = self.current() else {
-                panic!("adsf")
-            };
-            if g1.x.is_some() {
-                state.x = g1.x.unwrap();
-            }
-            if g1.y.is_some() {
-                state.y = g1.y.unwrap();
-            }
-            if g1.z.is_some() {
-                state.z = g1.z.unwrap();
-            }
-            if g1.e.is_some() {
-                state.e = g1.e.unwrap();
-            }
-            if g1.f.is_some() {
-                state.f = g1.f.unwrap();
-            }
-            state.get_hash(g1);
         } else {
-            return;
+            if let Some((Line::G1(g1), state)) = self.current() {
+                    state.x = g1.x.unwrap_or(NEG_INFINITY);
+                state.y = g1.y.unwrap_or(NEG_INFINITY);
+                state.z = g1.z.unwrap_or(NEG_INFINITY);
+                state.e = g1.e.unwrap_or(NEG_INFINITY);
+                state.f = g1.f.unwrap_or(NEG_INFINITY);
+                state.g1_hash = g1.get_hash();                   
+            }
         }
     }
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) {
-        assert!(self.at_g1());
+        if let Err(e) = self.at_g1() {
+            panic!("{}",e);
+        }
         if self.is_first_g1() || self.is_last_g1(g1_count) {
             return;
         }
@@ -559,36 +542,36 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         self.update_state(g1_count);
         self.move_prev_g1();
     }
-    fn subdiv_seg(&mut self, seg_len: f32, g1_count: i32) {
-        assert!(self.at_g1());
+    fn subdiv_seg(&mut self, count: i32, g1_count: i32) {
+        if let Err(e) = self.at_g1() {
+            panic!("{}", e);
+        }
         assert!(!self.is_first_g1());
         let (prev_g1, prev_state) = self.get_prev_g1(g1_count).unwrap();
         let mut dx = 0.0;
         let mut dy = 0.0;
         let mut dz = 0.0;
         let mut de = 0.0;
-        let mut seg_count = 0.0;
         let mut f: Option<f32> = None;
         if let Some((Line::G1(curr_g1), curr_state)) = self.current() {
             let init_dx = curr_state.x - prev_state.x;
             let init_dy = curr_state.y - prev_state.y;
             let init_dz = curr_state.z - prev_state.z;
             let init_dist = curr_state.dist(&prev_state);
-            seg_count = (init_dist / seg_len).trunc();
-            dx = curr_state.x / seg_count;
-            dy = curr_state.y / seg_count;
-            dz = curr_state.z / seg_count;
-            de = curr_g1.e.unwrap_or(0.0) / seg_count;
+            dx = curr_state.x / count as f32;
+            dy = curr_state.y / count as f32;
+            dz = curr_state.z / count as f32;
+            de = curr_g1.e.unwrap_or(0.0) / count as f32;
             curr_g1.e = Some(de);
             f = curr_g1.f;
         }
-        let mut i = 1.0;
-        while i < seg_count {
+        let mut i = 1;
+        while i < count {
             let new_g1 = G1 {
                 move_id: -1,
-                x: Some(prev_state.x + (dx * i)),
-                y: Some(prev_state.y + (dy * i)),
-                z: Some(prev_state.z + (dz * i)),
+                x: Some(prev_state.x + (dx * i as f32)),
+                y: Some(prev_state.y + (dy * i as f32)),
+                z: Some(prev_state.z + (dz * i as f32)),
                 e: Some(de),
                 f,
             };
@@ -596,7 +579,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
             self.prev();
             self.update_state(g1_count);
             self.next();
-            i += 1.0;
+            i += 1;
         }
     }
 }
@@ -844,8 +827,8 @@ fn check_state() {
 #[test]
 fn sub_all_test() { // THIS ONE IS STUCK IN LOOP
     let mut gcode = ParsedGCode::build(TEST_INPUT);
-    gcode.subdivide(10);
-    panic!("{:#?}", gcode);
+    gcode.subdivide(2);
+    panic!("{:?}", gcode.instructions.len());
 }
 #[test]
 fn trans_test() {
@@ -926,8 +909,8 @@ fn sub_seg_test() {
     let mut gcode = ParsedGCode::build(input);
     let mut cursor = gcode.instructions.cursor_front_mut();
     cursor.next();
-    let seg_dist = 5.0;
-    cursor.subdiv_seg(seg_dist, gcode.g1_moves);
+    let seg_count = 5;
+    cursor.subdiv_seg(seg_count, gcode.g1_moves);
     panic!("{:#?}", gcode);
 }
 #[test]
@@ -963,12 +946,24 @@ fn read_and_emit_test() {
             testy.push(format!("{}_{}", out[i + 1].clone(), test_gcode[i].clone()));
         }
     }
-    panic!(
-        "{:?}_{:?}_{:?}",
-        out[out.len() - 1],
-        test_gcode[test_gcode.len() - 1],
-        testy
-    );
+    let a: std::collections::HashSet::<String> = out.clone().into_iter().collect();
+    let b: std::collections::HashSet::<String> = test_gcode.clone().into_iter().collect();
+    for line in &test_gcode {
+        if !a.contains(line) || !b.contains(line) {
+            panic!("adsf");
+        }
+    for line in &out {
+        if !a.contains(line) || !b.contains(line) {
+            panic!("adsf");
+        }
+    }
+}
+    // panic!(
+    //     "{:?}_{:?}_{:?}",
+    //     out[out.len() - 1],
+    //     test_gcode[test_gcode.len() - 1],
+    //     testy
+    // );
 
     //assert_eq!(gcode, test_gcode);
 }
