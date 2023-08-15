@@ -242,7 +242,7 @@ impl ParsedGCode {
     fn tot_dist(&mut self) -> f32 {
         let mut out = 0.0;
         let mut cursor = self.instructions.cursor_front_mut();
-        while let Ok(()) = cursor.at_g1() {
+        while let Err(_) = cursor.at_g1() {
             cursor.next();
         }
         let (_, init_state) = cursor.current().unwrap();
@@ -702,7 +702,6 @@ asdfafasdf\n
 
 #[test]
 fn check_g1_index() {
-    // this one frozen
     let mut gcode = ParsedGCode::build(TEST_INPUT);
     assert_eq!(gcode.g1_moves, 5);
     let mut cursor = gcode.instructions.cursor_front_mut();
@@ -829,13 +828,13 @@ fn check_state() {
     }
 }
 #[test]
-fn sub_all_test() { // this one frozen
+fn sub_all_test() {
     let mut gcode = ParsedGCode::build(TEST_INPUT);
     gcode.subdivide(2);
     panic!("{:?}", gcode.instructions.len());
 }
 #[test]
-fn trans_test() { // this one frozen
+fn trans_test() { 
     let input = "G1 X0 Y1 Z1\n
         G1 X1 E1\n
         G1 X2 E1\n
@@ -918,7 +917,7 @@ fn sub_seg_test() {
     panic!("{:#?}", gcode);
 }
 #[test]
-fn tot_dist_test() { // this one frozen
+fn tot_dist_test() { 
     let input = "G1 X0 Y0 Z0\n
     G1 X1 Y0 Z0 \n
     G1 X1 Y1 Z0 \n
