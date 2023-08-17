@@ -191,14 +191,14 @@ impl ParsedGCode {
     fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
-            // this is the loop i am stuck in
             assert!(cursor.current().is_some());
             cursor.update_state(self.g1_moves)?;
-            if cursor.peek_next().is_none() {
+            if cursor.at_end() {
                 return Ok(());
             }
-            cursor.move_next();
+            cursor.next()?;
         }
+        Err(CursorError::Unknown)
     }
     fn tot_dist(&mut self) -> f32 {
         let mut out = 0.0;
@@ -413,7 +413,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
             panic!("call from non-g1");
         };
         if let Some(&mut (Line::G1(G1 { move_id, .. }), _)) = self.current() {
-            return move_id == 0;
+            return move_id == 1;
         }
         false
     }
@@ -657,6 +657,11 @@ G1 X10\n
 G1 Z10\n
 M324 S2345 Y245\n
 G1 E10\n
+G28 ; home all without mesh bed level\n
+G29 ; mesh bed leveling \n
+M204 T2500 ; restore travel acceleration\n
+M104 S220 ; set extruder temp\n
+G92 E0\n
 G1 X5\n
 asdfasdfasdf\n
 asdfafasdf\n
@@ -678,15 +683,15 @@ fn check_g1_index() {
     assert_eq!(gcode.g1_moves, count);
 }
 #[test]
-fn get_g1_index_return() {
+fn get_g1_index_return() { 
     let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
-    cursor.next();
-    while cursor.peek_next().is_some() {
+    cursor.next().expect("asdf");
+    while !cursor.is_last_g1(gcode.g1_moves) {
         let init = cursor.current().unwrap() as *const (Line, State);
         cursor.get_prev_g1(gcode.g1_moves).expect("asdf");
         assert_eq!(cursor.current().unwrap() as *const (Line, State), init);
-        cursor.move_next_g1(gcode.g1_moves);
+        cursor.move_next_g1(gcode.g1_moves).expect("asdf");
     }
 }
 #[test]
