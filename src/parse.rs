@@ -188,14 +188,14 @@ struct ParsedGCode {
 }
 
 impl ParsedGCode {
-    fn set_states(&mut self) {
+    fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
             // this is the loop i am stuck in
             assert!(cursor.current().is_some());
-            cursor.update_state(self.g1_moves);
+            cursor.update_state(self.g1_moves)?;
             if cursor.peek_next().is_none() {
-                break;
+                return Ok(());
             }
             cursor.move_next();
         }
@@ -216,7 +216,7 @@ impl ParsedGCode {
         }
         out
     }
-    fn build(path: &str) -> ParsedGCode {
+    fn build(path: &str) -> Result<ParsedGCode, CursorError> {
         let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -266,8 +266,8 @@ impl ParsedGCode {
             rel_e,
             g1_moves,
         };
-        out.set_states();
-        out
+        out.set_states()?;
+        Ok(out)
     }
     fn subdivide(&mut self, count: i32) {
         let mut cursor = self.instructions.cursor_front_mut();
@@ -359,12 +359,8 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn move_next_g1(&mut self) -> Result<(), CursorError> {
         // this one doesn't rly work
         self.at_g1()?;
-        let init = self.current().unwrap() as *const (Line, State);
         self.next()?;
         while let Err(_) = self.at_g1() {
-            if self.current().unwrap() as *const (Line, State) == init {
-                return Err(CursorError::Unknown);
-            }
             self.next()?;
         }
         Ok(())
@@ -392,12 +388,8 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn move_prev_g1(&mut self) -> Result<(), CursorError> {
         // this one doesn't rly work
         self.at_g1()?;
-        let init = self.current().unwrap() as *const (Line, State);
         self.prev()?;
         while let Err(e) = self.at_g1() {
-            if self.current().unwrap() as *const (Line, State) == init {
-                return Err(CursorError::Unknown);
-            }
             self.prev()?;
         }
         Ok(())
@@ -442,22 +434,14 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         false
     }
     fn update_state(&mut self, g1_count: i32) -> Result<(), CursorError> {
-        let init = self.current().unwrap() as *const (Line, State);
 
-        // if the state "hash" is from the current G1, update nothing
+        // if the state is from the current G1, update nothing
         if let Some((Line::G1(g1), state)) = self.current() {
             if g1.emit() == state.g1_emit {
                 return Ok(());
             }
         }
-        assert_eq!(self.current().unwrap() as *const (Line, State), init);
-        let a = self.current().cloned();
-        let prev = self.get_prev_g1(g1_count)?;
-        if self.current().unwrap() as *const (Line, State) != init {
-            panic!("{:?}\n\n{:?}", self.current(), a);
-        }
-        if let (prev_g1, prev_state) = prev {
-            assert_eq!(self.current().unwrap() as *const (Line, State), init);
+        if let Ok((prev_g1, prev_state)) = self.get_prev_g1(g1_count) {
             match self.current() {
                 Some((Line::G1(g1), state)) => {
                     state.x = g1.x.unwrap_or(prev_state.x);
@@ -489,7 +473,6 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
                 state.g1_emit = g1.emit();
             }
         }
-        assert_eq!(self.current().unwrap() as *const (Line, State), init);
         Ok(())
     }
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError> {
@@ -689,7 +672,7 @@ asdfafasdf\n
 
 #[test]
 fn check_g1_index() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("adsf");
     assert_eq!(gcode.g1_moves, 5);
     let mut cursor = gcode.instructions.cursor_front_mut();
     let mut count = 0;
@@ -704,7 +687,7 @@ fn check_g1_index() {
 }
 #[test]
 fn get_g1_index_return() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     cursor.next();
     while cursor.peek_next().is_some() {
@@ -713,6 +696,19 @@ fn get_g1_index_return() {
         assert_eq!(cursor.current().unwrap() as *const (Line, State), init);
         cursor.move_next_g1();
     }
+}
+#[test]
+fn single_g1() {
+    let input = "G1 X0 Y0 Z0 e1 f-1.12345\n";
+    let mut gcode = ParsedGCode::build(input).expect("failed to parse");
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    if let Some((Line::G1(g1), state)) = cursor.current() {
+        assert_eq!(state.x, 0.0);
+        assert_eq!(state.y, 0.0);
+        assert_eq!(state.z, 0.0);
+        assert_eq!(state.e, 1.0);
+        assert_eq!(state.f, -1.12345);
+    } else { panic!("failed to parse single g1"); }
 }
 #[test]
 fn check_line_test() {
@@ -789,12 +785,13 @@ fn dist_test() {
 #[test]
 fn init_state() {
     let input = "G1 X0 Y0 Z0";
-    let gcode = ParsedGCode::build(input);
+    let gcode = ParsedGCode::build(input).expect("asdf");
     let Some((Line::G1(g1), state)) = gcode.instructions.front() else {
         panic!("asdf");
     };
     let blah = [state.x, state.y, state.z, state.e, state.f];
     let test = [0.0, 0.0, 0.0, NEG_INFINITY, NEG_INFINITY];
+    panic!("{:?}", gcode);
     assert_eq!(blah, test);
 }
 #[test]
@@ -810,7 +807,7 @@ fn check_state() {
         [0.0, 0.0, 0.0, 102.9, 1.0],
     ];
     let mut i = 0;
-    let mut gcode = ParsedGCode::build(input);
+    let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     while !cursor.at_end() {
         let Some((Line::G1(g1), state)) = cursor.current() else {
@@ -827,7 +824,7 @@ fn check_state() {
 }
 #[test]
 fn sub_all_test() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
     gcode.subdivide(2);
     panic!("{:?}", gcode.instructions.len());
 }
@@ -837,7 +834,7 @@ fn trans_test() {
         G1 X1 E1\n
         G1 X2 E1\n
         G1 X3 E1\n";
-    let mut gcode = ParsedGCode::build(input);
+    let mut gcode = ParsedGCode::build(input).expect(("asdf"));
     let mut cursor = gcode.instructions.cursor_front_mut();
 
     while let Some((line, state)) = cursor.current() {
@@ -907,7 +904,7 @@ fn sub_seg_test() {
     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
     G1 X20 Y20 Z11 E10\n
     ;asdfasdfasdf\n";
-    let mut gcode = ParsedGCode::build(input);
+    let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     cursor.next();
     let seg_count = 5;
@@ -921,7 +918,7 @@ fn tot_dist_test() {
     G1 X1 Y1 Z0 \n
     G1 X1 Y1 Z1 \n
     G1 X10 Y1 Z1\n";
-    let mut gcode = ParsedGCode::build(input);
+    let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     assert_eq!(12.0, gcode.tot_dist());
 }
@@ -932,11 +929,11 @@ fn read_and_emit_test() {
     // this one frozen
     let path = "test.gcode";
     // build from path is stuck in loop
-    let gcode = ParsedGCode::build(path);
+    let gcode = ParsedGCode::build(path).expect("adsf");
     let out = gcode.emit();
     let mut file = File::create("test_output.gcode").unwrap();
     let _ = file.write_all(out.as_bytes());
-    let test_gcode = ParsedGCode::build("test_output.gcode").emit();
+    let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf").emit();
     let test_gcode = test_gcode
         .lines()
         .map(|s| s.to_string())
