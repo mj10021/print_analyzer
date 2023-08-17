@@ -2,7 +2,6 @@ use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::error::Error;
 use std::f32::NEG_INFINITY;
 
-
 #[derive(Clone, Debug, PartialEq)]
 struct Word(char, f32, Option<String>);
 
@@ -53,27 +52,6 @@ impl Emit for Line {
     }
 }
 
-const X_KEY: f32 = 1.1;
-const Y_KEY: f32 = 1.2;
-const Z_KEY: f32 = 1.3;
-const E_KEY: f32 = 1.4;
-const F_KEY: f32 = 1.5;
-
-trait DumbHash {
-    fn get_x(&self, key: f32) -> f32;
-    fn get_y(&self, key: f32) -> f32;
-    fn get_z(&self, key: f32) -> f32;
-    fn get_e(&self, key: f32) -> f32;
-    fn get_f(&self, key: f32) -> f32;
-    fn get_hash(&self) -> f32 {
-        self.get_x(X_KEY).powf(X_KEY)
-            * self.get_y(Y_KEY).powf(Y_KEY)
-            * self.get_z(Z_KEY).powf(Z_KEY)
-            * self.get_e(E_KEY).powf(E_KEY)
-            * self.get_f(F_KEY).powf(F_KEY)
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 struct State {
     x: f32,
@@ -81,7 +59,7 @@ struct State {
     z: f32,
     e: f32,
     f: f32,
-    g1_hash: f32,
+    g1_emit: String,
 }
 
 impl State {
@@ -92,7 +70,7 @@ impl State {
             z: NEG_INFINITY,
             e: NEG_INFINITY,
             f: NEG_INFINITY,
-            g1_hash: NEG_INFINITY,
+            g1_emit: String::new(),
         }
     }
     fn dist(&self, init: &State) -> f32 {
@@ -100,9 +78,6 @@ impl State {
         let dy = self.y - init.y;
         let dz = self.z - init.z;
         (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
-    }
-    fn get_hash(&mut self, g1: &G1) {
-        self.g1_hash = g1.get_hash();
     }
 }
 
@@ -152,23 +127,7 @@ struct G1 {
     e: Option<f32>,
     f: Option<f32>,
 }
-impl DumbHash for G1 {
-    fn get_x(&self, key: f32) -> f32 {
-        self.x.unwrap_or(key)
-    }
-    fn get_y(&self, key: f32) -> f32 {
-        self.y.unwrap_or(key)
-    }
-    fn get_z(&self, key: f32) -> f32 {
-        self.z.unwrap_or(key)
-    }
-    fn get_e(&self, key: f32) -> f32 {
-        self.e.unwrap_or(key)
-    }
-    fn get_f(&self, key: f32) -> f32 {
-        self.f.unwrap_or(key)
-    }
-}
+
 impl G1 {
     fn build(params: VecDeque<Word>, move_id: i32) -> G1 {
         let mut x = None;
@@ -231,7 +190,9 @@ struct ParsedGCode {
 impl ParsedGCode {
     fn set_states(&mut self) {
         let mut cursor = self.instructions.cursor_front_mut();
-        loop { // this is the loop i am stuck in
+        loop {
+            // this is the loop i am stuck in
+            assert!(cursor.current().is_some());
             cursor.update_state(self.g1_moves);
             if cursor.peek_next().is_none() {
                 break;
@@ -260,7 +221,8 @@ impl ParsedGCode {
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
         let mut rel_e = true;
-        // tries reading the input as g code if file parse error,
+
+        // tries reading the input as raw g-code if file parse error,
         // this is really just for running the tests
         let lines = match parse_file(path) {
             Ok(str) => str,
@@ -298,7 +260,6 @@ impl ParsedGCode {
             }
             parsed.push_back((Line::build(line, Some(g1_moves)), State::new()));
         }
-
         let mut out = ParsedGCode {
             instructions: parsed,
             rel_xyz,
@@ -370,9 +331,9 @@ trait GCursor {
     fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
     fn is_first_g1(&mut self) -> bool;
     fn is_last_g1(&mut self, g1_count: i32) -> bool;
-    fn update_state(&mut self, g1_count: i32);
-    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32);
-    fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32);
+    fn update_state(&mut self, g1_count: i32) -> Result<(), CursorError>;
+    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError>;
+    fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32) -> Result<(), CursorError>;
 }
 impl<'a> GCursor for CursorMut<'a, (Line, State)> {
     fn at_end(&mut self) -> bool {
@@ -388,7 +349,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Err(CursorError::ExpectedG1)
     }
     // move cursor forward without wrapping
-    fn next(&mut self) -> Result<(), CursorError>{
+    fn next(&mut self) -> Result<(), CursorError> {
         if self.at_end() {
             return Err(CursorError::PastEnd);
         }
@@ -396,10 +357,15 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Ok(())
     }
     fn move_next_g1(&mut self) -> Result<(), CursorError> {
+        // this one doesn't rly work
         self.at_g1()?;
+        let init = self.current().unwrap() as *const (Line, State);
         self.next()?;
         while let Err(_) = self.at_g1() {
-            self.next()?
+            if self.current().unwrap() as *const (Line, State) == init {
+                return Err(CursorError::Unknown);
+            }
+            self.next()?;
         }
         Ok(())
     }
@@ -424,27 +390,37 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Ok(())
     }
     fn move_prev_g1(&mut self) -> Result<(), CursorError> {
+        // this one doesn't rly work
         self.at_g1()?;
+        let init = self.current().unwrap() as *const (Line, State);
         self.prev()?;
         while let Err(e) = self.at_g1() {
+            if self.current().unwrap() as *const (Line, State) == init {
+                return Err(CursorError::Unknown);
+            }
             self.prev()?;
         }
         Ok(())
     }
     fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
-        self.at_g1()?;
         let init = self.current().unwrap() as *const (Line, State);
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
+        self.at_g1()?;
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
         if self.is_first_g1() {
             return Err(CursorError::PastFront);
         }
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
         self.move_prev_g1()?;
         let line = self.current().unwrap().clone();
         self.move_next_g1()?;
         assert_eq!(self.current().unwrap() as *const (Line, State), init);
         if let (Line::G1(g1), state) = line {
+            assert_eq!(self.current().unwrap() as *const (Line, State), init);
 
             return Ok((g1, state));
         }
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
         Err(CursorError::Unknown)
     }
     fn is_first_g1(&mut self) -> bool {
@@ -465,15 +441,23 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         }
         false
     }
-    fn update_state(&mut self, g1_count: i32) {
+    fn update_state(&mut self, g1_count: i32) -> Result<(), CursorError> {
+        let init = self.current().unwrap() as *const (Line, State);
 
         // if the state "hash" is from the current G1, update nothing
         if let Some((Line::G1(g1), state)) = self.current() {
-            if g1.get_hash() == state.g1_hash {
-                return;
+            if g1.emit() == state.g1_emit {
+                return Ok(());
             }
         }
-        if let Ok((prev_g1, prev_state)) = self.get_prev_g1(g1_count) {
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
+        let a = self.current().cloned();
+        let prev = self.get_prev_g1(g1_count)?;
+        if self.current().unwrap() as *const (Line, State) != init {
+            panic!("{:?}\n\n{:?}", self.current(), a);
+        }
+        if let (prev_g1, prev_state) = prev {
+            assert_eq!(self.current().unwrap() as *const (Line, State), init);
             match self.current() {
                 Some((Line::G1(g1), state)) => {
                     state.x = g1.x.unwrap_or(prev_state.x);
@@ -481,42 +465,46 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
                     state.z = g1.z.unwrap_or(prev_state.z);
                     state.e = prev_state.e + g1.e.unwrap_or(0.0);
                     state.f = g1.f.unwrap_or(prev_state.f);
-                    state.g1_hash = g1.get_hash();
-                },
+                    state.g1_emit = g1.emit();
+                }
                 Some((_, state)) => {
                     state.x = prev_state.x;
                     state.y = prev_state.y;
                     state.z = prev_state.z;
                     state.e = prev_state.e;
                     state.f = prev_state.f;
-                    state.g1_hash = NEG_INFINITY;                   
-                },
-                None => { panic!("uh oh"); }
+                    state.g1_emit = String::new();
+                }
+                None => {
+                    panic!("uh oh");
+                }
             }
         } else {
             if let Some((Line::G1(g1), state)) = self.current() {
-                    state.x = g1.x.unwrap_or(NEG_INFINITY);
+                state.x = g1.x.unwrap_or(NEG_INFINITY);
                 state.y = g1.y.unwrap_or(NEG_INFINITY);
                 state.z = g1.z.unwrap_or(NEG_INFINITY);
                 state.e = g1.e.unwrap_or(NEG_INFINITY);
                 state.f = g1.f.unwrap_or(NEG_INFINITY);
-                state.g1_hash = g1.get_hash();                   
+                state.g1_emit = g1.emit();
             }
         }
+        assert_eq!(self.current().unwrap() as *const (Line, State), init);
+        Ok(())
     }
-    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) {
+    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError> {
         if let Err(e) = self.at_g1() {
-            panic!("{}",e);
+            panic!("{}", e);
         }
         if self.is_first_g1() || self.is_last_g1(g1_count) {
-            return;
+            return Ok(());
         }
         let mut init_next_de = 0.0;
         let mut new_next_dist = 0.0;
         let mut init_next_dist = 0.0;
 
-        let (_, prev_state) = self.get_prev_g1(g1_count).unwrap();
-        let (next_g1, next_state) = self.get_next_g1(g1_count).unwrap();
+        let (_, prev_state) = self.get_prev_g1(g1_count)?;
+        let (next_g1, next_state) = self.get_next_g1(g1_count)?;
         if let Some((Line::G1(curr_g1), curr_state)) = self.current() {
             let init_prev_dist = curr_state.dist(&prev_state);
             init_next_dist = curr_state.dist(&next_state);
@@ -531,26 +519,24 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
                 z: curr_state.z + dz,
                 e: 0.0,
                 f: 0.0,
-                g1_hash: 0.0,
+                g1_emit: String::new(),
             };
             let new_prev_dist = temp_state.dist(&prev_state);
             new_next_dist = temp_state.dist(&next_state);
             curr_g1.e = Some(init_curr_de * (new_prev_dist / init_prev_dist));
         }
-        self.update_state(g1_count);
-        self.move_next_g1();
+        self.update_state(g1_count)?;
+        self.move_next_g1()?;
         if let Some((Line::G1(next_g1), next_state)) = self.current() {
             next_g1.e = Some(init_next_de * (new_next_dist / init_next_dist));
         }
-        self.update_state(g1_count);
-        self.move_prev_g1();
+        self.update_state(g1_count)?;
+        self.move_prev_g1()?;
+        Ok(())
     }
-    fn subdiv_seg(&mut self, count: i32, g1_count: i32) {
-        if let Err(e) = self.at_g1() {
-            panic!("{}", e);
-        }
-        assert!(!self.is_first_g1());
-        let (prev_g1, prev_state) = self.get_prev_g1(g1_count).unwrap();
+    fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), CursorError> {
+        self.at_g1()?;
+        let (prev_g1, prev_state) = self.get_prev_g1(g1_count)?;
         let mut dx = 0.0;
         let mut dy = 0.0;
         let mut dz = 0.0;
@@ -584,6 +570,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
             self.next();
             i += 1;
         }
+        Ok(())
     }
 }
 
@@ -715,7 +702,18 @@ fn check_g1_index() {
     }
     assert_eq!(gcode.g1_moves, count);
 }
-
+#[test]
+fn get_g1_index_return() {
+    let mut gcode = ParsedGCode::build(TEST_INPUT);
+    let mut cursor = gcode.instructions.cursor_front_mut();
+    cursor.next();
+    while cursor.peek_next().is_some() {
+        let init = cursor.current().unwrap() as *const (Line, State);
+        cursor.get_prev_g1(gcode.g1_moves).expect("asdf");
+        assert_eq!(cursor.current().unwrap() as *const (Line, State), init);
+        cursor.move_next_g1();
+    }
+}
 #[test]
 fn check_line_test() {
     assert_eq!(false, check_line(&VecDeque::from(['A', 'A', 'A'])));
@@ -775,7 +773,7 @@ fn dist_test() {
         z: 1.0,
         e: 0.0,
         f: 0.0,
-        g1_hash: 0.0,
+        g1_emit: String::new(),
     };
     let b = State {
         x: 10.0,
@@ -783,7 +781,7 @@ fn dist_test() {
         z: 10.0,
         e: 0.0,
         f: 0.0,
-        g1_hash: 0.0,
+        g1_emit: String::new(),
     };
 
     assert_eq!(a.dist(&b), (9.0_f32.powf(2.0) * 3.0).sqrt())
@@ -834,7 +832,7 @@ fn sub_all_test() {
     panic!("{:?}", gcode.instructions.len());
 }
 #[test]
-fn trans_test() { 
+fn trans_test() {
     let input = "G1 X0 Y1 Z1\n
         G1 X1 E1\n
         G1 X2 E1\n
@@ -917,7 +915,7 @@ fn sub_seg_test() {
     panic!("{:#?}", gcode);
 }
 #[test]
-fn tot_dist_test() { 
+fn tot_dist_test() {
     let input = "G1 X0 Y0 Z0\n
     G1 X1 Y0 Z0 \n
     G1 X1 Y1 Z0 \n
@@ -930,8 +928,10 @@ fn tot_dist_test() {
 use std::fs::File;
 use std::io::prelude::*;
 #[test]
-fn read_and_emit_test() { // this one frozen
+fn read_and_emit_test() {
+    // this one frozen
     let path = "test.gcode";
+    // build from path is stuck in loop
     let gcode = ParsedGCode::build(path);
     let out = gcode.emit();
     let mut file = File::create("test_output.gcode").unwrap();
@@ -949,18 +949,18 @@ fn read_and_emit_test() { // this one frozen
             testy.push(format!("{}_{}", out[i + 1].clone(), test_gcode[i].clone()));
         }
     }
-    let a: std::collections::HashSet::<String> = out.clone().into_iter().collect();
-    let b: std::collections::HashSet::<String> = test_gcode.clone().into_iter().collect();
+    let a: std::collections::HashSet<String> = out.clone().into_iter().collect();
+    let b: std::collections::HashSet<String> = test_gcode.clone().into_iter().collect();
     for line in &test_gcode {
         if !a.contains(line) || !b.contains(line) {
             panic!("adsf");
         }
-    for line in &out {
-        if !a.contains(line) || !b.contains(line) {
-            panic!("adsf");
+        for line in &out {
+            if !a.contains(line) || !b.contains(line) {
+                panic!("adsf");
+            }
         }
     }
-}
     // panic!(
     //     "{:?}_{:?}_{:?}",
     //     out[out.len() - 1],
