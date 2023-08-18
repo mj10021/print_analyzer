@@ -930,25 +930,13 @@ fn read_and_emit_test() {
     let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf");
     let mut out = Vec::new();
     let a: std::collections::HashSet<String> = test.clone().lines().into_iter().map(|s| s.to_string()).collect();
-    // let b: std::collections::HashSet<String> = test_gcode.clone().into_iter().collect();
+    let mut i = 0;
     for line in test_gcode.emit().lines() {
         if !a.contains(line) {
-            out.push(format!("{:?}", line));
+            out.push(format!("{}{:?}", i, line));
         }
+        i += 1;
     }
     panic!("{:?}", out);
-    //     for line in &out {
-    //         if !a.contains(line) || !b.contains(line) {
-    //             panic!("adsf");
-    //         }
-    //     }
-    // }
-    // panic!(
-    //     "{:?}_{:?}_{:?}",
-    //     out[out.len() - 1],
-    //     test_gcode[test_gcode.len() - 1],
-    //     testy
-    // );
-
     assert_eq!(gcode, test_gcode);
 }
