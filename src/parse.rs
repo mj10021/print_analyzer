@@ -277,12 +277,16 @@ impl ParsedGCode {
     fn subdivide(&mut self, count: i32) {
         let mut cursor = self.instructions.cursor_front_mut();
         while let Err(_) = cursor.at_g1() {
-            cursor.next();
+            cursor.next().expect("past end of list");
         }
-        cursor.move_next_g1(self.g1_moves);
-        while !cursor.is_last_g1(self.g1_moves) {
-            cursor.subdiv_seg(count, self.g1_moves);
-            cursor.move_next_g1(self.g1_moves);
+        // start from the second g1 move
+        cursor.move_next_g1(self.g1_moves).expect("g1 move failed");
+        loop {
+            cursor.subdiv_seg(count, self.g1_moves).expect("failed to divide");
+            if cursor.is_last_g1(self.g1_moves) {
+                break;
+            }
+            cursor.move_next_g1(self.g1_moves).expect("g1 move failed");
         }
     }
 }
@@ -515,6 +519,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Ok(())
     }
     fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), CursorError> {
+        // needs to have a previous g1 move to divide from
         self.at_g1()?;
         let (prev_g1, prev_state) = self.get_prev_g1(g1_count)?;
         let mut dx = 0.0;
@@ -534,7 +539,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
             curr_g1.e = Some(de);
             f = curr_g1.f;
         }
-        let mut i = 1;
+        let mut i = 0;
         while i < count {
             let new_g1 = G1 {
                 move_id: -1,
@@ -544,10 +549,12 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
                 e: Some(de),
                 f,
             };
+            let x = self.current().unwrap() as *const (Line, State);
             self.insert_before((Line::G1(new_g1), State::new()));
-            self.prev();
-            self.update_state(g1_count);
-            self.next();
+            self.prev()?;
+            self.update_state(g1_count)?;
+            self.next()?;
+            assert_eq!(self.current().unwrap() as *const (Line, State), x);
             i += 1;
         }
         Ok(())
@@ -840,7 +847,7 @@ fn sub_all_test() {
     for count in 2..10 {
         let mut gcode = ParsedGCode::build(TEST_G1_ONLY).expect("asdf");
         gcode.subdivide(count);
-        assert_eq!((TEST_G1_ONLY.lines().count() * count as usize) - 2, gcode.instructions.len());
+        assert_eq!((gcode.g1_moves + (gcode.g1_moves - 1 ) * count), gcode.instructions.len() as i32);
     }
 }
 #[test]
@@ -927,7 +934,7 @@ fn sub_seg_test() {
     if let Some((Line::G1(g1), _)) = gcode.instructions.front() {
         assert_eq!(g1.e, Some(10.0/seg_count as f32));
     }
-    assert_eq!(gcode.instructions.len() as i32 + 1, seg_count + 2);
+    assert_eq!(gcode.instructions.len() as i32, seg_count + 2);
 }
 #[test]
 fn tot_dist_test() {
