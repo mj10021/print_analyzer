@@ -1,3 +1,3 @@
 #![feature(linked_list_cursors)]
-#![allow(unused)]
+#![allow(dead_code)]
 pub mod parse;
