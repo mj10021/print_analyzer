@@ -90,6 +90,12 @@ struct Instruction {
 impl Instruction {
     fn build(mut line: VecDeque<Word>) -> Instruction {
         let first_word = line.pop_front().unwrap();
+        if line.len() < 1 {
+            return Instruction {
+                first_word,
+                params: None,
+            };
+        }
         Instruction {
             first_word,
             params: Some(line),
@@ -98,14 +104,13 @@ impl Instruction {
 }
 
 impl Emit for Instruction {
-    // I NEED TO CHECK THIS
     fn emit(&self) -> String {
         let Instruction {
             first_word: Word(letter, num, string),
             params,
         } = self;
-        if string.is_some() {
-            return string.clone().unwrap();
+        if let Some(string) = string {
+            return string.clone();
         }
         let mut out = format!("{}{}", letter, *num as i32);
         if let Some(params) = params {
@@ -615,7 +620,35 @@ fn check_line(line: &VecDeque<char>) -> bool {
     }
     true
 }
+#[test]
+fn split_line_test() {
+    // let a = "M83\n";
+    // let b = "M90\n";
+    // let c = "M91\n";
+    // let d = r#"M862.3 P "MINI"\n"#;
+    let e = r#"M205 X8.00 Y8.00 Z2.00 E10.00 ; sets the jerk limits, mm/sec
+    M205 S0 T0 ; sets the minimum extruding and travel feed rate, mm/sec
+    ;TYPE:Custom
+    M862.3 P "MINI" ; printer model check
+    G90 ; use absolute coordinates
+    M83 ; extruder relative mode
+    M104 S170 ; set extruder temp for bed leveling
+    G1 E-.01234567890;
+    M140 S60 ; set bed temp"#.lines().map(|s| s.split("\n").nth(0).unwrap());
+    let mut out: Vec<String> = Vec::new();
+    for a in e {
+        let a = clean_line(a);
+        //out.push(a);
+        let a = read_line(a);
+        if let Some(Word('X',_,None)) = a.front() {
+            continue;
+        }
+        let a = Line::build(a, Some(0));
+        out.push(a.emit());
+    }
+    panic!("{:?}", out);
 
+}
 fn split_line(mut line: VecDeque<char>) -> VecDeque<Word> {
     let mut temp: Vec<char> = Vec::new();
     let mut out = VecDeque::new();
@@ -624,10 +657,6 @@ fn split_line(mut line: VecDeque<char>) -> VecDeque<Word> {
         while line.len() > 0 && !line[0].is_ascii_alphabetic() {
             temp.push(line.pop_front().unwrap());
         }
-        // if temp.len() < 2 {
-        //     temp = Vec::new();
-        //     continue;
-        // }
         if temp.len() > 1 {
             out.push_back(Word(
                 temp[0],
@@ -646,8 +675,13 @@ fn read_line(mut line: VecDeque<char>) -> VecDeque<Word> {
     // here i rly want to check if there is a character that doesn't make sense
     // and just pass the raw string through if that's the case
     if !check_line(&line) {
-        let word = Word('X', 0.0, Some(line.iter().collect()));
-        return VecDeque::from([word]);
+        if line.len() > 1 {
+            let word = Word('X', NEG_INFINITY, Some(line.iter().collect()));
+            return VecDeque::from([word]);
+        } else {
+            let word = Word('X', NEG_INFINITY, None);
+            return VecDeque::from([word]);
+        }
     }
     split_line(line)
 }
@@ -930,9 +964,18 @@ fn read_and_emit_test() {
     let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf");
     let mut out = Vec::new();
     let a: std::collections::HashSet<String> = test.clone().lines().into_iter().map(|s| s.to_string()).collect();
+    let b: std::collections::HashSet<String> = gcode.emit().lines().into_iter().map(|s| s.to_string()).collect();
     let mut i = 0;
+    out.push("test a: ".to_string());
     for line in test_gcode.emit().lines() {
         if !a.contains(line) {
+            out.push(format!("{}{:?}", i, line));
+        }
+        i += 1;
+    }
+    out.push("test b: ".to_string());
+    for line in gcode.emit().lines() {
+        if !b.contains(line) {
             out.push(format!("{}{:?}", i, line));
         }
         i += 1;
