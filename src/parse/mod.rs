@@ -1,6 +1,8 @@
 use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
+mod finder;
+
 #[derive(Clone, Debug, PartialEq)]
 struct Word(char, f32, Option<String>);
 
@@ -183,7 +185,7 @@ impl Emit for G1 {
 }
 
 #[derive(Debug, PartialEq)]
-struct ParsedGCode {
+pub struct ParsedGCode {
     instructions: LinkedList<(Line, State)>,
     // the g1 move count is 1-indexed
     g1_moves: i32,
