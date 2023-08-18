@@ -120,6 +120,7 @@ impl Emit for Instruction {
 
 #[derive(Clone, Debug, PartialEq)]
 struct G1 {
+    // the g1 move id is 1-indexed
     move_id: i32,
     x: Option<f32>,
     y: Option<f32>,
@@ -182,6 +183,7 @@ impl Emit for G1 {
 #[derive(Debug, PartialEq)]
 struct ParsedGCode {
     instructions: LinkedList<(Line, State)>,
+    // the g1 move count is 1-indexed
     g1_moves: i32,
     rel_xyz: bool,
     rel_e: bool,
@@ -920,38 +922,27 @@ use std::fs::File;
 use std::io::prelude::*;
 #[test]
 fn read_and_emit_test() {
-    // this one frozen
     let path = "test.gcode";
-    // build from path is stuck in loop
     let gcode = ParsedGCode::build(path).expect("failed to parse gcode");
-    let out = gcode.emit();
+    let test = gcode.emit();
     let mut file = File::create("test_output.gcode").unwrap();
-    let _ = file.write_all(out.as_bytes());
-    let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf").emit();
-    let test_gcode = test_gcode
-        .lines()
-        .map(|s| s.to_string())
-        .collect::<Vec<String>>();
-    let out = out.lines().map(|s| s.to_string()).collect::<Vec<String>>();
-    let mut testy: Vec<String> = Vec::new();
-    for i in 0..100 {
-        //out.len() - 1 {
-        if out[i + 1] != test_gcode[i] {
-            testy.push(format!("{}_{}", out[i + 1].clone(), test_gcode[i].clone()));
+    let _ = file.write_all(test.as_bytes());
+    let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf");
+    let mut out = Vec::new();
+    let a: std::collections::HashSet<String> = test.clone().lines().into_iter().map(|s| s.to_string()).collect();
+    // let b: std::collections::HashSet<String> = test_gcode.clone().into_iter().collect();
+    for line in test_gcode.emit().lines() {
+        if !a.contains(line) {
+            out.push(format!("{:?}", line));
         }
     }
-    let a: std::collections::HashSet<String> = out.clone().into_iter().collect();
-    let b: std::collections::HashSet<String> = test_gcode.clone().into_iter().collect();
-    for line in &test_gcode {
-        if !a.contains(line) || !b.contains(line) {
-            panic!("adsf");
-        }
-        for line in &out {
-            if !a.contains(line) || !b.contains(line) {
-                panic!("adsf");
-            }
-        }
-    }
+    panic!("{:?}", out);
+    //     for line in &out {
+    //         if !a.contains(line) || !b.contains(line) {
+    //             panic!("adsf");
+    //         }
+    //     }
+    // }
     // panic!(
     //     "{:?}_{:?}_{:?}",
     //     out[out.len() - 1],
@@ -959,5 +950,5 @@ fn read_and_emit_test() {
     //     testy
     // );
 
-    //assert_eq!(gcode, test_gcode);
+    assert_eq!(gcode, test_gcode);
 }
