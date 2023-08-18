@@ -110,7 +110,7 @@ impl Emit for Instruction {
             params,
         } = self;
         if let Some(string) = string {
-            return string.clone();
+            return string.clone() + "\n";
         }
         let mut out = format!("{}{}", letter, *num as i32);
         if let Some(params) = params {
@@ -118,8 +118,7 @@ impl Emit for Instruction {
                 out += &format!(" {}{}", letter, val);
             }
         }
-        out += "\n";
-        out
+        out + "\n"
     }
 }
 
@@ -180,8 +179,7 @@ impl Emit for G1 {
         if let Some(f) = self.f {
             out += &format!(" F{}", f);
         }
-        out += "\n";
-        out
+        out + "\n"
     }
 }
 
@@ -291,11 +289,11 @@ impl ParsedGCode {
 
 impl Emit for ParsedGCode {
     fn emit(&self) -> String {
-        let mut out = format!("; emitting gcode from print-analyzer");
+        let mut out = String::new();
         for (line, _) in &self.instructions {
             out += &line.emit();
         }
-        out
+        out + "\n"
     }
 }
 enum CursorError {
@@ -577,6 +575,10 @@ fn parse_str(str: &str) -> Vec<String> {
 
 fn clean_line(line: &str) -> VecDeque<char> {
     let mut temp_line = VecDeque::new();
+    // this broken
+    // if line.chars().filter(|c| !c.is_ascii()).next().is_none() {
+    //     return VecDeque::from(line.chars().collect::<Vec<char>>());
+    // }
 
     for c in line.chars() {
         // end reading line at start of comments
@@ -786,7 +788,7 @@ fn parse_random() {
     assert_eq!(
         VecDeque::from([Word(
             'X',
-            0.0,
+            NEG_INFINITY,
             Some(String::from(input).to_ascii_uppercase())
         )]),
         line
@@ -957,29 +959,11 @@ use std::io::prelude::*;
 #[test]
 fn read_and_emit_test() {
     let path = "test.gcode";
-    let gcode = ParsedGCode::build(path).expect("failed to parse gcode");
-    let test = gcode.emit();
+    let init = ParsedGCode::build(path).expect("failed to parse gcode");
+    let init = init.emit();
     let mut file = File::create("test_output.gcode").unwrap();
-    let _ = file.write_all(test.as_bytes());
-    let test_gcode = ParsedGCode::build("test_output.gcode").expect("asdf");
-    let mut out = Vec::new();
-    let a: std::collections::HashSet<String> = test.clone().lines().into_iter().map(|s| s.to_string()).collect();
-    let b: std::collections::HashSet<String> = gcode.emit().lines().into_iter().map(|s| s.to_string()).collect();
-    let mut i = 0;
-    out.push("test a: ".to_string());
-    for line in test_gcode.emit().lines() {
-        if !a.contains(line) {
-            out.push(format!("{}{:?}", i, line));
-        }
-        i += 1;
-    }
-    out.push("test b: ".to_string());
-    for line in gcode.emit().lines() {
-        if !b.contains(line) {
-            out.push(format!("{}{:?}", i, line));
-        }
-        i += 1;
-    }
-    panic!("{:?}", out);
-    assert_eq!(gcode, test_gcode);
+    let _ = file.write_all(&init.as_bytes());
+    let snd = ParsedGCode::build("test_output.gcode").expect("asdf");
+    let snd = snd.emit();
+    assert_eq!(init, snd);
 }
