@@ -276,7 +276,7 @@ impl ParsedGCode {
     }
     fn subdivide(&mut self, count: i32) {
         let mut cursor = self.instructions.cursor_front_mut();
-        while let Ok(()) = cursor.at_g1() {
+        while let Err(_) = cursor.at_g1() {
             cursor.next();
         }
         cursor.move_next_g1(self.g1_moves);
@@ -622,35 +622,6 @@ fn check_line(line: &VecDeque<char>) -> bool {
     }
     true
 }
-#[test]
-fn split_line_test() {
-    // let a = "M83\n";
-    // let b = "M90\n";
-    // let c = "M91\n";
-    // let d = r#"M862.3 P "MINI"\n"#;
-    let e = r#"M205 X8.00 Y8.00 Z2.00 E10.00 ; sets the jerk limits, mm/sec
-    M205 S0 T0 ; sets the minimum extruding and travel feed rate, mm/sec
-    ;TYPE:Custom
-    M862.3 P "MINI" ; printer model check
-    G90 ; use absolute coordinates
-    M83 ; extruder relative mode
-    M104 S170 ; set extruder temp for bed leveling
-    G1 E-.01234567890;
-    M140 S60 ; set bed temp"#.lines().map(|s| s.split("\n").nth(0).unwrap());
-    let mut out: Vec<String> = Vec::new();
-    for a in e {
-        let a = clean_line(a);
-        //out.push(a);
-        let a = read_line(a);
-        if let Some(Word('X',_,None)) = a.front() {
-            continue;
-        }
-        let a = Line::build(a, Some(0));
-        out.push(a.emit());
-    }
-    panic!("{:?}", out);
-
-}
 fn split_line(mut line: VecDeque<char>) -> VecDeque<Word> {
     let mut temp: Vec<char> = Vec::new();
     let mut out = VecDeque::new();
@@ -704,6 +675,15 @@ G1 X5\n
 asdfasdfasdf\n
 asdfafasdf\n
 ";
+
+const TEST_G1_ONLY: &str = "G1 X0 Y0 Z0 E0 F0
+G1 X10
+G1 Z10
+G1 E10
+G1 x1e5 
+G1 X5
+";
+
 
 #[test]
 fn check_g1_index() {
@@ -857,9 +837,11 @@ fn check_state() {
 }
 #[test]
 fn sub_all_test() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
-    gcode.subdivide(2);
-    panic!("{:?}", gcode.instructions.len());
+    for count in 2..10 {
+        let mut gcode = ParsedGCode::build(TEST_G1_ONLY).expect("asdf");
+        gcode.subdivide(count);
+        assert_eq!((TEST_G1_ONLY.lines().count() * count as usize) - 2, gcode.instructions.len());
+    }
 }
 #[test]
 fn trans_test() {
@@ -934,14 +916,18 @@ fn parse_m() {
 #[test]
 fn sub_seg_test() {
     let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
-    G1 X20 Y20 Z11 E10\n
+    G1 X20 Y20 Z11 E10\nG1 Z100\n
     ;asdfasdfasdf\n";
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     cursor.next();
-    let seg_count = 5;
+    let seg_count = 111111;
     cursor.subdiv_seg(seg_count, gcode.g1_moves);
-    panic!("{:#?}", gcode);
+    gcode.instructions.pop_front();
+    if let Some((Line::G1(g1), _)) = gcode.instructions.front() {
+        assert_eq!(g1.e, Some(10.0/seg_count as f32));
+    }
+    assert_eq!(gcode.instructions.len() as i32 + 1, seg_count + 2);
 }
 #[test]
 fn tot_dist_test() {
