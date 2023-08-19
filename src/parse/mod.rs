@@ -8,6 +8,9 @@ struct Word(char, f32, Option<String>);
 
 pub trait Emit {
     fn emit(&self) -> String;
+    fn debug_emit(&self) -> String {
+        self.emit()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -166,18 +169,28 @@ impl Emit for G1 {
     fn emit(&self) -> String {
         let mut out = String::from("G1");
         if let Some(x) = self.x {
+            assert!(x.is_finite());
+            assert!(!x.is_nan());
             out += &format!(" X{}", x);
         }
         if let Some(y) = self.y {
+            assert!(y.is_finite());
+            assert!(!y.is_nan());
             out += &format!(" Y{}", y);
         }
         if let Some(z) = self.z {
+            assert!(z.is_finite());
+            assert!(!z.is_nan());
             out += &format!(" Z{}", z);
         }
         if let Some(e) = self.e {
+            assert!(e.is_finite());
+            assert!(!e.is_nan());
             out += &format!(" E{}", e);
         }
         if let Some(f) = self.f {
+            assert!(f.is_finite());
+            assert!(!f.is_nan());
             out += &format!(" F{}", f);
         }
         out + "\n"
@@ -189,12 +202,13 @@ pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
     // the g1 move count is 1-indexed
     pub g1_moves: i32,
+    pub features: Vec<Option<finder::Feature>>,
     pub rel_xyz: bool,
     pub rel_e: bool,
 }
 
 impl ParsedGCode {
-    fn set_states(&mut self) -> Result<(), CursorError> {
+    pub fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
             assert!(cursor.current().is_some());
@@ -268,6 +282,7 @@ impl ParsedGCode {
         let mut out = ParsedGCode {
             instructions: parsed,
             rel_xyz,
+            features: vec![None; g1_moves as usize],
             rel_e,
             g1_moves,
         };
@@ -296,6 +311,18 @@ impl Emit for ParsedGCode {
         let mut out = String::new();
         for (line, _) in &self.instructions {
             out += &line.emit();
+        }
+        out + "\n"
+    }
+    fn debug_emit(&self) -> String {
+        let mut out = String::new();
+        for (line, _) in &self.instructions {
+            out += &line.emit();
+            if let Line::G1(g1) = line {
+                if self.features[g1.move_id as usize - 1].is_some() {
+                    out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
+                }
+            }
         }
         out + "\n"
     }

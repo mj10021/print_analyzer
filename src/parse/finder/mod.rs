@@ -1,16 +1,18 @@
 use super::*;
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum Feature {
     FirstMove,
-    NewLayer,
+    ZChange,
     Retraction,
+    DeRetraction,
 }
 impl std::fmt::Debug for Feature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::NewLayer => write!(f, "NewLayer"),
+            Feature::ZChange => write!(f, "ZChange"),
             Feature::Retraction => write!(f, "Retraction"),
+            Feature::DeRetraction => write!(f, "DeRetraction"),
         }
     }
 }
@@ -18,16 +20,17 @@ impl std::fmt::Display for Feature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::NewLayer => write!(f, "NewLayer"),
+            Feature::ZChange => write!(f, "ZChange"),
             Feature::Retraction => write!(f, "Retraction"),
+            Feature::DeRetraction => write!(f, "DeRetraction"),
         }
     }
 }
 
 
 pub fn first_move_index(gcode: &ParsedGCode) -> i32 {
-    let x_max = 30.0;
-    let y_max = 30.0;
+    let x_max = 5.0;
+    let y_max = 5.0;
     let mut cur = gcode.instructions.cursor_front();
     let mut count = 0;
     let mut out: Vec<(f32,f32,f32,i32)> = Vec::new();
@@ -47,30 +50,25 @@ pub fn first_move_index(gcode: &ParsedGCode) -> i32 {
 }
 fn find_retractions(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
     let mut cur = gcode.instructions.cursor_front();
+    let mut last_retraction = -1;
+    let mut last_deretraction = -1;
     while cur.peek_next().is_some() {
         if let Some((Line::G1(g1), _)) = cur.current() {
-            if let Some(de) = g1.e{
+            if let Some(de) = g1.e {
                 if de < 0.0 {
                     map[g1.move_id as usize] = Some(Feature::Retraction);
+                    last_retraction = g1.move_id;
+                }
+                if de > 0.0 && last_retraction > last_deretraction {
+                    map[g1.move_id as usize] = Some(Feature::DeRetraction);
+                     last_deretraction = g1.move_id;
                 }
             }
         }
         cur.move_next();
     }
 }
-
-//fn check_forward(n: i32) -> bool {
-//    let mut check = cursor.current().unwrap().x;
-//    for _ in 0..n {
-//        if check != cursor.peek_next().unwrap().x {
-//            return false;
-//        }
-//        cursor.move_next();
-//    }
-//    true
-//}
-
-pub fn find_new_layer(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
+pub fn find_new_layer(gcode: &mut ParsedGCode) {
     let first_move_id = first_move_index(gcode);
     let mut cur = gcode.instructions.cursor_front();
     let mut layer_z = 0.0;
@@ -81,9 +79,9 @@ pub fn find_new_layer(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
                 continue;
             }
             if let Some((Line::G1(_), next)) = cur.peek_next() {
-                if curr.z != layer_z && curr.z == next.z {
+                if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
                     layer_z = next.z;
-                    map[g1.move_id as usize] = Some(Feature::NewLayer);
+                    gcode.features[g1.move_id as usize] = Some(Feature::ZChange);
                 }
             }
         }
@@ -94,10 +92,13 @@ pub fn find_new_layer(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
 #[cfg(test)]
 #[test]
 fn planar_z_test() {
-    let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let mut map: Vec<Option<Feature>> = vec![None; gcode.instructions.len()];
-    find_new_layer(&gcode, &mut map);
-    panic!("{:?}", map);
+    let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
+    find_new_layer(&mut gcode);
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
+    let _ = f.write_all(gcode.debug_emit().as_bytes());
+
 }
 #[test]
 fn find_retractions_test() {
