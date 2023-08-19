@@ -1,4 +1,29 @@
 use super::*;
+#[derive(Clone)]
+pub enum Feature {
+    FirstMove,
+    NewLayer,
+    Retraction,
+}
+impl std::fmt::Debug for Feature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Feature::FirstMove => write!(f, "FirstMove"),
+            Feature::NewLayer => write!(f, "NewLayer"),
+            Feature::Retraction => write!(f, "Retraction"),
+        }
+    }
+}
+impl std::fmt::Display for Feature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Feature::FirstMove => write!(f, "FirstMove"),
+            Feature::NewLayer => write!(f, "NewLayer"),
+            Feature::Retraction => write!(f, "Retraction"),
+        }
+    }
+}
+
 
 pub fn first_move_index(gcode: &ParsedGCode) -> i32 {
     let x_max = 30.0;
@@ -20,20 +45,18 @@ pub fn first_move_index(gcode: &ParsedGCode) -> i32 {
     }
     -1
 }
-fn find_retractions(gcode: &ParsedGCode) -> Vec<i32> {
+fn find_retractions(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
     let mut cur = gcode.instructions.cursor_front();
-    let mut out: Vec<i32> = Vec::new();
     while cur.peek_next().is_some() {
         if let Some((Line::G1(g1), _)) = cur.current() {
             if let Some(de) = g1.e{
                 if de < 0.0 {
-                    out.push(g1.move_id);
+                    map[g1.move_id as usize] = Some(Feature::Retraction);
                 }
             }
         }
         cur.move_next();
     }
-    out
 }
 
 //fn check_forward(n: i32) -> bool {
@@ -47,9 +70,9 @@ fn find_retractions(gcode: &ParsedGCode) -> Vec<i32> {
 //    true
 //}
 
-pub fn planar_z_finder(gcode: &ParsedGCode, first_move_id: i32) -> Vec<i32> {
+pub fn find_new_layer(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
+    let first_move_id = first_move_index(gcode);
     let mut cur = gcode.instructions.cursor_front();
-    let mut out: Vec<i32> = Vec::new();
     let mut layer_z = 0.0;
     while cur.peek_next().is_some() {
         if let Some((Line::G1(g1), curr)) = cur.current() {
@@ -60,27 +83,28 @@ pub fn planar_z_finder(gcode: &ParsedGCode, first_move_id: i32) -> Vec<i32> {
             if let Some((Line::G1(_), next)) = cur.peek_next() {
                 if curr.z != layer_z && curr.z == next.z {
                     layer_z = next.z;
-                    out.push(g1.move_id);
+                    map[g1.move_id as usize] = Some(Feature::NewLayer);
                 }
             }
         }
         cur.move_next();
     }
-    out
 }
 
 #[cfg(test)]
 #[test]
 fn planar_z_test() {
     let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = planar_z_finder(&gcode, first_move_index(&gcode));
-    panic!("{:?}", index);
+    let mut map: Vec<Option<Feature>> = vec![None; gcode.instructions.len()];
+    find_new_layer(&gcode, &mut map);
+    panic!("{:?}", map);
 }
 #[test]
 fn find_retractions_test() {
     let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = find_retractions(&gcode);
-    panic!("{:?}", index);
+    let mut map: Vec<Option<Feature>> = vec![None; gcode.instructions.len()];
+    find_retractions(&gcode, &mut map);
+    panic!("{:?}", map.iter().filter(|x| x.is_some()));
 }
 #[test]
 fn first_move_test() {
