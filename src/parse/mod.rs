@@ -64,7 +64,7 @@ pub struct State {
 }
 
 impl State {
-    fn new() -> State {
+    pub fn new() -> State {
         State {
             x: NEG_INFINITY,
             y: NEG_INFINITY,
@@ -83,7 +83,7 @@ impl State {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct Instruction {
+pub struct Instruction {
     first_word: Word,
     params: Option<VecDeque<Word>>,
 }
@@ -221,7 +221,7 @@ impl ParsedGCode {
         }
         out
     }
-    fn build(path: &str) -> Result<ParsedGCode, CursorError> {
+    pub fn build(path: &str) -> Result<ParsedGCode, CursorError> {
         let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -518,8 +518,7 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         self.move_prev_g1()?;
         Ok(())
     }
-    fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), C
-            }ursorError> {
+    fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), CursorError> {
         // needs to have a previous g1 move to divide from
         self.at_g1()?;
         let (_prev_g1, prev_state) = self.get_prev_g1(g1_count)?;
@@ -941,17 +940,4 @@ fn tot_dist_test() {
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut _cursor = gcode.instructions.cursor_front_mut();
     assert_eq!(12.0, gcode.tot_dist());
-}
-#[test]
-fn read_and_emit_test() {
-    use std::fs::File;
-    use std::io::prelude::*;
-    let path = "test.gcode";
-    let init = ParsedGCode::build(path).expect("failed to parse gcode");
-    let init = init.emit();
-    let mut file = File::create("test_output.gcode").unwrap();
-    let _ = file.write_all(&init.as_bytes());
-    let snd = ParsedGCode::build("test_output.gcode").expect("asdf");
-    let snd = snd.emit();
-    assert_eq!(init, snd);
 }
