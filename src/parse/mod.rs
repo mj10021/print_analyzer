@@ -300,7 +300,7 @@ impl Emit for ParsedGCode {
         out + "\n"
     }
 }
-enum CursorError {
+pub enum CursorError {
     PastEnd,
     PastFront,
     ExpectedG1,
@@ -518,7 +518,8 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         self.move_prev_g1()?;
         Ok(())
     }
-    fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), CursorError> {
+    fn subdiv_seg(&mut self, count: i32, g1_count: i32) -> Result<(), C
+            }ursorError> {
         // needs to have a previous g1 move to divide from
         self.at_g1()?;
         let (_prev_g1, prev_state) = self.get_prev_g1(g1_count)?;
