@@ -11,7 +11,7 @@ pub trait Emit {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Line {
+pub enum Line {
     G1(G1),
     Instruction(Instruction),
     Raw(String),
@@ -54,7 +54,7 @@ impl Emit for Line {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct State {
+pub struct State {
     x: f32,
     y: f32,
     z: f32,
@@ -74,7 +74,7 @@ impl State {
             g1_emit: String::new(),
         }
     }
-    fn dist(&self, init: &State) -> f32 {
+    pub fn dist(&self, init: &State) -> f32 {
         let dx = self.x - init.x;
         let dy = self.y - init.y;
         let dz = self.z - init.z;
@@ -124,9 +124,9 @@ impl Emit for Instruction {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct G1 {
+pub struct G1 {
     // the g1 move id is 1-indexed
-    move_id: i32,
+    pub move_id: i32,
     x: Option<f32>,
     y: Option<f32>,
     z: Option<f32>,
@@ -186,11 +186,11 @@ impl Emit for G1 {
 
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
-    instructions: LinkedList<(Line, State)>,
+    pub instructions: LinkedList<(Line, State)>,
     // the g1 move count is 1-indexed
-    g1_moves: i32,
-    rel_xyz: bool,
-    rel_e: bool,
+    pub g1_moves: i32,
+    pub rel_xyz: bool,
+    pub rel_e: bool,
 }
 
 impl ParsedGCode {
@@ -328,7 +328,7 @@ impl std::fmt::Debug for CursorError {
         write!(f, "{}", msg)
     }
 }
-trait GCursor {
+pub trait GCursor {
     fn at_end(&mut self) -> bool;
     fn at_front(&mut self) -> bool;
     fn at_g1(&mut self) -> Result<(), CursorError>;
