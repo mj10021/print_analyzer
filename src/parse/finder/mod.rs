@@ -1,8 +1,107 @@
 use super::*;
-#[derive(Clone, PartialEq)]
+
+#[derive(Copy, Clone)]
+enum Label {
+    Uninitialized,
+    FirstG1,
+    PrePrintMove,
+    TravelMove,
+    ExtrusionMove,
+    LiftZ,
+    LowerZ,
+    MysteryMove,
+}
+#[derive(Copy, Clone)]
+struct Annotation {
+    label: Label,
+    feature: Option<Feature>,
+    xi: f32,
+    yi: f32,    
+    zi: f32,
+    dx: f32,
+    dy: f32,
+    dz: f32,
+    de: f32,
+    dt: f32, // calc time from feedrate
+    //shape_id: id,
+    ex_width_mm: f32,
+}
+impl Annotation {
+    fn new() -> Annotation {
+        Annotation {
+            label: Label::Uninitialized,
+            feature: None,
+            xi: NEG_INFINITY,
+            yi: NEG_INFINITY,
+            zi: NEG_INFINITY,
+            dx: NEG_INFINITY,
+            dy: NEG_INFINITY,
+            dz: NEG_INFINITY,
+            de: NEG_INFINITY,
+            dt: NEG_INFINITY,
+            ex_width_mm: 0.0,
+        }
+    }
+    fn get_time(dist: f32, feedrate:f32) -> f32 {
+        (dist / feedrate) * 60.0
+    }
+    fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
+        gcode.set_states().expect("failed to set states");
+        let mut cur = gcode.instructions.cursor_front();
+        while let Err(_) = cur.at_g1() {
+            cur.move_next();
+        }
+        let mut out = Vec::with_capacity(gcode.g1_moves as usize);
+        for _ in 0..gcode.g1_moves {
+            out.push(Annotation::new());
+        }
+        out[0].label = Label::FirstG1;
+        let Some((Line::G1(_), state)) = cur.current() else { panic!("asdf"); };
+        out[0].xi = 0.0;
+        out[0].yi = 0.0;
+        out[0].zi = 0.0;
+        out[0].dx = state.x;
+        out[0].dy = state.y;
+        out[0].dz = state.z;
+        out[0].de = state.e;
+        out[0].dt = Annotation::get_time(state.dist(&State::origin()), state.f);
+        let mut prev_state = state.clone();
+        let first_move = gcode.first_move_id();
+        while !cur.is_last_g1(gcode.g1_moves) {
+            cur.move_next_g1(gcode.g1_moves).expect("asdf");
+            let Some((Line::G1(g1), state)) = cur.current() else { panic!("asdf"); };
+            let i = g1.move_id as usize;
+            out[i].xi = prev_state.x;
+            out[i].yi = prev_state.y;
+            out[i].zi = prev_state.z;
+            out[i].dx = state.x - prev_state.x;
+            out[i].dy = state.y - prev_state.y;
+            out[i].dz = state.z - prev_state.z;
+            out[i].de = state.e;
+            out[i].dt = Annotation::get_time(state.dist(&prev_state), state.f);
+            prev_state = state.clone();
+            out[i].label = {
+                if g1.move_id < first_move { Label::PrePrintMove }
+                else if out[i].de > 0.0 { Label::ExtrusionMove }
+                else if out[i].dz > 0.0 { Label::LiftZ }
+                else if out[i].dz < 0.0 { Label::LowerZ }
+                else if out[i].dx != 0.0 || out[i].dy != 0.0 { Label::TravelMove }
+                else { Label::MysteryMove }
+            }
+        }
+        out
+    }
+}
+
+
+
+
+
+#[derive(Copy, Clone, PartialEq)]
 pub enum Feature {
     FirstMove,
-    ZChange,
+    LayerChangeSequence(u32),
+    ShapeChangeSequence(u32),
     Retraction,
     DeRetraction,
 }
@@ -10,7 +109,8 @@ impl std::fmt::Debug for Feature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::ZChange => write!(f, "ZChange"),
+            Feature::LayerChangeSequence(i) => write!(f, "LayerChangeSequence {}", i),
+            Feature::ShapeChangeSequence(i) => write!(f, "ShapeChangeSequence({})", i),
             Feature::Retraction => write!(f, "Retraction"),
             Feature::DeRetraction => write!(f, "DeRetraction"),
         }
@@ -20,35 +120,15 @@ impl std::fmt::Display for Feature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::ZChange => write!(f, "ZChange"),
+            Feature::LayerChangeSequence(i) => write!(f, "LayerChangeSequence {}", i),
+            Feature::ShapeChangeSequence(i) => write!(f, "ShapeChangeSequence({})", i),
             Feature::Retraction => write!(f, "Retraction"),
             Feature::DeRetraction => write!(f, "DeRetraction"),
         }
     }
 }
 
-
-pub fn first_move_index(gcode: &ParsedGCode) -> i32 {
-    let x_max = 5.0;
-    let y_max = 5.0;
-    let mut cur = gcode.instructions.cursor_front();
-    let mut count = 0;
-    let mut out: Vec<(f32,f32,f32,i32)> = Vec::new();
-    while count < 100 {
-        if let Some((Line::G1(g1), state)) = cur.current() {
-            count += 1;
-            out.push((state.x, state.y, state.z, g1.move_id));
-        }
-        cur.move_next();
-    }
-    for (x, y, _z, id) in out {
-        if x > x_max && y > y_max {
-            return id;
-        }
-    }
-    -1
-}
-fn find_retractions(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
+fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
     let mut cur = gcode.instructions.cursor_front();
     let mut last_retraction = -1;
     let mut last_deretraction = -1;
@@ -56,11 +136,11 @@ fn find_retractions(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
         if let Some((Line::G1(g1), _)) = cur.current() {
             if let Some(de) = g1.e {
                 if de < 0.0 {
-                    map[g1.move_id as usize] = Some(Feature::Retraction);
+                    annotations[g1.move_id as usize - 1].feature = Some(Feature::Retraction);
                     last_retraction = g1.move_id;
                 }
                 if de > 0.0 && last_retraction > last_deretraction {
-                    map[g1.move_id as usize] = Some(Feature::DeRetraction);
+                    annotations[g1.move_id as usize - 1].feature = Some(Feature::DeRetraction);
                      last_deretraction = g1.move_id;
                 }
             }
@@ -68,8 +148,8 @@ fn find_retractions(gcode: &ParsedGCode, map: &mut Vec<Option<Feature>>) {
         cur.move_next();
     }
 }
-pub fn find_new_layer(gcode: &mut ParsedGCode) {
-    let first_move_id = first_move_index(gcode);
+pub fn find_new_layer(gcode: &mut ParsedGCode, annotations: &Vec<Annotation>) {
+    let first_move_id = gcode.first_move_id();
     let mut cur = gcode.instructions.cursor_front();
     let mut layer_z = 0.0;
     while cur.peek_next().is_some() {

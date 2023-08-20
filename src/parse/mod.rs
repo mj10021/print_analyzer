@@ -58,11 +58,11 @@ impl Emit for Line {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct State {
-    x: f32,
-    y: f32,
-    z: f32,
-    e: f32,
-    f: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub e: f32,
+    pub f: f32,
     g1_emit: String,
 }
 
@@ -74,6 +74,16 @@ impl State {
             z: NEG_INFINITY,
             e: NEG_INFINITY,
             f: NEG_INFINITY,
+            g1_emit: String::new(),
+        }
+    }
+    pub fn origin() -> State {
+        State {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            e: 0.0,
+            f: 0.0,
             g1_emit: String::new(),
         }
     }
@@ -208,6 +218,26 @@ pub struct ParsedGCode {
 }
 
 impl ParsedGCode {
+    pub fn first_move_id(&self) -> i32 {
+        let x_max = 5.0;
+        let y_max = 5.0;
+        let mut cur = self.instructions.cursor_front();
+        let mut count = 0;
+        let mut out: Vec<(f32,f32,f32,i32)> = Vec::new();
+        while count < 100 {
+            if let Some((Line::G1(g1), state)) = cur.current() {
+                count += 1;
+                out.push((state.x, state.y, state.z, g1.move_id));
+            }
+            cur.move_next();
+        }
+        for (x, y, _z, id) in out {
+            if x > x_max && y > y_max {
+                return id;
+            }
+        }
+        -1
+    }
     pub fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
@@ -584,12 +614,12 @@ pub trait GCursor {
     fn at_end(&self) -> bool;
     fn at_front(&self) -> bool;
     fn at_g1(&self) -> Result<(), CursorError>;
-    fn next(&self) -> Result<(), CursorError>;
-    fn prev(&self) -> Result<(), CursorError>;
-    fn move_next_g1(&self, g1_count: i32) -> Result<(), CursorError>;
-    fn get_next_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError>;
-    fn move_prev_g1(&self) -> Result<(), CursorError>;
-    fn get_prev_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError>;
+    fn next(&mut self) -> Result<(), CursorError>;
+    fn prev(&mut self) -> Result<(), CursorError>;
+    fn move_next_g1(&mut self, g1_count: i32) -> Result<(), CursorError>;
+    fn get_next_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
+    fn move_prev_g1(&mut self) -> Result<(), CursorError>;
+    fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
     fn is_first_g1(&self) -> bool;
     fn is_last_g1(&self, g1_count: i32) -> bool;
 }
@@ -606,14 +636,14 @@ impl GCursor for Cursor<'_, (Line, State)> {
         } else { Err(CursorError::ExpectedG1) }
     }
     // move cursor forward without wrapping
-    fn next(&self) -> Result<(), CursorError> {
+    fn next(&mut self) -> Result<(), CursorError> {
         if self.at_end() {
             return Err(CursorError::PastEnd);
         }
         self.move_next();
         Ok(())
     }
-    fn move_next_g1(&self, g1_count: i32) -> Result<(), CursorError> {
+    fn move_next_g1(&mut self, g1_count: i32) -> Result<(), CursorError> {
         self.at_g1()?;
         if self.is_last_g1(g1_count) {
             return Err(CursorError::PastEnd);
@@ -624,7 +654,7 @@ impl GCursor for Cursor<'_, (Line, State)> {
         }
         Ok(())
     }
-    fn get_next_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError> {
+    fn get_next_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
         self.at_g1()?;
         if self.is_last_g1(g1_count) {
             return Err(CursorError::PastEnd);
@@ -637,15 +667,14 @@ impl GCursor for Cursor<'_, (Line, State)> {
         }
         Err(CursorError::Unknown)
     }
-    fn prev(&self) -> Result<(), CursorError> {
+    fn prev(&mut self) -> Result<(), CursorError> {
         if self.at_front() {
             return Err(CursorError::PastFront);
         }
         self.move_prev();
         Ok(())
     }
-    fn move_prev_g1(&self) -> Result<(), CursorError> {
-        // this one doesn't rly work
+    fn move_prev_g1(&mut self) -> Result<(), CursorError> {
         self.at_g1()?;
         self.prev()?;
         while let Err(_) = self.at_g1() {
@@ -653,7 +682,7 @@ impl GCursor for Cursor<'_, (Line, State)> {
         }
         Ok(())
     }
-    fn get_prev_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError> {
+    fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError> {
         self.at_g1()?;
         if self.is_first_g1() {
             return Err(CursorError::PastFront);

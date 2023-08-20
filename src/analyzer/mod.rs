@@ -1,36 +1,4 @@
 use crate::parse::*;
-use crate::parse::finder::Feature;
-
-enum Label {
-    PrePrintMove,
-    TravelMove,
-    ExtrusionMove,
-    LiftZ,
-    LowerZ,
-}
-
-struct Annotation {
-    features: Vec<Feature>,
-    labels: Vec<Label>,
-    xi: f32,
-    yi: f32,    
-    zi: f32,
-    dx: f32,
-    dy: f32,
-    dz: f32,
-    de: f32,
-    dt: f32, // calc time from feedrate
-    //shape_id: id,
-    ex_width_mm: f32,
-}
-impl Annotation {
-    fn build(gcode: &ParsedGCode, features: Vec<Option<Feature>>) {
-        let mut cur = gcode.instructions.cursor_front();
-        while !cur.at_g1() {
-            cur.move_next();
-        }
-    }
-}
 
 fn retract() {}
 
