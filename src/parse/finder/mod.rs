@@ -88,6 +88,13 @@ pub fn find_new_layer(gcode: &mut ParsedGCode) {
         cur.move_next();
     }
 }
+// analysis rules:
+// - travel moves are usually much faster than print moves
+// - whether retraction or z hop is on or off, there is some sequence of moves
+//      that are inserted between every shape
+// - different features (ext perim, inner perim, infill) can have different widths (flow)
+//      and different speeds but don't always
+
 
 #[cfg(test)]
 #[test]

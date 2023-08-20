@@ -1,7 +1,7 @@
-use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
+use std::collections::{linked_list::{Cursor, CursorMut}, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
-mod finder;
+pub mod finder;
 
 #[derive(Clone, Debug, PartialEq)]
 struct Word(char, f32, Option<String>);
@@ -355,7 +355,7 @@ impl std::fmt::Debug for CursorError {
         write!(f, "{}", msg)
     }
 }
-pub trait GCursor {
+pub trait GCursorMut {
     fn at_end(&mut self) -> bool;
     fn at_front(&mut self) -> bool;
     fn at_g1(&mut self) -> Result<(), CursorError>;
@@ -371,7 +371,7 @@ pub trait GCursor {
     fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError>;
     fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32) -> Result<(), CursorError>;
 }
-impl<'a> GCursor for CursorMut<'a, (Line, State)> {
+impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
     fn at_end(&mut self) -> bool {
         self.peek_next().is_none() && self.current().is_some()
     }
@@ -392,7 +392,6 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Ok(())
     }
     fn move_next_g1(&mut self, g1_count: i32) -> Result<(), CursorError> {
-        // this one doesn't rly work
         self.at_g1()?;
         if self.is_last_g1(g1_count) {
             return Err(CursorError::PastEnd);
@@ -581,7 +580,110 @@ impl<'a> GCursor for CursorMut<'a, (Line, State)> {
         Ok(())
     }
 }
-
+pub trait GCursor {
+    fn at_end(&self) -> bool;
+    fn at_front(&self) -> bool;
+    fn at_g1(&self) -> Result<(), CursorError>;
+    fn next(&self) -> Result<(), CursorError>;
+    fn prev(&self) -> Result<(), CursorError>;
+    fn move_next_g1(&self, g1_count: i32) -> Result<(), CursorError>;
+    fn get_next_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError>;
+    fn move_prev_g1(&self) -> Result<(), CursorError>;
+    fn get_prev_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError>;
+    fn is_first_g1(&self) -> bool;
+    fn is_last_g1(&self, g1_count: i32) -> bool;
+}
+impl GCursor for Cursor<'_, (Line, State)> {
+    fn at_end(&self) -> bool {
+        self.peek_next().is_none() && self.current().is_some()
+    }
+    fn at_front(&self) -> bool {
+        self.peek_prev().is_none() && self.current().is_some()
+    }
+    fn at_g1(&self) -> Result<(), CursorError> {
+        if let Some((Line::G1(_), _)) = self.current() {
+            return Ok(());
+        } else { Err(CursorError::ExpectedG1) }
+    }
+    // move cursor forward without wrapping
+    fn next(&self) -> Result<(), CursorError> {
+        if self.at_end() {
+            return Err(CursorError::PastEnd);
+        }
+        self.move_next();
+        Ok(())
+    }
+    fn move_next_g1(&self, g1_count: i32) -> Result<(), CursorError> {
+        self.at_g1()?;
+        if self.is_last_g1(g1_count) {
+            return Err(CursorError::PastEnd);
+        };
+        self.next()?;
+        while let Err(_) = self.at_g1() {
+            self.next()?;
+        }
+        Ok(())
+    }
+    fn get_next_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError> {
+        self.at_g1()?;
+        if self.is_last_g1(g1_count) {
+            return Err(CursorError::PastEnd);
+        };
+        self.move_next_g1(g1_count)?;
+        let line = self.current().unwrap().clone();
+        self.move_prev_g1()?;
+        if let (Line::G1(g1), state) = line {
+            return Ok((g1, state));
+        }
+        Err(CursorError::Unknown)
+    }
+    fn prev(&self) -> Result<(), CursorError> {
+        if self.at_front() {
+            return Err(CursorError::PastFront);
+        }
+        self.move_prev();
+        Ok(())
+    }
+    fn move_prev_g1(&self) -> Result<(), CursorError> {
+        // this one doesn't rly work
+        self.at_g1()?;
+        self.prev()?;
+        while let Err(_) = self.at_g1() {
+            self.prev()?;
+        }
+        Ok(())
+    }
+    fn get_prev_g1(&self, g1_count: i32) -> Result<(G1, State), CursorError> {
+        self.at_g1()?;
+        if self.is_first_g1() {
+            return Err(CursorError::PastFront);
+        }
+        self.move_prev_g1()?;
+        let line = self.current().unwrap().clone();
+        self.move_next_g1(g1_count)?;
+        if let (Line::G1(g1), state) = line {
+            return Ok((g1, state));
+        } else { Err(CursorError::Unknown) }
+    }
+    fn is_first_g1(&self) -> bool {
+        if let Err(_) = self.at_g1() {
+            panic!("call from non-g1");
+        };
+        if let Some(&(Line::G1(G1 { move_id, .. }), _)) = self.current() {
+            return move_id == 1;
+        }
+        false
+    }
+    fn is_last_g1(&self, g1_count: i32) -> bool {
+        if let Err(_) = self.at_g1() {
+            panic!("call from non-g1");
+        };
+        if let Some(&(Line::G1(G1 { move_id, .. }), _)) = self.current() {
+            return move_id == g1_count;
+        }
+        false
+    }
+}
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()

@@ -32,7 +32,7 @@ fn transform_test() {
     while !cur.is_last_g1(gcode.g1_moves) {
         if let Some((Line::G1(g1), _)) = cur.current() {
             let i = g1.move_id as f32;
-            cur.translate_g1((i * (PI / 8.0)).sin(), 0.0, 0.0, gcode.g1_moves);
+            let _ = cur.translate_g1((i * (PI / 8.0)).sin(), 0.0, 0.0, gcode.g1_moves);
         }
         cur.move_next_g1(gcode.g1_moves).expect("asdf");}
     use std::fs::File;
@@ -41,6 +41,7 @@ fn transform_test() {
     let _ = f.write_all(gcode.debug_emit().as_bytes());
 }
 mod integration_tests {
+
     #[cfg(test)]
     use crate::parse::{ParsedGCode, Emit};
     #[test]
