@@ -1,5 +1,5 @@
 use crate::parse::*;
-
+use crate::cursor::*;
 fn retract() {}
 
 fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
@@ -36,7 +36,7 @@ fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
         cur.insert_before((Line::Raw(String::from("~~~ ")), State::new()));
     }
     loop {
-        cur.update_state(gcode.g1_moves).expect("failed to update state");
+        cur.update_state().expect("failed to update state");
         if cur.current().unwrap() as *const (Line, State) == init {
             break;
         }

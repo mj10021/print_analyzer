@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 enum Label {
     Uninitialized,
     FirstG1,
@@ -11,7 +11,7 @@ enum Label {
     LowerZ,
     MysteryMove,
 }
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 struct Annotation {
     label: Label,
     feature: Option<Feature>,
@@ -70,7 +70,7 @@ impl Annotation {
         while !cur.is_last_g1(gcode.g1_moves) {
             cur.move_next_g1(gcode.g1_moves).expect("asdf");
             let Some((Line::G1(g1), state)) = cur.current() else { panic!("asdf"); };
-            let i = g1.move_id as usize;
+            let i = g1.move_id as usize - 1;
             out[i].xi = prev_state.x;
             out[i].yi = prev_state.y;
             out[i].zi = prev_state.z;
@@ -86,7 +86,7 @@ impl Annotation {
                 else if out[i].dz > 0.0 { Label::LiftZ }
                 else if out[i].dz < 0.0 { Label::LowerZ }
                 else if out[i].dx != 0.0 || out[i].dy != 0.0 { Label::TravelMove }
-                else { Label::MysteryMove }
+                else { panic!("{:?}\r\n\r\n{:?}", g1, state) }//{ Label::MysteryMove }
             }
         }
         out
@@ -148,7 +148,7 @@ fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
         cur.move_next();
     }
 }
-pub fn find_new_layer(gcode: &mut ParsedGCode, annotations: &Vec<Annotation>) {
+fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
     let first_move_id = gcode.first_move_id();
     let mut cur = gcode.instructions.cursor_front();
     let mut layer_z = 0.0;
@@ -161,7 +161,7 @@ pub fn find_new_layer(gcode: &mut ParsedGCode, annotations: &Vec<Annotation>) {
             if let Some((Line::G1(_), next)) = cur.peek_next() {
                 if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
                     layer_z = next.z;
-                    gcode.features[g1.move_id as usize] = Some(Feature::ZChange);
+                    annotations[g1.move_id as usize - 1].feature = Some(Feature::LayerChangeSequence(0));
                 }
             }
         }
@@ -180,7 +180,8 @@ pub fn find_new_layer(gcode: &mut ParsedGCode, annotations: &Vec<Annotation>) {
 #[test]
 fn planar_z_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    find_new_layer(&mut gcode);
+    let mut ann = Annotation::build(&mut gcode);
+    find_new_layer(&mut gcode, &mut ann);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
@@ -189,14 +190,15 @@ fn planar_z_test() {
 }
 #[test]
 fn find_retractions_test() {
-    let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let mut map: Vec<Option<Feature>> = vec![None; gcode.instructions.len()];
-    find_retractions(&gcode, &mut map);
-    panic!("{:?}", map.iter().filter(|x| x.is_some()));
+    let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
+    let mut ann = Annotation::build(&mut gcode);
+    find_retractions(&gcode, &mut ann);
+    let out = ann.iter().filter(|x| x.label==Label::MysteryMove).collect::<Vec<_>>();
+    panic!("{:?}", out);
 }
 #[test]
 fn first_move_test() {
     let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = first_move_index(&gcode);
+    let index = gcode.first_move_id();
     panic!("{:?}", index);
 }
