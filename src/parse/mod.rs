@@ -81,7 +81,7 @@ impl State {
             g1_emit: String::new(),
         }
     }
-    pub fn update_from(&mut self, state: State) {
+    pub fn update_from(&mut self, state: &State) {
         self.x = state.x;
         self.y = state.y;
         self.z = state.z;
@@ -769,7 +769,7 @@ fn sub_seg_test() {
 }
 #[test]
 fn tot_dist_test() {
-    let input = "G1 X0 Y0 Z0\n
+    let input = "G28\nG1 X0 Y0 Z0\n
     G1 X1 Y0 Z0 \n
     G1 X1 Y1 Z0 \n
     G1 X1 Y1 Z1 \n

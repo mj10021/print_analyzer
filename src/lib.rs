@@ -163,22 +163,14 @@ mod cursor {
                     return Ok(());
                 }
             }
-
-            if let Some((_line, state)) = self.peek_prev() {
-                let prev_state = state.clone();
+            if let Some((_line, prev_state)) = self.peek_prev() {
+                let prev_state = prev_state.clone();
                 match self.current() {
                 // if the instruction is a G28, update the set state to home and return Ok(())
-                    Some((Line::Instruction(Instruction {first_word, params: _}), state)) => {
-                        if first_word == &mut Word('G', 28.0, None) {
-                            state.home();
-                            state.g1_emit = "G28\n".to_string();
-                            panic!("{:?}", self);
-                            //return Ok(());
-                        } else { 
-                            state.update_from(prev_state);
-                            return Ok(());
-                        }
-                    },
+                    Some((Line::Instruction(_), state)) => { 
+                        state.update_from(&prev_state);
+                        Ok(())
+                    }
                     // FIXME: change this to mark green when state is computed and mark red when g1 is modified 
                     Some((Line::G1(g1), state)) => {
                         assert!(prev_state.homed, "g1 move from unhomed state");
@@ -194,16 +186,16 @@ mod cursor {
                             state.f = g1.f.unwrap_or(prev_state.f);
                             state.homed = prev_state.homed;
                             state.g1_emit = g1.emit();
-                            return Ok(())
+                            Ok(())
                         }
                     },
                     Some((Line::Raw(_), state)) => {
-                        state.update_from(prev_state);
-                        return Ok(());
+                        state.update_from(&prev_state);
+                        Ok(())
                     },
                     _ => Err(CursorError::Unknown),
                 }
-            } else { /* first command */ Ok(()) }
+            } else { /* front of list */ Ok(()) }
         }
         fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError> {
             if let Err(e) = self.at_g1() {
