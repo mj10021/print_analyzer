@@ -1,7 +1,7 @@
 use std::collections::{LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
-use crate::cursor::*;
+use crate::gcursor::*;
 
 pub mod finder;
 
@@ -263,7 +263,6 @@ impl ParsedGCode {
     pub fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
-            assert!(cursor.current().is_some());
             cursor.update_state()?;
             if cursor.at_end() {
                 return Ok(());
@@ -540,7 +539,10 @@ fn check_g1_index() {
 fn get_g1_index_return() { 
     let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
-    cursor.next().expect("asdf");
+    while let Err(_) = cursor.at_g1() {
+        cursor.next().expect("no g1 found");
+    }
+    cursor.move_next_g1(gcode.g1_moves).expect("no next g1");
     while !cursor.is_last_g1(gcode.g1_moves) {
         let init = cursor.current().unwrap() as *const (Line, State);
         let _ = cursor.get_prev_g1(gcode.g1_moves).expect("asdf");

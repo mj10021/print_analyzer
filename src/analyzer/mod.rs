@@ -1,5 +1,5 @@
 use crate::parse::*;
-use crate::cursor::*;
+use crate::gcursor::*;
 fn retract() {}
 
 fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
