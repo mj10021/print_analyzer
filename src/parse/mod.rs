@@ -694,10 +694,11 @@ fn sub_all_test() {
 }
 #[test]
 fn trans_test() {
-    let input = "G1 X0 Y1 Z1\n
-        G1 X1 E1\n
-        G1 X2 E1\n
-        G1 X3 E1\n";
+    let input = "G28\n\
+                        G1 X0 Y1 Z1\n\
+                        G1 X1 E1\n\
+                        G1 X2 E1\n\
+                        G1 X3 E1\n";
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
 
@@ -770,7 +771,8 @@ fn sub_seg_test() {
     ;asdfasdfasdf\n";
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
-    let _ = cursor.next();
+    cursor.next().expect("end of list");
+    cursor.next().expect("end of list");
     let seg_count = 111111;
     let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves); 
     let _ = gcode.instructions.pop_front();   
