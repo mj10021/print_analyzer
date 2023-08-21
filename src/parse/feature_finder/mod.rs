@@ -171,6 +171,6 @@ fn find_retractions_test() {
 #[test]
 fn first_move_test() {
     let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = gcode.first_move_id(); // should be 12 for test.gcode
-    assert_eq!(index, 12);
+    let index = gcode.first_move_id(); // should be 11 for test.gcode
+    assert_eq!(index, 11);
 }

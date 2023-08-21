@@ -358,3 +358,21 @@ impl GCursor for Cursor<'_, (Line, State)> {
         false
     }
 }
+
+#[cfg(test)]
+#[test]
+fn at_end_test() {}
+// fn at_end(&mut self) -> bool;
+// fn at_front(&mut self) -> bool;
+// fn at_g1(&mut self) -> Result<(), CursorError>;
+// fn next(&mut self) -> Result<(), CursorError>;
+// fn prev(&mut self) -> Result<(), CursorError>;
+// fn move_next_g1(&mut self, g1_count: i32) -> Result<(), CursorError>;
+// fn get_next_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
+// fn move_prev_g1(&mut self) -> Result<(), CursorError>;
+// fn get_prev_g1(&mut self, g1_count: i32) -> Result<(G1, State), CursorError>;
+// fn is_first_g1(&mut self) -> bool;
+// fn is_last_g1(&mut self, g1_count: i32) -> bool;
+// fn update_state(&mut self) -> Result<(), CursorError>;
+// fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError>;
+// fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32) -> Result<(), CursorError>;

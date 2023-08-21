@@ -241,24 +241,24 @@ pub struct ParsedGCode {
 
 impl ParsedGCode {
     pub fn first_move_id(&self) -> i32 {
-        let x_max = 5.0;
-        let y_max = 5.0;
+        let x_min = 5.0;
+        let y_min = 5.0;
         let mut cur = self.instructions.cursor_front();
-        let mut count = 1;
-        let mut out: Vec<(f32,f32,f32,i32)> = Vec::new();
-        while count < 100 {
-            if let Some((Line::G1(g1), state)) = cur.current() {
-                count += 1;
-                out.push((state.x, state.y, state.z, g1.move_id));
+        loop {
+            if cur.at_end() {
+                panic!("no g1 moves found inside print area");
+            }
+            if let Some((Line::G1(g1), _)) = cur.current() {
+                if let Some(x) = g1.x {
+                    if let Some(y) = g1.y {
+                        if x > x_min && y > y_min {
+                            return g1.move_id;
+                        }
+                    }
+                }
             }
             cur.move_next();
         }
-        for (x, y, _z, id) in out {
-            if x > x_max && y > y_max {
-                return id;
-            }
-        }
-        -1
     }
     pub fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
