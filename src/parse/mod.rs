@@ -3,7 +3,7 @@ use std::f32::NEG_INFINITY;
 
 use crate::gcursor::*;
 
-pub mod finder;
+pub mod feature_finder;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32, pub Option<String>);
@@ -232,9 +232,9 @@ impl Emit for G1 {
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
-    // the g1 move count is 1-indexed
+    // the g1 move count is 1-indexed!
     pub g1_moves: i32,
-    pub features: Vec<Option<finder::Feature>>,
+    pub features: Vec<Option<feature_finder::Feature>>,
     pub rel_xyz: bool,
     pub rel_e: bool,
 }

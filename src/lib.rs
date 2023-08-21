@@ -26,7 +26,7 @@ mod gcursor;
 fn transform_test() {
     use std::f32::consts::PI;
     use crate::parse::*;
-    use crate::cursor::*;
+    use crate::gcursor::*;
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
     let mut cur = gcode.instructions.cursor_front_mut();
     while let Err(_) = cur.at_g1() {
