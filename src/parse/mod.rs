@@ -244,7 +244,7 @@ impl ParsedGCode {
         let x_max = 5.0;
         let y_max = 5.0;
         let mut cur = self.instructions.cursor_front();
-        let mut count = 0;
+        let mut count = 1;
         let mut out: Vec<(f32,f32,f32,i32)> = Vec::new();
         while count < 100 {
             if let Some((Line::G1(g1), state)) = cur.current() {
@@ -263,11 +263,11 @@ impl ParsedGCode {
     pub fn set_states(&mut self) -> Result<(), CursorError> {
         let mut cursor = self.instructions.cursor_front_mut();
         loop {
-            cursor.update_state()?;
+            cursor.update_state().expect("failed to update state");
             if cursor.at_end() {
                 return Ok(());
             }
-            cursor.next()?;
+            cursor.next().expect("past end of list");
         }
     }
     fn tot_dist(&mut self) -> f32 {
@@ -337,7 +337,7 @@ impl ParsedGCode {
             rel_e,
             g1_moves,
         };
-        out.set_states()?;
+        out.set_states().expect("failed to set states");
         Ok(out)
     }
     fn subdivide(&mut self, count: i32) {
@@ -552,9 +552,10 @@ fn get_g1_index_return() {
 }
 #[test]
 fn single_g1() {
-    let input = "G1 X0 Y0 Z0 e1 f-1.12345\n";
+    let input = "G28\nG1 X0 Y0 Z0 e1 f-1.12345\n";
     let mut gcode = ParsedGCode::build(input).expect("failed to parse");
     let mut cursor = gcode.instructions.cursor_front_mut();
+    cursor.next().expect("end of list");
     if let Some((Line::G1(_g1), state)) = cursor.current() {
         assert_eq!(state.x, 0.0);
         assert_eq!(state.y, 0.0);
@@ -639,20 +640,25 @@ fn dist_test() {
 }
 #[test]
 fn init_state() {
-    let input = "G1 X0 Y0 Z0";
-    let gcode = ParsedGCode::build(input).expect("failed to parse gcode");
-    if let Some((Line::G1(_g1), state)) = gcode.instructions.front() {
-        let blah = [state.x, state.y, state.z, state.e, state.f];
-        let test = [0.0, 0.0, 0.0, NEG_INFINITY, NEG_INFINITY];
+    let input = "G28\nG1x1y1\n";
+    let gcode = ParsedGCode::build(input);
+    let Ok(gcode) = gcode else {
+        panic!("{:?}", gcode);
+    };
+    let mut cur = gcode.instructions.cursor_front();
+    cur.next().expect("end of list");
+    if let Some((Line::G1(_g1), state)) = cur.current() {
+        let blah = (state.x, state.y, state.z, state.e, state.f, state.homed);
+        let test = (1.0, 1.0, 0.0, 0.0, 0.0, true);
         assert_eq!(blah, test);
-    } else { panic!("failed to parse gcode") }
+    } else { panic!(" couldn't find first g1") }
 }
 #[test]
 fn check_state() {
     let input = "G28\nG1 X0 Y0 Z0 E0 F1000\n
     G1 X1 Y2 Z3 E4 F2000\n
     G1 X2 Y2 Z2 E-1.1 F1000\n
-    F1 X0 Y0 Z0 E100 F1\n";
+    G1 X0 Y0 Z0 E100 F1\n";
     let a = [
         [0.0, 0.0, 0.0, 0.0, 1000.0],
         [1.0, 2.0, 3.0, 4.0, 2000.0],
@@ -662,6 +668,9 @@ fn check_state() {
     let mut i = 0;
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
+    while let Err(_) = cursor.at_g1() {
+        cursor.next().expect("end of list");
+    }
     while !cursor.at_end() {
         let Some((Line::G1(_g1), state)) = cursor.current() else {
             panic!("asdf");
@@ -672,7 +681,7 @@ fn check_state() {
         assert_eq!(a[i][3], state.e);
         assert_eq!(a[i][4], state.f);
         i += 1;
-        let _ = cursor.next();
+        cursor.move_next_g1(gcode.g1_moves).expect("no g1 found");
     }
 }
 #[test]
@@ -680,7 +689,7 @@ fn sub_all_test() {
     for count in 2..10 {
         let mut gcode = ParsedGCode::build(TEST_G1_ONLY).expect("asdf");
         gcode.subdivide(count);
-        assert_eq!((gcode.g1_moves + (gcode.g1_moves - 1 ) * count), gcode.instructions.len() as i32);
+        assert_eq!((gcode.g1_moves + (gcode.g1_moves - 1 ) * count), gcode.instructions.len() as i32 - 1 /* subtract the G28 */);
     }
 }
 #[test]
@@ -755,14 +764,16 @@ fn parse_m() {
 }
 #[test]
 fn sub_seg_test() {
-    let input = "G1 X1 Y1 Z1 E1;asdfasdfasdf \n
+    // THIS IS BROKEN
+    let input = "G28\nG1 X1 Y1 Z1 E1;asdfasdfasdf \n
     G1 X20 Y20 Z11 E10\nG1 Z100\n
     ;asdfasdfasdf\n";
     let mut gcode = ParsedGCode::build(input).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     let _ = cursor.next();
     let seg_count = 111111;
-    let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves);
+    let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves); 
+    let _ = gcode.instructions.pop_front();   
     let _ = gcode.instructions.pop_front();
     if let Some((Line::G1(g1), _)) = gcode.instructions.front() {
         assert_eq!(g1.e, Some(10.0/seg_count as f32));

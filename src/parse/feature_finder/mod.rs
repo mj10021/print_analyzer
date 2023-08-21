@@ -92,12 +92,7 @@ impl Annotation {
         out
     }
 }
-
-
-
-
-
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Feature {
     FirstMove,
     LayerChangeSequence(u32),
@@ -105,29 +100,6 @@ pub enum Feature {
     Retraction,
     DeRetraction,
 }
-impl std::fmt::Debug for Feature {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::LayerChangeSequence(i) => write!(f, "LayerChangeSequence {}", i),
-            Feature::ShapeChangeSequence(i) => write!(f, "ShapeChangeSequence({})", i),
-            Feature::Retraction => write!(f, "Retraction"),
-            Feature::DeRetraction => write!(f, "DeRetraction"),
-        }
-    }
-}
-impl std::fmt::Display for Feature {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Feature::FirstMove => write!(f, "FirstMove"),
-            Feature::LayerChangeSequence(i) => write!(f, "LayerChangeSequence {}", i),
-            Feature::ShapeChangeSequence(i) => write!(f, "ShapeChangeSequence({})", i),
-            Feature::Retraction => write!(f, "Retraction"),
-            Feature::DeRetraction => write!(f, "DeRetraction"),
-        }
-    }
-}
-
 fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
     let mut cur = gcode.instructions.cursor_front();
     let mut last_retraction = -1;
@@ -199,6 +171,6 @@ fn find_retractions_test() {
 #[test]
 fn first_move_test() {
     let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = gcode.first_move_id();
-    panic!("{:?}", index);
+    let index = gcode.first_move_id(); // should be 12 for test.gcode
+    assert_eq!(index, 12);
 }

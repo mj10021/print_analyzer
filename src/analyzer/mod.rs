@@ -14,7 +14,6 @@ fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
         }
         cur.next().expect("past list end");
     }
-    let init = cur.current().unwrap() as *const (Line, State);
     let mut dist = 0.0;
     let mut moves: Vec<(G1, State)> = Vec::new();
     while dist < min_dist {
@@ -29,19 +28,20 @@ fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
             moves.push((g1.clone(), curr.clone()));
         }
     }
+    let start = cur.peek_prev().unwrap() as *const (Line, State);
+    let end = cur.current().unwrap() as *const (Line, State);
     while moves.len() > 0 {
         let (g1, curr) = moves.pop().unwrap();
         cur.insert_before((Line::Raw(String::from(" ~~~")), State::new()));
         cur.insert_before((Line::G1(g1), curr));
         cur.insert_before((Line::Raw(String::from("~~~ ")), State::new()));
     }
-    loop {
+    while cur.current().unwrap() as *const (Line, State) != start {
+        cur.prev().expect("end of list");
+    }
+    while cur.current().unwrap() as *const (Line, State) != end {
         cur.update_state().expect("failed to update state");
-        if cur.current().unwrap() as *const (Line, State) == init {
-            break;
-        }
-        cur.move_next_g1(gcode.g1_moves).expect("No next G1 command found");
-
+        cur.next().expect("end of list");
         }
     }
 
@@ -55,6 +55,7 @@ const WIPE_TEST_GCODE: &str = "G28\nG1 X0 Y-2 Z.2 F1234\n\
                                 G1 X50 Y80 E2\n";
 #[test]
 fn wipe_test() {
+    todo!();
     // this inserts at the wrong place right now
     let mut gcode = ParsedGCode::build(WIPE_TEST_GCODE).expect("asdf");
     wipe(&mut gcode, 5, 63.0);
