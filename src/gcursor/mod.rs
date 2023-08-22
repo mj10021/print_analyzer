@@ -1,5 +1,5 @@
-use std::collections::linked_list::{Cursor, CursorMut};
 use crate::parse::*;
+use std::collections::linked_list::{Cursor, CursorMut};
 pub enum CursorError {
     PastEnd,
     PastFront,
@@ -41,7 +41,8 @@ pub trait GCursorMut {
     fn is_first_g1(&mut self) -> bool;
     fn is_last_g1(&mut self, g1_count: i32) -> bool;
     fn update_state(&mut self) -> Result<(), CursorError>;
-    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError>;
+    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32)
+        -> Result<(), CursorError>;
     fn subdiv_seg(&mut self, seg_len: i32, g1_count: i32) -> Result<(), CursorError>;
 }
 impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
@@ -54,7 +55,9 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
     fn at_g1(&mut self) -> Result<(), CursorError> {
         if let Some((Line::G1(_), _)) = self.current() {
             return Ok(());
-        } else { Err(CursorError::ExpectedG1) }
+        } else {
+            Err(CursorError::ExpectedG1)
+        }
     }
     // move cursor forward without wrapping
     fn next(&mut self) -> Result<(), CursorError> {
@@ -114,7 +117,9 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
         self.move_next_g1(g1_count)?;
         if let (Line::G1(g1), state) = line {
             return Ok((g1, state));
-        } else { Err(CursorError::Unknown) }
+        } else {
+            Err(CursorError::Unknown)
+        }
     }
     fn is_first_g1(&mut self) -> bool {
         if let Err(_) = self.at_g1() {
@@ -136,7 +141,7 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
     }
     fn update_state(&mut self) -> Result<(), CursorError> {
         // if the current instruction is a G28, update the set state to home and return Ok(())
-        if let Some((Line::Instruction(Instruction { first_word, ..}), state)) = self.current() {
+        if let Some((Line::Instruction(Instruction { first_word, .. }), state)) = self.current() {
             if first_word == &mut Word('G', 28.0, None) {
                 state.home();
                 return Ok(());
@@ -148,11 +153,11 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
             // match the current instruction against commands that we want to handle
             match self.current() {
                 // if the instruction is not G1, just update the state from the previous state
-                Some((Line::Instruction(_), state)) => { 
+                Some((Line::Instruction(_), state)) => {
                     state.update_from(&prev_state);
                     Ok(())
                 }
-                // FIXME: change this to mark green when state is computed and mark red when g1 is modified 
+                // FIXME: change this to mark green when state is computed and mark red when g1 is modified
                 Some((Line::G1(g1), state)) => {
                     // requires all axes to be homed before move command
                     assert!(prev_state.homed, "g1 move from unhomed state");
@@ -170,16 +175,25 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
                         state.g1_emit = g1.emit();
                         Ok(())
                     }
-                },
+                }
                 Some((Line::Raw(_), state)) => {
                     state.update_from(&prev_state);
                     Ok(())
-                },
+                }
                 _ => Err(CursorError::Unknown),
             }
-        } else { /* front of list */ Ok(()) }
+        } else {
+            /* front of list */
+            Ok(())
+        }
     }
-    fn translate_g1(&mut self, dx: f32, dy: f32, dz: f32, g1_count: i32) -> Result<(), CursorError> {
+    fn translate_g1(
+        &mut self,
+        dx: f32,
+        dy: f32,
+        dz: f32,
+        g1_count: i32,
+    ) -> Result<(), CursorError> {
         if let Err(e) = self.at_g1() {
             panic!("{}", e);
         }
@@ -281,7 +295,9 @@ impl GCursor for Cursor<'_, (Line, State)> {
     fn at_g1(&self) -> Result<(), CursorError> {
         if let Some((Line::G1(_), _)) = self.current() {
             return Ok(());
-        } else { Err(CursorError::ExpectedG1) }
+        } else {
+            Err(CursorError::ExpectedG1)
+        }
     }
     // move cursor forward without wrapping
     fn next(&mut self) -> Result<(), CursorError> {
@@ -340,7 +356,9 @@ impl GCursor for Cursor<'_, (Line, State)> {
         self.move_next_g1(g1_count)?;
         if let (Line::G1(g1), state) = line {
             return Ok((g1, state));
-        } else { Err(CursorError::Unknown) }
+        } else {
+            Err(CursorError::Unknown)
+        }
     }
     fn is_first_g1(&self) -> bool {
         if let Err(_) = self.at_g1() {

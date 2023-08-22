@@ -1,7 +1,7 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
-mod parse;
 mod analyzer;
+mod parse;
 
 mod transform {
     // use crate::parse::*;
@@ -20,13 +20,12 @@ mod transform {
 }
 mod gcursor;
 
-
 #[cfg(test)]
 #[test]
 fn transform_test() {
-    use std::f32::consts::PI;
-    use crate::parse::*;
     use crate::gcursor::*;
+    use crate::parse::*;
+    use std::f32::consts::PI;
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
     let mut cur = gcode.instructions.cursor_front_mut();
     while let Err(_) = cur.at_g1() {
@@ -38,7 +37,8 @@ fn transform_test() {
             let i = g1.move_id as f32;
             let _ = cur.translate_g1((i * (PI / 8.0)).sin(), 0.0, 0.0, gcode.g1_moves);
         }
-        cur.move_next_g1(gcode.g1_moves).expect("asdf");}
+        cur.move_next_g1(gcode.g1_moves).expect("asdf");
+    }
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("transform_test.gcode").expect("failed to create file");
@@ -47,7 +47,7 @@ fn transform_test() {
 mod integration_tests {
 
     #[cfg(test)]
-    use crate::parse::{ParsedGCode, Emit};
+    use crate::parse::{Emit, ParsedGCode};
     #[test]
     fn import_emit_reemit() {
         let f = "test.gcode";

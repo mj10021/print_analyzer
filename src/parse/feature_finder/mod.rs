@@ -11,14 +11,14 @@ enum Label {
     LowerZ,
     MysteryMove,
     Retraction,
-    FeedrateChangeOnly
+    FeedrateChangeOnly,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-struct Annotation {
+pub struct Annotation {
     label: Label,
     feature: Option<Feature>,
     xi: f32,
-    yi: f32,    
+    yi: f32,
     zi: f32,
     dx: f32,
     dy: f32,
@@ -29,7 +29,7 @@ struct Annotation {
     ex_width_mm: f32,
 }
 impl Annotation {
-    fn new() -> Annotation {
+    pub fn new() -> Annotation {
         Annotation {
             label: Label::Uninitialized,
             feature: None,
@@ -44,13 +44,13 @@ impl Annotation {
             ex_width_mm: 0.0,
         }
     }
-    fn get_time(&self, feedrate:f32) -> f32 {
-        let dist = (self.dx.powi(2) + self.dy.powi(2) + self.dz.powi(2)).sqrt();
-        if dist == 0.0 { return (self.de.abs() / feedrate) * 60.0; }
-        return (dist / feedrate) * 60.0;
+    fn get_time(&self, feedrate: f32) -> f32 {
+        // because all axes move at the same time, use the longest axis distance to calculate time
+        let max_axis_dist =
+            (self.dx.abs()).max(self.dy.abs().max(self.dz.abs().max(self.de.abs())));
+        return (max_axis_dist / feedrate) * 60.0;
     }
-    fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
-        // dt IS NOT RIGHT FOR EXTRUSION ONLY MOVES (not sure what feedrate ex. axis uses)
+    pub fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
         gcode.set_states().expect("failed to set states");
         let mut cur = gcode.instructions.cursor_front();
         // move cursor to first g1 move
@@ -64,7 +64,9 @@ impl Annotation {
         }
         // label the annotation for the first g1 move
         out[0].label = Label::FirstG1;
-        let Some((Line::G1(_), state)) = cur.current() else { panic!("cursor not at g1 move"); };
+        let Some((Line::G1(_), state)) = cur.current() else {
+            panic!("cursor not at g1 move");
+        };
         out[0].xi = 0.0;
         out[0].yi = 0.0;
         out[0].zi = 0.0;
@@ -77,7 +79,9 @@ impl Annotation {
         let first_move = gcode.first_move_id();
         while !cur.is_last_g1(gcode.g1_moves) {
             cur.move_next_g1(gcode.g1_moves).expect("asdf");
-            let Some((Line::G1(g1), state)) = cur.current() else { panic!("asdf"); };
+            let Some((Line::G1(g1), state)) = cur.current() else {
+                panic!("asdf");
+            };
             let i = g1.move_id as usize - 1;
             out[i].xi = prev_state.x;
             out[i].yi = prev_state.y;
@@ -86,17 +90,26 @@ impl Annotation {
             out[i].dy = state.y - prev_state.y;
             out[i].dz = state.z - prev_state.z;
             out[i].de = state.e - prev_state.e;
-            out[i].dt = out[i].get_time( state.f);
+            out[i].dt = out[i].get_time(state.f);
             prev_state = state.clone();
             out[i].label = {
-                if g1.move_id < first_move { Label::PrePrintMove }
-                else if out[i].de > 0.0 { Label::ExtrusionMove }
-                else if out[i].dz > 0.0 { Label::LiftZ }
-                else if out[i].dz < 0.0 { Label::LowerZ }
-                else if out[i].dx != 0.0 || out[i].dy != 0.0 { Label::TravelMove }
-                else if out[i].de < 0.0 { Label::Retraction }
-                else if g1.f.is_some() { Label::FeedrateChangeOnly }
-                else { panic!("{:?}\r\n\r\n{:?}", g1, state) }//{ Label::MysteryMove }
+                if g1.move_id < first_move {
+                    Label::PrePrintMove
+                } else if out[i].de > 0.0 {
+                    Label::ExtrusionMove
+                } else if out[i].dz > 0.0 {
+                    Label::LiftZ
+                } else if out[i].dz < 0.0 {
+                    Label::LowerZ
+                } else if out[i].dx != 0.0 || out[i].dy != 0.0 {
+                    Label::TravelMove
+                } else if out[i].de < 0.0 {
+                    Label::Retraction
+                } else if g1.f.is_some() {
+                    Label::FeedrateChangeOnly
+                } else {
+                    panic!("{:?}\r\n\r\n{:?}", g1, state)
+                } //{ Label::MysteryMove }
             }
         }
         out
@@ -143,7 +156,8 @@ fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
             if let Some((Line::G1(_), next)) = cur.peek_next() {
                 if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
                     layer_z = next.z;
-                    annotations[g1.move_id as usize - 1].feature = Some(Feature::LayerChangeSequence(0));
+                    annotations[g1.move_id as usize - 1].feature =
+                        Some(Feature::LayerChangeSequence(0));
                 }
             }
         }
@@ -157,7 +171,6 @@ fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
 // - different features (ext perim, inner perim, infill) can have different widths (flow)
 //      and different speeds but don't always
 
-
 #[cfg(test)]
 #[test]
 fn planar_z_test() {
@@ -168,16 +181,25 @@ fn planar_z_test() {
     use std::io::prelude::*;
     let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
     let _ = f.write_all(gcode.debug_emit().as_bytes());
-
 }
 #[test]
 fn find_retractions_test() {
-    let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
+    let test = "G28\n\
+                        G1 X0 Y-2 Z.2 F1234\n\
+                        G1 X80 E22.22\n\
+                        G1 E-0.2\n\
+                        G1 X50 Y50\n\
+                        G1 X80 Y50 E2\n\
+                        G1 X80 Y80 E2\n\
+                        G1 E-0.2\n\
+                        G1 X50 Y80 E2\n";
+    let mut gcode = ParsedGCode::build(test).expect("asdf");
     let mut ann = Annotation::build(&mut gcode);
     find_retractions(&gcode, &mut ann);
-    
-    let out = ann.iter().filter(|x| x.feature==Some(Feature::Retraction)).collect::<Vec<_>>();
-    panic!("{:?}", out);
+    assert_eq!(ann[2].feature, Some(Feature::Retraction));
+    assert_eq!(ann[3].feature, Some(Feature::DeRetraction));
+    assert_eq!(ann[6].feature, Some(Feature::Retraction));
+    assert_eq!(ann[7].feature, Some(Feature::DeRetraction));
 }
 #[test]
 fn first_move_test() {

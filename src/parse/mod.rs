@@ -8,13 +8,6 @@ pub mod feature_finder;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32, pub Option<String>);
 
-pub trait Emit {
-    fn emit(&self) -> String;
-    fn debug_emit(&self) -> String {
-        self.emit()
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     G1(G1),
@@ -44,16 +37,6 @@ impl Line {
                 }
                 Line::Raw(raw_line)
             }
-        }
-    }
-}
-
-impl Emit for Line {
-    fn emit(&self) -> String {
-        match self {
-            Line::G1(g1) => g1.emit(),
-            Line::Instruction(ins) => ins.emit(),
-            Line::Raw(string) => string.clone(),
         }
     }
 }
@@ -140,25 +123,6 @@ impl Instruction {
     }
 }
 
-impl Emit for Instruction {
-    fn emit(&self) -> String {
-        let Instruction {
-            first_word: Word(letter, num, string),
-            params,
-        } = self;
-        if let Some(string) = string {
-            return string.clone() + "\n";
-        }
-        let mut out = format!("{}{}", letter, *num as i32);
-        if let Some(params) = params {
-            for Word(letter, val, _) in params {
-                out += &format!(" {}{}", letter, val);
-            }
-        }
-        out + "\n"
-    }
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct G1 {
     // the g1 move id is 1-indexed
@@ -198,38 +162,6 @@ impl G1 {
     }
 }
 
-impl Emit for G1 {
-    fn emit(&self) -> String {
-        let mut out = String::from("G1");
-        if let Some(x) = self.x {
-            assert!(x.is_finite());
-            assert!(!x.is_nan());
-            out += &format!(" X{}", x);
-        }
-        if let Some(y) = self.y {
-            assert!(y.is_finite());
-            assert!(!y.is_nan());
-            out += &format!(" Y{}", y);
-        }
-        if let Some(z) = self.z {
-            assert!(z.is_finite());
-            assert!(!z.is_nan());
-            out += &format!(" Z{}", z);
-        }
-        if let Some(e) = self.e {
-            assert!(e.is_finite());
-            assert!(!e.is_nan());
-            out += &format!(" E{}", e);
-        }
-        if let Some(f) = self.f {
-            assert!(f.is_finite());
-            assert!(!f.is_nan());
-            out += &format!(" F{}", f);
-        }
-        out + "\n"
-    }
-}
-
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
@@ -261,13 +193,18 @@ impl ParsedGCode {
         }
     }
     pub fn set_states(&mut self) -> Result<(), CursorError> {
-        let mut cursor = self.instructions.cursor_front_mut();
+        let mut cur = self.instructions.cursor_front_mut();
+        let mut g1_moves = 0;
         loop {
-            cursor.update_state().expect("failed to update state");
-            if cursor.at_end() {
+            if let Some((Line::G1(_),_)) = cur.current() {
+                g1_moves += 1;
+            }
+            cur.update_state().expect("failed to update state");
+            if cur.at_end() {
+                self.g1_moves = g1_moves;
                 return Ok(());
             }
-            cursor.next().expect("past end of list");
+            cur.next().expect("past end of list");
         }
     }
     fn tot_dist(&mut self) -> f32 {
@@ -347,7 +284,9 @@ impl ParsedGCode {
         // start from the second g1 move
         cursor.move_next_g1(self.g1_moves).expect("g1 move failed");
         loop {
-            cursor.subdiv_seg(count, self.g1_moves).expect("failed to divide");
+            cursor
+                .subdiv_seg(count, self.g1_moves)
+                .expect("failed to divide");
             if cursor.is_last_g1(self.g1_moves) {
                 break;
             }
@@ -356,6 +295,70 @@ impl ParsedGCode {
     }
 }
 
+pub trait Emit {
+    fn emit(&self) -> String;
+    fn debug_emit(&self) -> String {
+        self.emit()
+    }
+}
+impl Emit for G1 {
+    fn emit(&self) -> String {
+        let mut out = String::from("G1");
+        if let Some(x) = self.x {
+            assert!(x.is_finite());
+            assert!(!x.is_nan());
+            out += &format!(" X{}", x);
+        }
+        if let Some(y) = self.y {
+            assert!(y.is_finite());
+            assert!(!y.is_nan());
+            out += &format!(" Y{}", y);
+        }
+        if let Some(z) = self.z {
+            assert!(z.is_finite());
+            assert!(!z.is_nan());
+            out += &format!(" Z{}", z);
+        }
+        if let Some(e) = self.e {
+            assert!(e.is_finite());
+            assert!(!e.is_nan());
+            out += &format!(" E{}", e);
+        }
+        if let Some(f) = self.f {
+            assert!(f.is_finite());
+            assert!(!f.is_nan());
+            out += &format!(" F{}", f);
+        }
+        out + "\n"
+    }
+}
+impl Emit for Instruction {
+    fn emit(&self) -> String {
+        let Instruction {
+            first_word: Word(letter, num, string),
+            params,
+        } = self;
+        if let Some(string) = string {
+            return string.clone() + "\n";
+        }
+        let mut out = format!("{}{}", letter, *num as i32);
+        if let Some(params) = params {
+            for Word(letter, val, _) in params {
+                out += &format!(" {}{}", letter, val);
+            }
+        }
+        out + "\n"
+    }
+}
+impl Emit for Line {
+    fn emit(&self) -> String {
+        match self {
+            Line::G1(g1) => g1.emit(),
+            Line::Instruction(ins) => ins.emit(),
+            Line::Raw(string) => string.clone(),
+        }
+    }
+}
 impl Emit for ParsedGCode {
     fn emit(&self) -> String {
         let mut out = String::new();
@@ -369,9 +372,9 @@ impl Emit for ParsedGCode {
         for (line, _) in &self.instructions {
             out += &line.emit();
             //if let Line::G1(g1) = line {
-                // if self.features[g1.move_id as usize - 1].is_some() {
-                //     out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
-                // }
+            // if self.features[g1.move_id as usize - 1].is_some() {
+            //     out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
+            // }
             //}
         }
         out + "\n"
@@ -535,7 +538,7 @@ fn check_g1_index() {
     assert_eq!(gcode.g1_moves, count);
 }
 #[test]
-fn get_g1_index_return() { 
+fn get_g1_index_return() {
     let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
     let mut cursor = gcode.instructions.cursor_front_mut();
     while let Err(_) = cursor.at_g1() {
@@ -561,7 +564,9 @@ fn single_g1() {
         assert_eq!(state.z, 0.0);
         assert_eq!(state.e, 1.0);
         assert_eq!(state.f, -1.12345);
-    } else { panic!("failed to parse single g1"); }
+    } else {
+        panic!("failed to parse single g1");
+    }
 }
 #[test]
 fn check_line_test() {
@@ -650,7 +655,9 @@ fn init_state() {
         let blah = (state.x, state.y, state.z, state.e, state.f, state.homed);
         let test = (1.0, 1.0, 0.0, 0.0, 0.0, true);
         assert_eq!(blah, test);
-    } else { panic!(" couldn't find first g1") }
+    } else {
+        panic!(" couldn't find first g1")
+    }
 }
 #[test]
 fn check_state() {
@@ -688,7 +695,10 @@ fn sub_all_test() {
     for count in 2..10 {
         let mut gcode = ParsedGCode::build(TEST_G1_ONLY).expect("asdf");
         gcode.subdivide(count);
-        assert_eq!((gcode.g1_moves + (gcode.g1_moves - 1 ) * count), gcode.instructions.len() as i32 - 1 /* subtract the G28 */);
+        assert_eq!(
+            (gcode.g1_moves + (gcode.g1_moves - 1) * count),
+            gcode.instructions.len() as i32 - 1 /* subtract the G28 */
+        );
     }
 }
 #[test]
@@ -773,11 +783,11 @@ fn sub_seg_test() {
     cursor.next().expect("end of list");
     cursor.next().expect("end of list");
     let seg_count = 111111;
-    let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves); 
-    let _ = gcode.instructions.pop_front();   
+    let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves);
+    let _ = gcode.instructions.pop_front();
     let _ = gcode.instructions.pop_front();
     if let Some((Line::G1(g1), _)) = gcode.instructions.front() {
-        assert_eq!(g1.e, Some(10.0/seg_count as f32));
+        assert_eq!(g1.e, Some(10.0 / seg_count as f32));
     }
     assert_eq!(gcode.instructions.len() as i32, seg_count + 2);
 }
