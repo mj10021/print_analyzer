@@ -72,7 +72,7 @@ impl Annotation {
         out[0].dy = state.y;
         out[0].dz = state.z;
         out[0].de = state.e;
-        out[0].dt = Annotation::get_time(state.dist(&State::origin()), state.f);
+        out[0].dt = out[0].get_time(state.f);
         let mut prev_state = state.clone();
         let first_move = gcode.first_move_id();
         while !cur.is_last_g1(gcode.g1_moves) {
@@ -86,7 +86,7 @@ impl Annotation {
             out[i].dy = state.y - prev_state.y;
             out[i].dz = state.z - prev_state.z;
             out[i].de = state.e - prev_state.e;
-            out[i].dt = out[0].get_time( state.f);
+            out[i].dt = out[i].get_time( state.f);
             prev_state = state.clone();
             out[i].label = {
                 if g1.move_id < first_move { Label::PrePrintMove }
