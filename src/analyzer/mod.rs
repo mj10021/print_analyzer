@@ -3,6 +3,8 @@ use crate::gcursor::*;
 fn retract() {}
 
 fn wipe(gcode: &mut ParsedGCode, g1_id: i32, min_dist: f32) {
+    // WIPE SHOULD ONLY WIPE FOR THE GIVEN SHAPE, can't wipe into layer changes etc
+    // I THINK THIS IS OFF BY ONE NODE
     assert!(g1_id <= gcode.g1_moves, "g1 id out of range");
     let mut cur = gcode.instructions.cursor_front_mut();
     loop {
@@ -55,9 +57,9 @@ const WIPE_TEST_GCODE: &str = "G28\nG1 X0 Y-2 Z.2 F1234\n\
                                 G1 X50 Y80 E2\n";
 #[test]
 fn wipe_test() {
-    todo!();
     // this inserts at the wrong place right now
+    // i think it's off by one node
     let mut gcode = ParsedGCode::build(WIPE_TEST_GCODE).expect("asdf");
-    wipe(&mut gcode, 5, 63.0);
+    wipe(&mut gcode, 5, 1.0);
     panic!("{:?}", gcode.emit());
 }

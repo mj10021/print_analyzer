@@ -175,6 +175,7 @@ fn find_retractions_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
     let mut ann = Annotation::build(&mut gcode);
     find_retractions(&gcode, &mut ann);
+    
     let out = ann.iter().filter(|x| x.feature==Some(Feature::Retraction)).collect::<Vec<_>>();
     panic!("{:?}", out);
 }
