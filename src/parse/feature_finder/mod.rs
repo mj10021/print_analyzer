@@ -44,8 +44,10 @@ impl Annotation {
             ex_width_mm: 0.0,
         }
     }
-    fn get_time(dist: f32, feedrate:f32) -> f32 {
-        (dist / feedrate) * 60.0
+    fn get_time(&self, feedrate:f32) -> f32 {
+        let dist = (self.dx.powi(2) + self.dy.powi(2) + self.dz.powi(2)).sqrt();
+        if dist == 0.0 { return (self.de.abs() / feedrate) * 60.0; }
+        return (dist / feedrate) * 60.0;
     }
     fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
         // dt IS NOT RIGHT FOR EXTRUSION ONLY MOVES (not sure what feedrate ex. axis uses)
@@ -84,7 +86,7 @@ impl Annotation {
             out[i].dy = state.y - prev_state.y;
             out[i].dz = state.z - prev_state.z;
             out[i].de = state.e - prev_state.e;
-            out[i].dt = Annotation::get_time(state.dist(&prev_state), state.f);
+            out[i].dt = out[0].get_time( state.f);
             prev_state = state.clone();
             out[i].label = {
                 if g1.move_id < first_move { Label::PrePrintMove }
