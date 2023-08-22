@@ -135,28 +135,31 @@ impl<'a> GCursorMut for CursorMut<'a, (Line, State)> {
         false
     }
     fn update_state(&mut self) -> Result<(), CursorError> {
-
+        // if the current instruction is a G28, update the set state to home and return Ok(())
         if let Some((Line::Instruction(Instruction { first_word, ..}), state)) = self.current() {
             if first_word == &mut Word('G', 28.0, None) {
                 state.home();
                 return Ok(());
             }
         }
+        // check that there is a previous state and store it
         if let Some((_line, prev_state)) = self.peek_prev() {
             let prev_state = prev_state.clone();
+            // match the current instruction against commands that we want to handle
             match self.current() {
-            // if the instruction is a G28, update the set state to home and return Ok(())
+                // if the instruction is not G1, just update the state from the previous state
                 Some((Line::Instruction(_), state)) => { 
                     state.update_from(&prev_state);
                     Ok(())
                 }
                 // FIXME: change this to mark green when state is computed and mark red when g1 is modified 
                 Some((Line::G1(g1), state)) => {
+                    // requires all axes to be homed before move command
                     assert!(prev_state.homed, "g1 move from unhomed state");
                     // if the state is from the current G1, update nothing and return Ok(())
                     if g1.emit() == state.g1_emit {
                         return Ok(());
-                    // otherwise, update the state
+                    // otherwise, update the state (assuming x,y,z absolute and e relative)
                     } else {
                         state.x = g1.x.unwrap_or(prev_state.x);
                         state.y = g1.y.unwrap_or(prev_state.y);

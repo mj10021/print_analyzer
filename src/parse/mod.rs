@@ -60,6 +60,7 @@ impl Emit for Line {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct State {
+    // absolute x, y, z, AND e values, feedrate in mm/min
     pub x: f32,
     pub y: f32,
     pub z: f32,
@@ -232,9 +233,8 @@ impl Emit for G1 {
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
-    // the g1 move count is 1-indexed!
+    // number of total g1 moves
     pub g1_moves: i32,
-    pub features: Vec<Option<feature_finder::Feature>>,
     pub rel_xyz: bool,
     pub rel_e: bool,
 }
@@ -333,7 +333,6 @@ impl ParsedGCode {
         let mut out = ParsedGCode {
             instructions: parsed,
             rel_xyz,
-            features: vec![None; g1_moves as usize],
             rel_e,
             g1_moves,
         };
@@ -369,11 +368,11 @@ impl Emit for ParsedGCode {
         let mut out = String::new();
         for (line, _) in &self.instructions {
             out += &line.emit();
-            if let Line::G1(g1) = line {
-                if self.features[g1.move_id as usize - 1].is_some() {
-                    out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
-                }
-            }
+            //if let Line::G1(g1) = line {
+                // if self.features[g1.move_id as usize - 1].is_some() {
+                //     out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
+                // }
+            //}
         }
         out + "\n"
     }

@@ -10,6 +10,8 @@ enum Label {
     LiftZ,
     LowerZ,
     MysteryMove,
+    Retraction,
+    FeedrateChangeOnly
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 struct Annotation {
@@ -46,17 +48,21 @@ impl Annotation {
         (dist / feedrate) * 60.0
     }
     fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
+        // dt IS NOT RIGHT FOR EXTRUSION ONLY MOVES (not sure what feedrate ex. axis uses)
         gcode.set_states().expect("failed to set states");
         let mut cur = gcode.instructions.cursor_front();
+        // move cursor to first g1 move
         while let Err(_) = cur.at_g1() {
             cur.move_next();
         }
+        // initialize a vector where length = number of g1 moves
         let mut out = Vec::with_capacity(gcode.g1_moves as usize);
         for _ in 0..gcode.g1_moves {
             out.push(Annotation::new());
         }
+        // label the annotation for the first g1 move
         out[0].label = Label::FirstG1;
-        let Some((Line::G1(_), state)) = cur.current() else { panic!("asdf"); };
+        let Some((Line::G1(_), state)) = cur.current() else { panic!("cursor not at g1 move"); };
         out[0].xi = 0.0;
         out[0].yi = 0.0;
         out[0].zi = 0.0;
@@ -77,7 +83,7 @@ impl Annotation {
             out[i].dx = state.x - prev_state.x;
             out[i].dy = state.y - prev_state.y;
             out[i].dz = state.z - prev_state.z;
-            out[i].de = state.e;
+            out[i].de = state.e - prev_state.e;
             out[i].dt = Annotation::get_time(state.dist(&prev_state), state.f);
             prev_state = state.clone();
             out[i].label = {
@@ -86,6 +92,8 @@ impl Annotation {
                 else if out[i].dz > 0.0 { Label::LiftZ }
                 else if out[i].dz < 0.0 { Label::LowerZ }
                 else if out[i].dx != 0.0 || out[i].dy != 0.0 { Label::TravelMove }
+                else if out[i].de < 0.0 { Label::Retraction }
+                else if g1.f.is_some() { Label::FeedrateChangeOnly }
                 else { panic!("{:?}\r\n\r\n{:?}", g1, state) }//{ Label::MysteryMove }
             }
         }
@@ -113,7 +121,7 @@ fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
                 }
                 if de > 0.0 && last_retraction > last_deretraction {
                     annotations[g1.move_id as usize - 1].feature = Some(Feature::DeRetraction);
-                     last_deretraction = g1.move_id;
+                    last_deretraction = g1.move_id;
                 }
             }
         }
@@ -165,7 +173,7 @@ fn find_retractions_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
     let mut ann = Annotation::build(&mut gcode);
     find_retractions(&gcode, &mut ann);
-    let out = ann.iter().filter(|x| x.label==Label::MysteryMove).collect::<Vec<_>>();
+    let out = ann.iter().filter(|x| x.feature==Some(Feature::Retraction)).collect::<Vec<_>>();
     panic!("{:?}", out);
 }
 #[test]
