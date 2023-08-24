@@ -42,7 +42,7 @@ fn transform_test() {
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("transform_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit().as_bytes());
+    let _ = f.write_all(gcode.emit().as_bytes());
 }
 mod integration_tests {
 

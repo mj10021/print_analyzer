@@ -8,7 +8,7 @@ use crate::parse::*;
 
 fn get_move_vectors(gcode: &ParsedGCode) -> Vec<[f32; 3]> {
     fn normalize(v: [f32; 3]) -> [f32; 3] {
-        let mut out = [0.0;3];
+        let mut out = [0.0; 3];
         let mag = (v[0].powf(2.0) + v[1].powf(2.0) + v[2].powf(2.0)).sqrt();
         for i in 0..3 {
             out[i] = v[i] / mag;
@@ -17,14 +17,23 @@ fn get_move_vectors(gcode: &ParsedGCode) -> Vec<[f32; 3]> {
     }
     let mut cur = gcode.instructions.cursor_front();
     let mut moves = Vec::new();
-    while cur.peek_next().is_some() {
-        let mut prev: Option<State> = none;
+    while let Err(_) = cur.at_g1() {
+        cur.next().expect("past list end");
+    }
+    let Some((Line::G1(_), prev)) = cur.current() else {
+        panic!("exptected g1 move");
+    };
+    let mut prev = prev.clone();
+    while !cur.is_last_g1(gcode.g1_moves) {
         if let Some((Line::G1(_), state)) = cur.current() {
-            if let Some(prev_state) = prev {
-                moves.push(normalize([state.x - prev_state.x, state.y - prev_state.y, state.z - prev_state.z]));
-            }
+            moves.push(normalize([
+                state.x - prev.x,
+                state.y - prev.y,
+                state.z - prev.z,
+            ]));
+            prev = state.clone();
         }
-        cur.move_next();
+        cur.next().expect("past list end");
     }
     moves
 }
@@ -33,7 +42,7 @@ fn z_map(gcode: &ParsedGCode) -> std::collections::BTreeMap<String, Vec<(f32, f3
     let mut z_map = std::collections::BTreeMap::new();
     let mut cur = gcode.instructions.cursor_front();
     while cur.peek_next().is_some() {
-        if let Some((Line::G1(_), state)) = cur.current() { 
+        if let Some((Line::G1(_), state)) = cur.current() {
             let entry = z_map.entry(state.z.to_string()).or_insert(Vec::new());
             entry.push((state.x, state.y));
         }
@@ -48,7 +57,6 @@ fn z_map_test() {
     panic!("{:?}", z_map);
 }
 
-
 fn find_center_coord(gcode: &mut ParsedGCode) -> (f32, f32, f32) {
     let mut max_x = std::f32::NEG_INFINITY;
     let mut max_y = std::f32::NEG_INFINITY;
@@ -59,7 +67,7 @@ fn find_center_coord(gcode: &mut ParsedGCode) -> (f32, f32, f32) {
     let ann = feature_finder::Annotation::build(gcode);
     let init = gcode.first_move_id();
     let mut cur = gcode.instructions.cursor_front();
- 
+
     loop {
         if let Some((Line::G1(g1), _)) = cur.current() {
             if g1.move_id == init {
@@ -79,8 +87,11 @@ fn find_center_coord(gcode: &mut ParsedGCode) -> (f32, f32, f32) {
         }
         cur.next().expect("past end of list");
     }
-    ((max_x + min_x) / 2.0, (max_y + min_y) / 2.0, (max_z + min_z) / 2.0)
-
+    (
+        (max_x + min_x) / 2.0,
+        (max_y + min_y) / 2.0,
+        (max_z + min_z) / 2.0,
+    )
 }
 #[test]
 fn find_center_coord_test() {
@@ -104,7 +115,9 @@ fn modify_flow(gcode: &mut ParsedGCode, flow_mod: fn(&G1) -> f32) {
 fn modify_flow_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse gcode");
 
-    fn moddy(g1: &G1) -> f32 { g1.e.unwrap_or(0.0) * (1 + g1.move_id % 3) as f32 }
+    fn moddy(g1: &G1) -> f32 {
+        g1.e.unwrap_or(0.0) * (1 + g1.move_id % 3) as f32
+    }
     modify_flow(&mut gcode, |g| moddy(g));
     let gcode = gcode.emit();
     use std::fs::File;
@@ -121,15 +134,16 @@ fn erode(gcode: &mut ParsedGCode, location: (f32, f32, f32), erosion: ErosionTyp
         x: location.0,
         y: location.1,
         z: location.2,
-        ..State::new()};
+        ..State::new()
+    };
     let mut cur = gcode.instructions.cursor_front_mut();
     while !cur.at_end() {
-        if let Some((Line::G1(_), state)) = cur.current() {
+        if let Some((Line::G1(g1), state)) = cur.current() {
             match erosion {
                 ErosionType::Sphere => {
                     let dist = state.dist(&location);
                     if dist < radius {
-                        let _ = cur.remove_current();
+                        g1.e = Some(0.0);
                     }
                 }
                 ErosionType::Prism => {
@@ -137,9 +151,10 @@ fn erode(gcode: &mut ParsedGCode, location: (f32, f32, f32), erosion: ErosionTyp
                         x: location.x,
                         y: location.y,
                         z: state.z,
-                        ..State::new()};
+                        ..State::new()
+                    };
                     if state.dist(&temp_state) < radius && (state.z - location.z).abs() < radius {
-                        let _ = cur.remove_current();
+                        g1.e = Some(0.0);
                     }
                 }
             }
@@ -151,7 +166,7 @@ fn erode(gcode: &mut ParsedGCode, location: (f32, f32, f32), erosion: ErosionTyp
 #[test]
 fn erode_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse gcode");
-    erode(&mut gcode, (82.0,97.0,10.0), ErosionType::Prism, 2.0);
+    erode(&mut gcode, (82.0, 97.0, 10.0), ErosionType::Sphere, 5.0);
     let gcode = gcode.emit();
     use std::fs::File;
     use std::io::prelude::*;

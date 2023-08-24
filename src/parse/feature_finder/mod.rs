@@ -1,7 +1,7 @@
 use super::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Label {
+pub enum Label {
     Uninitialized,
     FirstG1,
     PrePrintMove,
@@ -11,12 +11,13 @@ enum Label {
     LowerZ,
     MysteryMove,
     Retraction,
+    Wipe,
     FeedrateChangeOnly,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Annotation {
-    label: Label,
-    feature: Option<Feature>,
+    pub label: Label,
+    pub feature: Option<Feature>,
     xi: f32,
     yi: f32,
     zi: f32,
@@ -25,7 +26,7 @@ pub struct Annotation {
     dz: f32,
     de: f32,
     dt: f32, // calc time from feedrate
-    //shape_id: id,
+    //shape_id: id, USE UNBROKEN CONSECUTIVE EXTRUSIONS TO FIND SHAPES!!!
     ex_width_mm: f32,
 }
 impl Annotation {
@@ -104,7 +105,11 @@ impl Annotation {
                 } else if out[i].dx != 0.0 || out[i].dy != 0.0 {
                     Label::TravelMove
                 } else if out[i].de < 0.0 {
-                    Label::Retraction
+                    if out[i].dx > 0.0 || out[i].dy > 0.0 {
+                        Label::Wipe
+                    } else {
+                        Label::Retraction
+                    }
                 } else if g1.f.is_some() {
                     Label::FeedrateChangeOnly
                 } else {
@@ -120,6 +125,8 @@ pub enum Feature {
     FirstMove,
     LayerChangeSequence(u32),
     ShapeChangeSequence(u32),
+    ShapeStart,
+    ShapeEnd,
     Retraction,
     DeRetraction,
 }
@@ -164,6 +171,45 @@ fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
         cur.move_next();
     }
 }
+fn find_shapes(gcode: &ParsedGCode, ann: &mut Vec<Annotation>) {
+    let mut cur = gcode.instructions.cursor_front();
+    let mut in_shape = false;
+    while !cur.at_end() {
+        if let Some((Line::G1(g1), _)) = cur.current() {
+            if g1.e.is_some()
+                && g1.e.unwrap() > 0.0
+                && ((g1.x.is_some() && g1.x.unwrap() > 0.0)
+                    || (g1.y.is_some() && g1.y.unwrap() > 0.0))
+            {
+                if !in_shape {
+                    in_shape = true;
+                    ann[g1.move_id as usize - 1].feature = Some(Feature::ShapeStart);
+                }
+            } else {
+                // THIS SHOULD REALLY LABEL THE PREVIOUS MOVE AS THE END OF THE SHAPE
+                if in_shape {
+                    in_shape = false;
+                    if g1.move_id > 1 {
+                        ann[g1.move_id as usize - 2].feature = Some(Feature::ShapeEnd);
+                    }
+                }
+            }
+        }
+        cur.next().expect("past end of list");
+    }
+}
+#[test]
+fn shape_finder_test() {
+    let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse");
+    let mut ann = Annotation::build(&mut gcode);
+    find_retractions(&gcode, &mut ann);
+    find_new_layer(&mut gcode, &mut ann);
+    find_shapes(&gcode, &mut ann);
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("shape_finder_test.gcode").expect("failed to create file");
+    let _ = f.write_all(gcode.debug_emit(&ann).as_bytes());
+}
 // analysis rules:
 // - travel moves are usually much faster than print moves
 // - whether retraction or z hop is on or off, there is some sequence of moves
@@ -180,7 +226,7 @@ fn planar_z_test() {
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit().as_bytes());
+    let _ = f.write_all(gcode.debug_emit(&ann).as_bytes());
 }
 #[test]
 fn find_retractions_test() {

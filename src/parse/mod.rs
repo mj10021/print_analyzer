@@ -3,6 +3,8 @@ use std::f32::NEG_INFINITY;
 
 use crate::gcursor::*;
 
+use self::feature_finder::Annotation;
+
 pub mod feature_finder;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -196,7 +198,7 @@ impl ParsedGCode {
         let mut cur = self.instructions.cursor_front_mut();
         let mut g1_moves = 0;
         loop {
-            if let Some((Line::G1(_),_)) = cur.current() {
+            if let Some((Line::G1(_), _)) = cur.current() {
                 g1_moves += 1;
             }
             cur.update_state().expect("failed to update state");
@@ -297,7 +299,7 @@ impl ParsedGCode {
 
 pub trait Emit {
     fn emit(&self) -> String;
-    fn debug_emit(&self) -> String {
+    fn debug_emit(&self, ann: &Vec<Annotation>) -> String {
         self.emit()
     }
 }
@@ -367,15 +369,19 @@ impl Emit for ParsedGCode {
         }
         out + "\n"
     }
-    fn debug_emit(&self) -> String {
+    fn debug_emit(&self, ann: &Vec<Annotation>) -> String {
         let mut out = String::new();
         for (line, _) in &self.instructions {
             out += &line.emit();
-            //if let Line::G1(g1) = line {
-            // if self.features[g1.move_id as usize - 1].is_some() {
-            //     out += &format!("; {}: {:?}\n", g1.move_id, self.features[g1.move_id as usize - 1]);
-            // }
-            //}
+            if let Line::G1(g1) = line {
+                if ann[g1.move_id as usize - 1].feature.is_some() {
+                    out += &format!(
+                        "; {}: {:?}\n",
+                        g1.move_id,
+                        ann[g1.move_id as usize - 1].feature
+                    );
+                }
+            }
         }
         out + "\n"
     }
