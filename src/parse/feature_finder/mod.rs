@@ -83,7 +83,7 @@ impl Annotation {
             let Some((Line::G1(g1), state)) = cur.current() else {
                 panic!("asdf");
             };
-            let i = g1.move_id as usize - 1;
+            let i = g1.ann_i();
             out[i].xi = prev_state.x;
             out[i].yi = prev_state.y;
             out[i].zi = prev_state.z;
@@ -130,7 +130,7 @@ pub enum Feature {
     Retraction,
     DeRetraction,
 }
-fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
+fn find_retractions(gcode: &mut ParsedGCode) {
     let mut cur = gcode.instructions.cursor_front();
     let mut last_retraction = -1;
     let mut last_deretraction = -1;
@@ -138,11 +138,11 @@ fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
         if let Some((Line::G1(g1), _)) = cur.current() {
             if let Some(de) = g1.e {
                 if de < 0.0 {
-                    annotations[g1.move_id as usize - 1].feature = Some(Feature::Retraction);
+                    gcode.ann[g1.ann_i()].feature = Some(Feature::Retraction);
                     last_retraction = g1.move_id;
                 }
                 if de > 0.0 && last_retraction > last_deretraction {
-                    annotations[g1.move_id as usize - 1].feature = Some(Feature::DeRetraction);
+                    gcode.ann[g1.ann_i()].feature = Some(Feature::DeRetraction);
                     last_deretraction = g1.move_id;
                 }
             }
@@ -150,7 +150,7 @@ fn find_retractions(gcode: &ParsedGCode, annotations: &mut Vec<Annotation>) {
         cur.move_next();
     }
 }
-fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
+fn find_new_layer(gcode: &mut ParsedGCode) {
     let first_move_id = gcode.first_move_id();
     let mut cur = gcode.instructions.cursor_front();
     let mut layer_z = 0.0;
@@ -163,7 +163,7 @@ fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
             if let Some((Line::G1(_), next)) = cur.peek_next() {
                 if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
                     layer_z = next.z;
-                    annotations[g1.move_id as usize - 1].feature =
+                    gcode.ann[g1.ann_i()].feature =
                         Some(Feature::LayerChangeSequence(0));
                 }
             }
@@ -171,7 +171,7 @@ fn find_new_layer(gcode: &mut ParsedGCode, annotations: &mut Vec<Annotation>) {
         cur.move_next();
     }
 }
-fn find_shapes(gcode: &ParsedGCode, ann: &mut Vec<Annotation>) {
+fn find_shapes(gcode: &mut ParsedGCode) {
     let mut cur = gcode.instructions.cursor_front();
     let mut in_shape = false;
     while !cur.at_end() {
@@ -183,14 +183,13 @@ fn find_shapes(gcode: &ParsedGCode, ann: &mut Vec<Annotation>) {
             {
                 if !in_shape {
                     in_shape = true;
-                    ann[g1.move_id as usize - 1].feature = Some(Feature::ShapeStart);
+                    gcode.ann[g1.ann_i()].feature = Some(Feature::ShapeStart);
                 }
             } else {
-                // THIS SHOULD REALLY LABEL THE PREVIOUS MOVE AS THE END OF THE SHAPE
                 if in_shape {
                     in_shape = false;
                     if g1.move_id > 1 {
-                        ann[g1.move_id as usize - 2].feature = Some(Feature::ShapeEnd);
+                        gcode.ann[g1.move_id as usize - 2].feature = Some(Feature::ShapeEnd);
                     }
                 }
             }
@@ -198,17 +197,56 @@ fn find_shapes(gcode: &ParsedGCode, ann: &mut Vec<Annotation>) {
         cur.next().expect("past end of list");
     }
 }
+fn shape_len(gcode: &ParsedGCode, ann: &Vec<Annotation>) -> std::collections::HashMap<i32, (i32, f32)> {
+    let mut out = std::collections::HashMap::new();
+    let mut cur = gcode.instructions.cursor_front();
+    let mut dist = 0.0;
+    let mut in_shape = false;
+    let mut last_start_id = 0;
+    while !cur.at_end() {
+        if !in_shape {
+            if let Some((Line::G1(g1), _)) = cur.current() {
+                if ann[g1.ann_i()].feature == Some(Feature::ShapeStart) {
+                    in_shape = true;
+                    last_start_id = g1.move_id;
+                }
+            }
+        } else {
+            if let Some((Line::G1(g1), _)) = cur.current() {
+                let s = ann[g1.ann_i()];
+                dist += (s.dx.powf(2.0) + s.dy.powf(2.0) + s.dz.powf(2.0)).sqrt();
+                if ann[g1.ann_i()].feature == Some(Feature::ShapeEnd) {
+                    in_shape = false;
+
+                } else {
+                    out.insert(last_start_id, (g1.move_id, dist));
+                    dist = 0.0;
+                    in_shape = false;
+                }
+            }
+        }
+        cur.next().expect("past end of list");
+    }
+    out
+}
+#[test]
+fn shape_len_test() {
+    let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse gcode");
+    let ann = Annotation::build(&mut gcode);
+    let shape_len = shape_len(&gcode, &ann);
+    panic!("{:?}", shape_len);
+
+}
 #[test]
 fn shape_finder_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse");
-    let mut ann = Annotation::build(&mut gcode);
-    find_retractions(&gcode, &mut ann);
-    find_new_layer(&mut gcode, &mut ann);
-    find_shapes(&gcode, &mut ann);
+    find_retractions(&mut gcode);
+    find_new_layer(&mut gcode);
+    find_shapes(&mut gcode);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("shape_finder_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit(&ann).as_bytes());
+    let _ = f.write_all(gcode.debug_emit().as_bytes());
 }
 // analysis rules:
 // - travel moves are usually much faster than print moves
@@ -221,12 +259,11 @@ fn shape_finder_test() {
 #[test]
 fn planar_z_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let mut ann = Annotation::build(&mut gcode);
-    find_new_layer(&mut gcode, &mut ann);
+    find_new_layer(&mut gcode);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit(&ann).as_bytes());
+    let _ = f.write_all(gcode.debug_emit().as_bytes());
 }
 #[test]
 fn find_retractions_test() {
@@ -240,12 +277,11 @@ fn find_retractions_test() {
                         G1 E-0.2\n\
                         G1 X50 Y80 E2\n";
     let mut gcode = ParsedGCode::build(test).expect("asdf");
-    let mut ann = Annotation::build(&mut gcode);
-    find_retractions(&gcode, &mut ann);
-    assert_eq!(ann[2].feature, Some(Feature::Retraction));
-    assert_eq!(ann[3].feature, Some(Feature::DeRetraction));
-    assert_eq!(ann[6].feature, Some(Feature::Retraction));
-    assert_eq!(ann[7].feature, Some(Feature::DeRetraction));
+    find_retractions(&mut gcode);
+    assert_eq!(gcode.ann[2].feature, Some(Feature::Retraction));
+    assert_eq!(gcode.ann[3].feature, Some(Feature::DeRetraction));
+    assert_eq!(gcode.ann[6].feature, Some(Feature::Retraction));
+    assert_eq!(gcode.ann[7].feature, Some(Feature::DeRetraction));
 }
 #[test]
 fn first_move_test() {

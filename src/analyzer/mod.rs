@@ -64,7 +64,6 @@ fn find_center_coord(gcode: &mut ParsedGCode) -> (f32, f32, f32) {
     let mut min_x = std::f32::INFINITY;
     let mut min_y = std::f32::INFINITY;
     let mut min_z = std::f32::INFINITY;
-    let ann = feature_finder::Annotation::build(gcode);
     let init = gcode.first_move_id();
     let mut cur = gcode.instructions.cursor_front();
 
@@ -103,7 +102,7 @@ fn modify_flow(gcode: &mut ParsedGCode, flow_mod: fn(&G1) -> f32) {
     let mut cur = gcode.instructions.cursor_front_mut();
     while cur.peek_next().is_some() {
         if let Some((Line::G1(g1), _)) = cur.current() {
-            if let Some(e) = g1.e {
+            if let Some(_) = g1.e {
                 g1.e = Some(flow_mod(g1));
             }
         }

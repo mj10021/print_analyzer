@@ -162,15 +162,19 @@ impl G1 {
             f,
         }
     }
+    fn ann_i(&self) -> usize {
+        self.move_id as usize - 1
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
-    // number of total g1 moves
+    // total number of total g1 moves
     pub g1_moves: i32,
     pub rel_xyz: bool,
     pub rel_e: bool,
+    pub ann: Vec<Annotation>,
 }
 
 impl ParsedGCode {
@@ -274,8 +278,10 @@ impl ParsedGCode {
             rel_xyz,
             rel_e,
             g1_moves,
+            ann: Vec::new()
         };
         out.set_states().expect("failed to set states");
+        out.ann = Annotation::build(&mut out);
         Ok(out)
     }
     fn subdivide(&mut self, count: i32) {
@@ -299,7 +305,7 @@ impl ParsedGCode {
 
 pub trait Emit {
     fn emit(&self) -> String;
-    fn debug_emit(&self, ann: &Vec<Annotation>) -> String {
+    fn debug_emit(&self) -> String {
         self.emit()
     }
 }
@@ -369,18 +375,17 @@ impl Emit for ParsedGCode {
         }
         out + "\n"
     }
-    fn debug_emit(&self, ann: &Vec<Annotation>) -> String {
+    fn debug_emit(&self) -> String {
         let mut out = String::new();
         for (line, _) in &self.instructions {
             out += &line.emit();
             if let Line::G1(g1) = line {
-                if ann[g1.move_id as usize - 1].feature.is_some() {
-                    out += &format!(
-                        "; {}: {:?}\n",
-                        g1.move_id,
-                        ann[g1.move_id as usize - 1].feature
-                    );
-                }
+                out += &format!(
+                    "; id:{} | label: {:?} | feature: {:?}\n",
+                    g1.move_id,
+                    self.ann[g1.ann_i()].label,
+                    self.ann[g1.ann_i()].feature
+                );
             }
         }
         out + "\n"

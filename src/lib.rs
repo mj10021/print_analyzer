@@ -2,23 +2,26 @@
 #![allow(dead_code)]
 mod analyzer;
 mod parse;
-
-mod transform {
-    // use crate::parse::*;
-
-    // fn transform(gcode: &mut ParsedGCode, f: fn(G1)) {
-    //     let mut cur = gcode.instructions.cursor_front_mut();
-    //     while cur.peek_next().is_some() {
-    //         if let Some((Line::G1(g1), _)) = cur.current() {
-    //             f(g1);
-    //         }
-    //         cur.move_next();
-    //     }
-    //     gcode.set_states();
-
-    // }
-}
 mod gcursor;
+
+use parse::feature_finder::Annotation;
+
+use crate::parse::{ParsedGCode, Line};
+
+
+fn ann_filter<T>(gcode: &mut ParsedGCode, filter: fn(&Annotation) -> bool) {
+    let mut cur = gcode.instructions.cursor_front_mut();
+    if let Some((Line::G1(g1), _)) = cur.current() { {
+            if filter(&gcode.ann[g1.move_id as usize - 1]) {
+                g1.e = None;
+            }
+        }
+    }
+
+
+    
+}
+
 
 #[cfg(test)]
 #[test]
