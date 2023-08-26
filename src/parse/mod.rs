@@ -162,11 +162,171 @@ impl G1 {
             f,
         }
     }
-    fn ann_i(&self) -> usize {
+    pub fn ann_i(&self) -> usize {
         self.move_id as usize - 1
     }
 }
+#[derive(Clone, Copy, Debug)]
+struct Pos {
+    x: f32,
+    y: f32,
+    z: f32,
+    e: f32,
+}
+impl Pos {
+    fn pre_home(&self) -> bool {
+        if self.x == NEG_INFINITY
+            || self.y == NEG_INFINITY
+            || self.z == NEG_INFINITY
+            || self.e == NEG_INFINITY
+        {
+            return true;
+        }
+        false
+    }
+    fn unhomed() -> Pos {
+        Pos {
+            x: NEG_INFINITY,
+            y: NEG_INFINITY,
+            z: NEG_INFINITY,
+            e: NEG_INFINITY,
+        }
+    }
+    fn home() -> Pos {
+        Pos { x: 0.0, y: 0.0, z: 0.0, e: 0.0 }
+    }
+    fn build(prev: &mut Pos, g1: &G1) -> Pos {
+        if prev.pre_home() {
+            panic!("g1 move from unhomed state")
+        }
+        Pos {
+            x: prev.x + g1.x.unwrap_or(0.0),
+            y: prev.y + g1.y.unwrap_or(0.0),
+            z: prev.z + g1.z.unwrap_or(0.0),
+            e: prev.e + g1.e.unwrap_or(0.0),
+        }
+    }
+}
 
+#[derive(Debug)]
+struct Vertex {
+    id: i32,
+    from: Option<*mut Pos>,
+    to: Pos,
+}
+#[derive(Debug)]
+enum Node {
+    Vertex(Vertex),
+    NonMove(Line),
+    Start,
+    End,
+}
+#[derive(Debug)]
+struct Parsed {
+    nodes: LinkedList<Node>,
+    rel_xyz: bool,
+    rel_e: bool,
+}
+impl Parsed {
+    fn build(path: &str) -> Result<Parsed, CursorError> {
+        let mut g1_moves = 0;
+        let mut parsed = LinkedList::new();
+        parsed.push_front(Node::Vertex(Vertex {
+            id: -1,
+            to: Pos::unhomed(),
+            from: None,
+        }));
+        let mut rel_xyz = false;
+        let mut rel_e = true;
+        // tries reading the input as raw g-code if file parse error,
+        // this is really just for running the tests
+        let lines = match parse_file(path) {
+            Ok(str) => str,
+            Err(_) => parse_str(path),
+        };
+        assert!(lines.len() > 0);
+        let mut prev_pos =  match parsed.front_mut().unwrap() {
+            Node::Vertex( Vertex {id: _, to: p, from: _ } ) => p as *mut Pos,
+            _ => panic!("unexpected front node")
+        };
+        let mut prev_node = parsed.front().unwrap();
+        for line in lines {
+            let line = clean_line(&line);
+            if line.len() < 1 { continue; }
+            let mut line = read_line(line);
+            if line.len() < 1 { continue; }
+            // just throw away any logical line count bc i dont't care
+            if let Some(&Word('N', _, _)) = line.front() {
+                let _ = line.pop_front();
+            }
+            if line.front() == Some(&Word('G', 28.0, None)) {
+                unsafe {
+                    let prev = &mut *prev_pos;
+                    if !prev.pre_home() {
+                    panic!("homing from previously homed state")
+                    } else {
+                        let vrtx = Vertex{
+                            id: 0,
+                            to: Pos::home(),
+                            from: Some(prev_pos),
+                        };
+                        let node = Node::Vertex(vrtx);
+                        parsed.push_back(node);
+                        prev_node = parsed.back().unwrap();
+                        continue;
+                    }
+                }
+            }
+            if line.front() == Some(&Word('G', 1.0, None)) {
+                g1_moves += 1;
+                let g1 = G1::build(line, g1_moves);
+                let mut vrtx = Vertex {
+                    id: g1_moves,
+                    to: Pos::build(prev_pos.unwrap(), &g1),
+                    from: prev_pos
+                };
+                let node = Node::Vertex(vrtx);
+                parsed.push_back(node);
+                if let &mut Node::Vertex(mut v) = parsed.back_mut().unwrap() {
+                    prev_pos = Some(&mut v.to);
+                }
+                prev_node = parsed.back().unwrap();
+            } else {
+                let Word(letter, num, _) = line[0];
+                let num = num as i32;
+                match (letter, num) {
+                    ('G', 90) => {
+                        rel_xyz = false;
+                    }
+                    ('G', 91) => {
+                        rel_xyz = true;
+                    }
+                    ('M', 82) => {
+                        rel_e = false;
+                    }
+                    ('M', 83) => {
+                        rel_e = true;
+                    }
+                    _ => {}
+                }
+                let node = Node::NonMove(Line::build(line, None));
+                parsed.push_back(node);
+                prev_node = parsed.back().unwrap();
+            }
+        }
+        // FIXME: NEED TO SET STATES
+        Ok(Parsed {
+            nodes: parsed,
+            rel_xyz,
+            rel_e,
+        })
+    }
+}
+#[test]
+fn parsed_test() {
+    let parsed = Parsed::build("test.gcode").expect("failed to parse");
+    panic!("{:?}", parsed);
+}
 #[derive(Debug, PartialEq)]
 pub struct ParsedGCode {
     pub instructions: LinkedList<(Line, State)>,
@@ -278,7 +438,7 @@ impl ParsedGCode {
             rel_xyz,
             rel_e,
             g1_moves,
-            ann: Vec::new()
+            ann: Vec::new(),
         };
         out.set_states().expect("failed to set states");
         out.ann = Annotation::build(&mut out);

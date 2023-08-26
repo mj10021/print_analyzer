@@ -1,27 +1,54 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 mod analyzer;
-mod parse;
 mod gcursor;
+mod parse;
 
+use gcursor::GCursorMut;
 use parse::feature_finder::Annotation;
 
-use crate::parse::{ParsedGCode, Line};
-
-
-fn ann_filter<T>(gcode: &mut ParsedGCode, filter: fn(&Annotation) -> bool) {
+use crate::parse::{Line, ParsedGCode};
+/*
+fn offset_layers(gcode: &mut ParsedGCode, dx: f32, dy: f32, layer_rule: F(i32) -> bool)
+where
+    F: Copy + FnOnce(i32) -> bool,
+{
     let mut cur = gcode.instructions.cursor_front_mut();
-    if let Some((Line::G1(g1), _)) = cur.current() { {
-            if filter(&gcode.ann[g1.move_id as usize - 1]) {
-                g1.e = None;
+}*/
+
+fn ann_filter<F>(gcode: &mut ParsedGCode, f: F)
+where
+    F: Copy + FnOnce(usize) -> bool,
+{
+    let mut cur = gcode.instructions.cursor_front_mut();
+    while !cur.at_end() {
+        if let Some((Line::G1(g1), _)) = cur.current() {
+            {
+                if f(g1.ann_i()) {
+                    g1.e = None;
+                }
             }
         }
+        cur.next().expect("past end of list");
     }
-
-
-    
+    gcode.set_states().expect("failed to update states");
+    gcode.ann = Annotation::build(gcode);
 }
 
+#[test]
+fn ann_filter_test() {
+    use crate::parse::feature_finder::shape_len;
+    use crate::parse::Emit;
+    let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse gcode");
+    let shapes = shape_len(&gcode);
+    panic!("{:?}", shapes);
+    let f = |i: usize| shapes.get(&(i as i32)).unwrap_or(&(-1, -1.0)).1 < 0.1;
+    ann_filter(&mut gcode, &f);
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("ann_filter_test.gcode").expect("failed to create file");
+    let _ = f.write_all(gcode.emit().as_bytes());
+}
 
 #[cfg(test)]
 #[test]

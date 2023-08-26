@@ -117,18 +117,62 @@ impl Annotation {
                 } //{ Label::MysteryMove }
             }
         }
+        find_shapes(gcode);
         out
     }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Feature {
     FirstMove,
+    NewLayer(i32),
     LayerChangeSequence(u32),
     ShapeChangeSequence(u32),
     ShapeStart,
     ShapeEnd,
     Retraction,
     DeRetraction,
+}
+
+struct Shape {
+    start_id: i32,
+    end_id: i32,
+    len: f32,
+}
+
+struct Layer {
+    start_id: i32,
+    end_id: i32,
+    shapes: Vec<Shape>,
+    height: f32,
+}
+impl Layer {
+    fn build_planar(gcode: &mut ParsedGCode) -> Vec<Layer> {
+        let mut out = Vec::new();
+        let first_move_id = gcode.first_move_id();
+        let mut cur = gcode.instructions.cursor_front();
+        let mut layer_z = 0.0;
+        while cur.peek_next().is_some() {
+            if let Some((Line::G1(g1), curr)) = cur.current() {
+                if g1.move_id < first_move_id {
+                    cur.move_next();
+                    continue;
+                }
+                if let Some((Line::G1(_), next)) = cur.peek_next() {
+                    if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
+                        layer_z = next.z;
+                        gcode.ann[g1.ann_i()].feature = Some(Feature::LayerChangeSequence(0));
+                    }
+                }
+            }
+            cur.move_next();
+        }
+        out
+    }
+}
+fn find_all(gcode: &mut ParsedGCode) {
+    find_retractions(gcode);
+    //let _ = find_new_layer(gcode);
+    find_shapes(gcode);
 }
 fn find_retractions(gcode: &mut ParsedGCode) {
     let mut cur = gcode.instructions.cursor_front();
@@ -150,27 +194,7 @@ fn find_retractions(gcode: &mut ParsedGCode) {
         cur.move_next();
     }
 }
-fn find_new_layer(gcode: &mut ParsedGCode) {
-    let first_move_id = gcode.first_move_id();
-    let mut cur = gcode.instructions.cursor_front();
-    let mut layer_z = 0.0;
-    while cur.peek_next().is_some() {
-        if let Some((Line::G1(g1), curr)) = cur.current() {
-            if g1.move_id < first_move_id {
-                cur.move_next();
-                continue;
-            }
-            if let Some((Line::G1(_), next)) = cur.peek_next() {
-                if curr.z != layer_z && curr.z == next.z && g1.z.is_some() {
-                    layer_z = next.z;
-                    gcode.ann[g1.ann_i()].feature =
-                        Some(Feature::LayerChangeSequence(0));
-                }
-            }
-        }
-        cur.move_next();
-    }
-}
+
 fn find_shapes(gcode: &mut ParsedGCode) {
     let mut cur = gcode.instructions.cursor_front();
     let mut in_shape = false;
@@ -197,7 +221,8 @@ fn find_shapes(gcode: &mut ParsedGCode) {
         cur.next().expect("past end of list");
     }
 }
-fn shape_len(gcode: &ParsedGCode, ann: &Vec<Annotation>) -> std::collections::HashMap<i32, (i32, f32)> {
+pub fn shape_len(gcode: &ParsedGCode) -> std::collections::HashMap<i32, (i32, f32)> {
+    // FIXME: doesnt do anything!!!!!!!!!!!11
     let mut out = std::collections::HashMap::new();
     let mut cur = gcode.instructions.cursor_front();
     let mut dist = 0.0;
@@ -206,18 +231,17 @@ fn shape_len(gcode: &ParsedGCode, ann: &Vec<Annotation>) -> std::collections::Ha
     while !cur.at_end() {
         if !in_shape {
             if let Some((Line::G1(g1), _)) = cur.current() {
-                if ann[g1.ann_i()].feature == Some(Feature::ShapeStart) {
+                if gcode.ann[g1.ann_i()].feature == Some(Feature::ShapeStart) {
                     in_shape = true;
                     last_start_id = g1.move_id;
                 }
             }
         } else {
             if let Some((Line::G1(g1), _)) = cur.current() {
-                let s = ann[g1.ann_i()];
+                let s = gcode.ann[g1.ann_i()];
                 dist += (s.dx.powf(2.0) + s.dy.powf(2.0) + s.dz.powf(2.0)).sqrt();
-                if ann[g1.ann_i()].feature == Some(Feature::ShapeEnd) {
+                if gcode.ann[g1.ann_i()].feature == Some(Feature::ShapeEnd) {
                     in_shape = false;
-
                 } else {
                     out.insert(last_start_id, (g1.move_id, dist));
                     dist = 0.0;
@@ -233,15 +257,14 @@ fn shape_len(gcode: &ParsedGCode, ann: &Vec<Annotation>) -> std::collections::Ha
 fn shape_len_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse gcode");
     let ann = Annotation::build(&mut gcode);
-    let shape_len = shape_len(&gcode, &ann);
+    let shape_len = shape_len(&gcode);
     panic!("{:?}", shape_len);
-
 }
 #[test]
 fn shape_finder_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("failed to parse");
     find_retractions(&mut gcode);
-    find_new_layer(&mut gcode);
+    // find_new_layer(&mut gcode);
     find_shapes(&mut gcode);
     use std::fs::File;
     use std::io::prelude::*;
@@ -259,7 +282,7 @@ fn shape_finder_test() {
 #[test]
 fn planar_z_test() {
     let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    find_new_layer(&mut gcode);
+    // find_new_layer(&mut gcode);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
