@@ -195,24 +195,38 @@ impl Pos {
     fn home() -> Pos {
         Pos { x: 0.0, y: 0.0, z: 0.0, e: 0.0 }
     }
-    fn build(prev: &mut Pos, g1: &G1) -> Pos {
-        if prev.pre_home() {
-            panic!("g1 move from unhomed state")
-        }
-        Pos {
-            x: prev.x + g1.x.unwrap_or(0.0),
-            y: prev.y + g1.y.unwrap_or(0.0),
-            z: prev.z + g1.z.unwrap_or(0.0),
-            e: prev.e + g1.e.unwrap_or(0.0),
+    unsafe fn build(prev: *mut Pos, g1: &G1) -> Pos {
+        unsafe {
+            if (*prev).pre_home() {
+                panic!("g1 move from unhomed state")
+            }
+            Pos {
+                x: (*prev).x + g1.x.unwrap_or(0.0),
+                y: (*prev).y + g1.y.unwrap_or(0.0),
+                z: (*prev).z + g1.z.unwrap_or(0.0),
+                e: (*prev).e + g1.e.unwrap_or(0.0),
+            }
         }
     }
 }
 
-#[derive(Debug)]
 struct Vertex {
     id: i32,
     from: Option<*mut Pos>,
     to: Pos,
+}
+impl std::fmt::Debug for Vertex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let from = match self.from {
+            Some(p) => format!("{:?}", unsafe {*(self.from.unwrap())}),
+            None => String::from("none"),
+        };
+        f.debug_struct("Point")
+         .field("id", &self.id)
+         .field("from", &from)
+         .field("to", &self.to)
+         .finish()
+    }
 }
 #[derive(Debug)]
 enum Node {
@@ -245,11 +259,10 @@ impl Parsed {
             Err(_) => parse_str(path),
         };
         assert!(lines.len() > 0);
-        let mut prev_pos =  match parsed.front_mut().unwrap() {
+        let mut prev =  match parsed.front_mut().unwrap() {
             Node::Vertex( Vertex {id: _, to: p, from: _ } ) => p as *mut Pos,
             _ => panic!("unexpected front node")
         };
-        let mut prev_node = parsed.front().unwrap();
         for line in lines {
             let line = clean_line(&line);
             if line.len() < 1 { continue; }
@@ -261,18 +274,19 @@ impl Parsed {
             }
             if line.front() == Some(&Word('G', 28.0, None)) {
                 unsafe {
-                    let prev = &mut *prev_pos;
-                    if !prev.pre_home() {
+                    if !(*prev).pre_home() {
                     panic!("homing from previously homed state")
                     } else {
                         let vrtx = Vertex{
                             id: 0,
                             to: Pos::home(),
-                            from: Some(prev_pos),
+                            from: Some(prev),
                         };
                         let node = Node::Vertex(vrtx);
                         parsed.push_back(node);
-                        prev_node = parsed.back().unwrap();
+                        if let Node::Vertex( Vertex {id:_,from:_,to: mut p } ) = parsed.back().unwrap() {
+                            prev = &mut p as *mut Pos;
+                        }
                         continue;
                     }
                 }
@@ -280,17 +294,19 @@ impl Parsed {
             if line.front() == Some(&Word('G', 1.0, None)) {
                 g1_moves += 1;
                 let g1 = G1::build(line, g1_moves);
-                let mut vrtx = Vertex {
-                    id: g1_moves,
-                    to: Pos::build(prev_pos.unwrap(), &g1),
-                    from: prev_pos
-                };
-                let node = Node::Vertex(vrtx);
-                parsed.push_back(node);
-                if let &mut Node::Vertex(mut v) = parsed.back_mut().unwrap() {
-                    prev_pos = Some(&mut v.to);
+                unsafe {
+                    let vrtx = Vertex {
+                        id: g1_moves,
+                        to: Pos::build(prev, &g1),
+                        from: Some(prev)
+                    };
+                
+                    let node = Node::Vertex(vrtx);
+                    parsed.push_back(node);
                 }
-                prev_node = parsed.back().unwrap();
+                if let &mut Node::Vertex( Vertex {id: _, from: _, mut to} ) = parsed.back_mut().unwrap() {
+                    prev = &mut to as *mut Pos;
+                }
             } else {
                 let Word(letter, num, _) = line[0];
                 let num = num as i32;
@@ -311,7 +327,6 @@ impl Parsed {
                 }
                 let node = Node::NonMove(Line::build(line, None));
                 parsed.push_back(node);
-                prev_node = parsed.back().unwrap();
             }
         }
         // FIXME: NEED TO SET STATES
@@ -324,7 +339,7 @@ impl Parsed {
 }
 #[test]
 fn parsed_test() {
-    let parsed = Parsed::build("test.gcode").expect("failed to parse");
+    let parsed = Parsed::build("G28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
     panic!("{:?}", parsed);
 }
 #[derive(Debug, PartialEq)]
