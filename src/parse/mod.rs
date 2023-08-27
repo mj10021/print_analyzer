@@ -185,16 +185,16 @@ impl Pos {
     fn home() -> Pos {
         Pos { x: 0.0, y: 0.0, z: 0.0, e: 0.0 }
     }
-    unsafe fn build(prev: *mut Pos, g1: &G1) -> Pos {
+    unsafe fn build(prev: &Pos, g1: &G1) -> Pos {
         unsafe {
             if pre_home(*prev) {
                 panic!("g1 move from unhomed state")
             }
             Pos {
-                x: g1.x.unwrap_or((*prev).x),
-                y: g1.y.unwrap_or((*prev).y),
-                z: g1.z.unwrap_or((*prev).z),
-                e: (*prev).e + g1.e.unwrap_or(0.0),
+                x: g1.x.unwrap_or(prev.x),
+                y: g1.y.unwrap_or(prev.y),
+                z: g1.z.unwrap_or(prev.z),
+                e: prev.e + g1.e.unwrap_or(0.0),
             }
         }
     }
@@ -209,13 +209,14 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-
+#[derive(Clone)]
 struct Vertex {
     id: i32,
-    from: Option<*mut Pos>,
+    prev: Option<*mut Vertex>,
+    from: Pos,
     to: Pos,
 }
-impl Vertex {
+/* impl Vertex {
     unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         assert!(self.from.is_some());
         let dxi = self.to.x - (*(self.from.unwrap())).x;
@@ -237,16 +238,12 @@ impl Vertex {
     fn insert(parsed: &mut Parsed) { }
     fn mod_flow(&mut self) { }
 
-}
+} */
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let from = match self.from {
-            Some(p) => format!("{:?}", unsafe {*p}),
-            None => String::from("none"),
-        };
         f.debug_struct("Point")
          .field("id", &self.id)
-         .field("from", &from)
+         .field("from", &self.from)
          .field("to", &self.to)
          .finish()
     }
@@ -268,11 +265,6 @@ impl Parsed {
     fn build(path: &str) -> Result<Parsed, CursorError> {
         let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
-        parsed.push_front(Node::Vertex(Vertex {
-            id: -1,
-            to: Pos::unhomed(),
-            from: None,
-        }));
         let mut rel_xyz = false;
         let mut rel_e = true;
         // tries reading the input as raw g-code if file parse error,
@@ -283,11 +275,7 @@ impl Parsed {
         };
         assert!(lines.len() > 0);
         // prev holds a raw mut pointer to the to position of the previous vertex
-        let mut prev =  match parsed.front_mut().unwrap() {
-            Node::Vertex( Vertex {id: _, to: p, from: _ } ) => p as *mut Pos,
-            _ => panic!("unexpected front node")
-        };
-
+        let mut prev: Option<*mut Vertex> = None; 
         for line in lines {
             let line = clean_line(&line);
             if line.len() < 1 { continue; }
@@ -298,36 +286,37 @@ impl Parsed {
                 let _ = line.pop_front();
             }
             if line.front() == Some(&Word('G', 28.0, None)) {
-                assert!(pre_home(unsafe { *prev }), "homing from previously homed state");
+                assert!(prev.is_none(), "homing from previously homed state");
                 let vrtx = Vertex{
                     id: 0,
                     to: Pos::home(),
-                    from: Some(prev),
+                    from: Pos::unhomed(),
+                    prev
                 };
                 let node = Node::Vertex(vrtx);
                 parsed.push_back(node);
-                if let Node::Vertex( Vertex {id:_,from:_,to: mut p } ) = parsed.back().unwrap() {
-                    prev = &mut p as *mut Pos;
+                if let Node::Vertex( v ) = parsed.back_mut().unwrap() {
+                    prev = Some(v as *mut Vertex);
                 } else { panic!("failed to read last pushed node") }
                 continue;
             }
-            if line.front() == Some(&Word('G', 1.0, None)) {
-                assert!(unsafe { !pre_home(*prev) }, "g1 move from unhomed state");
+            else if line.front() == Some(&Word('G', 1.0, None)) {
+                assert!(&prev.is_some(), "g1 move from unhomed state");
                 g1_moves += 1;
                 let g1 = G1::build(line, g1_moves);
                 unsafe { // this seems wrong
                     let vrtx = Vertex {
                         id: g1_moves,
-                        to: Pos::build(prev, &g1),
-                        from: Some(prev)
+                        to: Pos::build(&(*(prev.unwrap())).to, &g1),
+                        from: (*(prev.unwrap())).to.clone(),
+                        prev
                     };
                 
                     let node = Node::Vertex(vrtx);
                     parsed.push_back(node);
-                    prev = match parsed.back_mut().unwrap() {
-                        Node::Vertex( Vertex {id: _, from: _, to: p} ) => p as *mut Pos,
-                        _ => panic!("failed to read last pushed node")
-                    };
+                    if let Some(Node::Vertex(v)) = parsed.back_mut() {
+                        prev = Some(v as *mut Vertex);
+                    } else { panic!("failed to read last pushed node") }
                 }
             } else {
                 let Word(letter, num, _) = line[0];
