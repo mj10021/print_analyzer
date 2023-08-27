@@ -174,16 +174,6 @@ struct Pos {
     e: f32,
 }
 impl Pos {
-    fn pre_home(&self) -> bool {
-        if self.x == NEG_INFINITY
-            || self.y == NEG_INFINITY
-            || self.z == NEG_INFINITY
-            || self.e == NEG_INFINITY
-        {
-            return true;
-        }
-        false
-    }
     fn unhomed() -> Pos {
         Pos {
             x: NEG_INFINITY,
@@ -197,17 +187,27 @@ impl Pos {
     }
     unsafe fn build(prev: *mut Pos, g1: &G1) -> Pos {
         unsafe {
-            if (*prev).pre_home() {
+            if pre_home(*prev) {
                 panic!("g1 move from unhomed state")
             }
             Pos {
-                x: (*prev).x + g1.x.unwrap_or(0.0),
-                y: (*prev).y + g1.y.unwrap_or(0.0),
-                z: (*prev).z + g1.z.unwrap_or(0.0),
+                x: g1.x.unwrap_or((*prev).x),
+                y: g1.y.unwrap_or((*prev).y),
+                z: g1.z.unwrap_or((*prev).z),
                 e: (*prev).e + g1.e.unwrap_or(0.0),
             }
         }
     }
+}
+fn pre_home(p: Pos) -> bool {
+    if p.x == NEG_INFINITY
+        || p.y == NEG_INFINITY
+        || p.z == NEG_INFINITY
+        || p.e == NEG_INFINITY
+    {
+        return true;
+    }
+    false
 }
 
 struct Vertex {
@@ -215,10 +215,33 @@ struct Vertex {
     from: Option<*mut Pos>,
     to: Pos,
 }
+impl Vertex {
+    unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+        assert!(self.from.is_some());
+        let dxi = self.to.x - (*(self.from.unwrap())).x;
+        let dyi = self.to.y - (*(self.from.unwrap())).y;
+        let dzi = self.to.z - (*(self.from.unwrap())).z;
+        let dei = self.to.e - (*(self.from.unwrap())).e;
+        let init_prev_dist = (dxi.powf(2.0) + dyi.powf(2.0) + dzi.powf(2.0)).sqrt();
+        (*(self.from.unwrap())).x += dx;
+        (*(self.from.unwrap())).y += dy;
+        (*(self.from.unwrap())).z += dz;
+        let (dxf, dyf, dzf) = (dxi + dx, dyi + dy, dzi + dz);
+        let new_prev_dist = (dxf.powf(2.0) + dyf.powf(2.0) + dzf.powf(2.0)).sqrt();
+        let prev_move_scale = new_prev_dist / init_prev_dist;
+        (*(self.from.unwrap())).e = dei * prev_move_scale;
+        let new_next_dist = 
+    }
+    fn delete(&mut self, parsed: &mut Parsed) { }
+    fn subdivide(&mut self, parsed: &mut Parsed) { }
+    fn insert(parsed: &mut Parsed) { }
+    fn mod_flow(&mut self) { }
+
+}
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let from = match self.from {
-            Some(p) => format!("{:?}", unsafe {*(self.from.unwrap())}),
+            Some(p) => format!("{:?}", unsafe {*p}),
             None => String::from("none"),
         };
         f.debug_struct("Point")
@@ -259,10 +282,12 @@ impl Parsed {
             Err(_) => parse_str(path),
         };
         assert!(lines.len() > 0);
+        // prev holds a raw mut pointer to the to position of the previous vertex
         let mut prev =  match parsed.front_mut().unwrap() {
             Node::Vertex( Vertex {id: _, to: p, from: _ } ) => p as *mut Pos,
             _ => panic!("unexpected front node")
         };
+
         for line in lines {
             let line = clean_line(&line);
             if line.len() < 1 { continue; }
@@ -273,28 +298,24 @@ impl Parsed {
                 let _ = line.pop_front();
             }
             if line.front() == Some(&Word('G', 28.0, None)) {
-                unsafe {
-                    if !(*prev).pre_home() {
-                    panic!("homing from previously homed state")
-                    } else {
-                        let vrtx = Vertex{
-                            id: 0,
-                            to: Pos::home(),
-                            from: Some(prev),
-                        };
-                        let node = Node::Vertex(vrtx);
-                        parsed.push_back(node);
-                        if let Node::Vertex( Vertex {id:_,from:_,to: mut p } ) = parsed.back().unwrap() {
-                            prev = &mut p as *mut Pos;
-                        }
-                        continue;
-                    }
-                }
+                assert!(pre_home(unsafe { *prev }), "homing from previously homed state");
+                let vrtx = Vertex{
+                    id: 0,
+                    to: Pos::home(),
+                    from: Some(prev),
+                };
+                let node = Node::Vertex(vrtx);
+                parsed.push_back(node);
+                if let Node::Vertex( Vertex {id:_,from:_,to: mut p } ) = parsed.back().unwrap() {
+                    prev = &mut p as *mut Pos;
+                } else { panic!("failed to read last pushed node") }
+                continue;
             }
             if line.front() == Some(&Word('G', 1.0, None)) {
+                assert!(unsafe { !pre_home(*prev) }, "g1 move from unhomed state");
                 g1_moves += 1;
                 let g1 = G1::build(line, g1_moves);
-                unsafe {
+                unsafe { // this seems wrong
                     let vrtx = Vertex {
                         id: g1_moves,
                         to: Pos::build(prev, &g1),
@@ -303,13 +324,15 @@ impl Parsed {
                 
                     let node = Node::Vertex(vrtx);
                     parsed.push_back(node);
-                }
-                if let &mut Node::Vertex( Vertex {id: _, from: _, mut to} ) = parsed.back_mut().unwrap() {
-                    prev = &mut to as *mut Pos;
+                    prev = match parsed.back_mut().unwrap() {
+                        Node::Vertex( Vertex {id: _, from: _, to: p} ) => p as *mut Pos,
+                        _ => panic!("failed to read last pushed node")
+                    };
                 }
             } else {
                 let Word(letter, num, _) = line[0];
                 let num = num as i32;
+                // here we check against all the non-move commands that we care abt
                 match (letter, num) {
                     ('G', 90) => {
                         rel_xyz = false;
@@ -336,6 +359,17 @@ impl Parsed {
             rel_e,
         })
     }
+}
+#[test]
+#[should_panic]
+fn no_home_test() {
+    let input = "G1 X1 Y1 Z1 E1\n";
+    let _ = Parsed::build(input).expect("failed to parse");
+}
+#[test]
+#[should_panic]
+fn double_home() {
+    let _ = Parsed::build("G28\nG28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
 }
 #[test]
 fn parsed_test() {
