@@ -168,12 +168,17 @@ impl G1 {
 }
 #[derive(Clone, Copy, Debug)]
 struct Pos {
+    // FIXME: change to rel e
+    // abs x, y, z and rel e
     x: f32,
     y: f32,
     z: f32,
     e: f32,
 }
 impl Pos {
+    fn to_tup(&self) -> (f32, f32, f32) {
+        (self.x, self.y, self.z)
+    }
     fn unhomed() -> Pos {
         Pos {
             x: NEG_INFINITY,
@@ -186,17 +191,16 @@ impl Pos {
         Pos { x: 0.0, y: 0.0, z: 0.0, e: 0.0 }
     }
     unsafe fn build(prev: &Pos, g1: &G1) -> Pos {
-        unsafe {
-            if pre_home(*prev) {
-                panic!("g1 move from unhomed state")
-            }
-            Pos {
-                x: g1.x.unwrap_or(prev.x),
-                y: g1.y.unwrap_or(prev.y),
-                z: g1.z.unwrap_or(prev.z),
-                e: prev.e + g1.e.unwrap_or(0.0),
-            }
+        if pre_home(*prev) {
+            panic!("g1 move from unhomed state")
         }
+        Pos {
+            x: g1.x.unwrap_or(prev.x),
+            y: g1.y.unwrap_or(prev.y),
+            z: g1.z.unwrap_or(prev.z),
+            e: g1.e.unwrap_or(0.0),
+        }
+    
     }
 }
 fn pre_home(p: Pos) -> bool {
@@ -209,36 +213,61 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-#[derive(Clone)]
+
 struct Vertex {
     id: i32,
     prev: Option<*mut Vertex>,
     from: Pos,
     to: Pos,
 }
-/* impl Vertex {
-    unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        assert!(self.from.is_some());
-        let dxi = self.to.x - (*(self.from.unwrap())).x;
-        let dyi = self.to.y - (*(self.from.unwrap())).y;
-        let dzi = self.to.z - (*(self.from.unwrap())).z;
-        let dei = self.to.e - (*(self.from.unwrap())).e;
-        let init_prev_dist = (dxi.powf(2.0) + dyi.powf(2.0) + dzi.powf(2.0)).sqrt();
-        (*(self.from.unwrap())).x += dx;
-        (*(self.from.unwrap())).y += dy;
-        (*(self.from.unwrap())).z += dz;
-        let (dxf, dyf, dzf) = (dxi + dx, dyi + dy, dzi + dz);
-        let new_prev_dist = (dxf.powf(2.0) + dyf.powf(2.0) + dzf.powf(2.0)).sqrt();
-        let prev_move_scale = new_prev_dist / init_prev_dist;
-        (*(self.from.unwrap())).e = dei * prev_move_scale;
-        let new_next_dist = 
+impl Vertex {
+    fn dist(&self) -> f32 {
+        ((self.to.x - self.from.x).powf(2.0) + (self.to.y - self.from.y).powf(2.0) + (self.to.z - self.from.z).powf(2.0)).sqrt()
     }
-    fn delete(&mut self, parsed: &mut Parsed) { }
-    fn subdivide(&mut self, parsed: &mut Parsed) { }
-    fn insert(parsed: &mut Parsed) { }
-    fn mod_flow(&mut self) { }
+    unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+        assert!(self.prev.is_some());
+        let prev = self.prev.unwrap();
+        let (fx, fy, fz) = (*prev).from.to_tup();
+        let (tx, ty, tz) = (*prev).to.to_tup();
+        let dxi = tx - fx;
+        let dyi = ty - fy;
+        let dzi = tz - fz;
+        let di = (dxi.powf(2.0) + dyi.powf(2.0) + dzi.powf(2.0)).sqrt();
+        (*prev).to.x += dx;
+        (*prev).to.y += dy;
+        (*prev).to.z += dz;
+        let (tx, ty, tz) = (*prev).to.to_tup();
+        let dxf = tx - fx;
+        let dyf = ty - fy;
+        let dzf = tz - fz;
+        let df = (dxf.powf(2.0) + dyf.powf(2.0) + dzf.powf(2.0)).sqrt();
+        let scale = df / di;
+        (*prev).to.e *= scale;
+        let di = self.dist();
+        self.from = (*prev).to;
+        let df = self.dist();
+        let scale = df / di;
+        self.to.e *= scale;
+    }
+    fn mod_flow(&mut self, coeff: f32) {
+        self.to.e *= coeff;
+    }
 
-} */
+}
+#[test]
+fn tran_test() {
+    let test = "G28\ng1x1e1\ng1x2e1\ng1x3e1\n";
+    let mut gcode = Parsed::build(test).expect("failed to parse");
+    let mut cursor = gcode.nodes.cursor_front_mut();
+    cursor.move_next();
+    cursor.move_next();
+    if let Node::Vertex(v) = cursor.current().unwrap() {
+        unsafe {
+            v.translate(0.0, 1.0, 0.0);
+        }
+    }
+    panic!("{:?}", gcode);
+}
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Point")
@@ -341,13 +370,15 @@ impl Parsed {
                 parsed.push_back(node);
             }
         }
-        // FIXME: NEED TO SET STATES
         Ok(Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
         })
     }
+    fn subdivide() { }
+    fn delete() { }
+    fn insert() { }
 }
 #[test]
 #[should_panic]
