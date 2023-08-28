@@ -1,4 +1,4 @@
-use std::collections::{LinkedList, VecDeque};
+use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
 use crate::gcursor::*;
@@ -326,7 +326,42 @@ impl Parsed {
             rel_e,
         })
     }
-    fn subdivide() {}
+    fn subdivide(&mut self, cur: &mut CursorMut<Node>, count: i32) {
+        assert!(count > 1);
+        let end =  match cur.current() {
+            Some(Node::Vertex(v)) => v,
+            _ => panic!("subdivide called from non-move node"),
+        };
+        let start = end.prev.unwrap();
+        let di = end.dist();
+        let seg_dist = di / count as f32;
+        let x_seg = (end.to.x - end.from.x) / count as f32;
+        let y_seg = (end.to.y - end.from.y) / count as f32;
+        let z_seg = (end.to.z - end.from.z) / count as f32;
+        let mut prev = Some(start);
+        for i in 1..=count {
+            let v = Vertex {
+                id: -1,
+                prev,
+                from: Pos {
+                    x: end.from.x,
+                    y: end.from.y,
+                    z: end.from.z,
+                    e: end.from.e / count as f32,
+                },
+                to: Pos {
+                    x: end.from.x + x_seg * i as f32,
+                    y: end.from.y + y_seg * i as f32,
+                    z: end.from.z + z_seg * i as f32,
+                    e: end.from.e / count as f32,
+                },
+            };
+            cur.insert_before(Node::Vertex(v));
+            prev = Some(cur.peek_prev().unwrap() as *mut Vertex);
+        }
+        end.prev = prev;
+        end.from = (*prev).to.clone();
+    }
     fn delete() {}
     fn insert() {}
 }
