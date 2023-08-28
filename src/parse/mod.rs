@@ -44,66 +44,6 @@ impl Line {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct State {
-    // absolute x, y, z, AND e values, feedrate in mm/min
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub e: f32,
-    pub f: f32,
-    pub homed: bool,
-    pub g1_emit: String,
-}
-
-impl State {
-    pub fn new() -> State {
-        State {
-            x: NEG_INFINITY,
-            y: NEG_INFINITY,
-            z: NEG_INFINITY,
-            e: NEG_INFINITY,
-            f: NEG_INFINITY,
-            homed: false,
-            g1_emit: String::new(),
-        }
-    }
-    pub fn update_from(&mut self, state: &State) {
-        self.x = state.x;
-        self.y = state.y;
-        self.z = state.z;
-        self.e = state.e;
-        self.f = state.f;
-        self.homed = state.homed;
-        self.g1_emit = String::new();
-    }
-    pub fn origin() -> State {
-        State {
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            e: 0.0,
-            f: 0.0,
-            homed: false,
-            g1_emit: String::new(),
-        }
-    }
-    pub fn home(&mut self) {
-        self.x = 0.0;
-        self.y = 0.0;
-        self.z = 0.0;
-        self.e = 0.0;
-        self.f = 0.0;
-        self.homed = true;
-    }
-    pub fn dist(&self, init: &State) -> f32 {
-        let dx = self.x - init.x;
-        let dy = self.y - init.y;
-        let dz = self.z - init.z;
-        (dx.powf(2.0) + dy.powf(2.0) + dz.powf(2.0)).sqrt()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
     pub first_word: Word,
     pub params: Option<VecDeque<Word>>,
@@ -460,7 +400,7 @@ impl Emit for Line {
         }
     }
 }
-impl Emit for ParsedGCode {
+impl Emit for Parsed {
     fn emit(&self) -> String {
         let mut out = String::new();
         for (line, _) in &self.instructions {
