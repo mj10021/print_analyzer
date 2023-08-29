@@ -1,4 +1,4 @@
-/*
+
 use super::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -19,13 +19,10 @@ pub enum Label {
 pub struct Annotation {
     pub label: Label,
     pub feature: Option<Feature>,
-    xi: f32,
-    yi: f32,
-    zi: f32,
     dx: f32,
     dy: f32,
     dz: f32,
-    de: f32, CHANGE THIS TO ABSOLUTE E VALUE
+    de: f32,
     dt: f32, // calc time from feedrate
     //shape_id: id, USE UNBROKEN CONSECUTIVE EXTRUSIONS TO FIND SHAPES!!!
     ex_width_mm: f32,
@@ -35,9 +32,6 @@ impl Annotation {
         Annotation {
             label: Label::Uninitialized,
             feature: None,
-            xi: NEG_INFINITY,
-            yi: NEG_INFINITY,
-            zi: NEG_INFINITY,
             dx: NEG_INFINITY,
             dy: NEG_INFINITY,
             dz: NEG_INFINITY,
@@ -52,74 +46,62 @@ impl Annotation {
             (self.dx.abs()).max(self.dy.abs().max(self.dz.abs().max(self.de.abs())));
         return (max_axis_dist / feedrate) * 60.0;
     }
-    pub fn build(gcode: &mut ParsedGCode) -> Vec<Annotation> {
-        gcode.set_states().expect("failed to set states");
-        let mut cur = gcode.instructions.cursor_front();
-        // move cursor to first g1 move
-        while let Err(_) = cur.at_g1() {
-            cur.move_next();
-        }
-        // initialize a vector where length = number of g1 moves
-        let mut out = Vec::with_capacity(gcode.g1_moves as usize);
-        for _ in 0..gcode.g1_moves {
-            out.push(Annotation::new());
-        }
-        // label the annotation for the first g1 move
-        out[0].label = Label::FirstG1;
-        let Some((Line::G1(_), state)) = cur.current() else {
-            panic!("cursor not at g1 move");
-        };
-        out[0].xi = 0.0;
-        out[0].yi = 0.0;
-        out[0].zi = 0.0;
-        out[0].dx = state.x;
-        out[0].dy = state.y;
-        out[0].dz = state.z;
-        out[0].de = state.e;
-        out[0].dt = out[0].get_time(state.f);
-        let mut prev_state = state.clone();
+    fn get_ex_width(&self, layer_height: f32) -> f32 {
+        let move_dist = (self.dx.powf(2.0) + self.dy.powf(2.0) + self.dz.powf(2.0)).sqrt();
+        let in_area = ((1.75/2.0) * std::f32::consts::PI).powf(2.0);
+        let ex = (in_area * self.de) / move_dist;
+        return ex / layer_height;
+    }
+    pub fn build(gcode: &mut Parsed) -> std::collections::HashMap<i32, Annotation> {
+        let mut ann = std::collections::HashMap::new();
         let first_move = gcode.first_move_id();
-        while !cur.is_last_g1(gcode.g1_moves) {
-            cur.move_next_g1(gcode.g1_moves).expect("asdf");
-            let Some((Line::G1(g1), state)) = cur.current() else {
-                panic!("asdf");
-            };
-            let i = g1.ann_i();
-            out[i].xi = prev_state.x;
-            out[i].yi = prev_state.y;
-            out[i].zi = prev_state.z;
-            out[i].dx = state.x - prev_state.x;
-            out[i].dy = state.y - prev_state.y;
-            out[i].dz = state.z - prev_state.z;
-            out[i].de = state.e - prev_state.e;
-            out[i].dt = out[i].get_time(state.f);
-            prev_state = state.clone();
-            out[i].label = {
-                if g1.move_id < first_move {
-                    Label::PrePrintMove
-                } else if out[i].de > 0.0 {
-                    Label::ExtrusionMove
-                } else if out[i].dz > 0.0 {
-                    Label::LiftZ
-                } else if out[i].dz < 0.0 {
-                    Label::LowerZ
-                } else if out[i].dx != 0.0 || out[i].dy != 0.0 {
-                    Label::TravelMove
-                } else if out[i].de < 0.0 {
-                    if out[i].dx > 0.0 || out[i].dy > 0.0 {
-                        Label::Wipe
-                    } else {
-                        Label::Retraction
-                    }
-                } else if g1.f.is_some() {
-                    Label::FeedrateChangeOnly
-                } else {
-                    panic!("{:?}\r\n\r\n{:?}", g1, state)
-                } //{ Label::MysteryMove }
+
+        for node in gcode.nodes.iter() {
+            match node {
+                Node::Vertex( Vertex { id, prev, from, to  }) => {
+                    let mut a =  Annotation {
+                        label: Label::Uninitialized,
+                        feature: None,
+                        dx: to.x - from.x,
+                        dy: to.y - from.y,
+                        dz: to.z - from.z,
+                        de: to.e,
+                        dt: 0.0,
+                        ex_width_mm: 0.0,
+                    };
+                    a.ex_width_mm = a.get_ex_width(0.2);
+                    a.dt = a.get_time(to.f);
+                    a.label = {
+                        if *id == 1 {
+                            Label::FirstG1
+                        } else if *id < first_move {
+                            Label::PrePrintMove
+                        } else if a.de > 0.0 {
+                            Label::ExtrusionMove
+                        } else if a.dz > 0.0 {
+                            Label::LiftZ
+                        } else if a.dz < 0.0 {
+                            Label::LowerZ
+                        } else if a.dx != 0.0 || a.dy != 0.0 {
+                            Label::TravelMove
+                        } else if a.de < 0.0 {
+                            if a.dx > 0.0 || a.dy > 0.0 {
+                                Label::Wipe
+                            } else {
+                                Label::Retraction
+                            }
+                        } else if to.f.is_some() {
+                            Label::FeedrateChangeOnly
+                        } else {
+                            panic!("{:?}\r\n\r\n{:?}", to, from)
+                        } //{ Label::MysteryMove }
+                    };
+                    ann.insert(id, a);
+                },
+                _ => (),
             }
         }
-        find_shapes(gcode);
-        out
+        ann
     }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -313,4 +295,3 @@ fn first_move_test() {
     let index = gcode.first_move_id(); // should be 11 for test.gcode
     assert_eq!(index, 11);
 }
-*/

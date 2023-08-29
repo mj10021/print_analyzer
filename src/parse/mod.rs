@@ -12,7 +12,6 @@ pub struct Word(pub char, pub f32, pub Option<String>);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
-    G1(G1),
     Instruction(Instruction),
     Raw(String),
 }
@@ -21,10 +20,6 @@ impl Line {
         let Word(letter, num, _) = line[0];
         let num = num as i32;
         match (letter, num, letter.is_ascii_alphabetic()) {
-            ('G', 1, _) => {
-                let g1_count = g1_count.unwrap();
-                Line::G1(G1::build(line, g1_count))
-            }
             ('N', _, _) => {
                 let _ = line.pop_front();
                 let _ = line.pop_front();
@@ -224,11 +219,15 @@ impl std::fmt::Debug for Vertex {
             .finish()
     }
 }
+// Nodes are designed to contain all of the information needed to generate g-gcode
+// Each node represents one line of g-code
 #[derive(Debug)]
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
 }
+// Parsed struct contains a linked list of nodes and any other print information
+// needed to correctly emit g-code
 #[derive(Debug)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
@@ -328,6 +327,18 @@ impl Parsed {
             rel_xyz,
             rel_e,
         })
+    }
+    fn first_move_id(&self) -> i32 {
+        let min_x = 5.0;
+        let min_y = 5.0;
+        for node in self.nodes {
+            if let Node::Vertex(v) = node {
+                if v.to.x > min_x && v.to.y > min_y {
+                    return v.id;
+                }
+            }
+        }
+        -1
     }
     
     fn delete() {}
@@ -474,37 +485,6 @@ pub trait Emit {
         self.emit()
     }
 }
-impl Emit for G1 {
-    fn emit(&self) -> String {
-        let mut out = String::from("G1");
-        if let Some(x) = self.x {
-            assert!(x.is_finite());
-            assert!(!x.is_nan());
-            out += &format!(" X{}", x);
-        }
-        if let Some(y) = self.y {
-            assert!(y.is_finite());
-            assert!(!y.is_nan());
-            out += &format!(" Y{}", y);
-        }
-        if let Some(z) = self.z {
-            assert!(z.is_finite());
-            assert!(!z.is_nan());
-            out += &format!(" Z{}", z);
-        }
-        if let Some(e) = self.e {
-            assert!(e.is_finite());
-            assert!(!e.is_nan());
-            out += &format!(" E{}", e);
-        }
-        if let Some(f) = self.f {
-            assert!(f.is_finite());
-            assert!(!f.is_nan());
-            out += &format!(" F{}", f);
-        }
-        out + "\n"
-    }
-}
 impl Emit for Instruction {
     fn emit(&self) -> String {
         let Instruction {
@@ -526,7 +506,6 @@ impl Emit for Instruction {
 impl Emit for Line {
     fn emit(&self) -> String {
         match self {
-            Line::G1(g1) => g1.emit(),
             Line::Instruction(ins) => ins.emit(),
             Line::Raw(string) => string.clone(),
         }
@@ -534,15 +513,42 @@ impl Emit for Line {
 }
 impl Emit for Pos {
     fn emit(&self) -> String {
+        assert!(self.x.is_finite() && !self.x.is_nan());
+        assert!(self.y.is_finite() && !self.y.is_nan());
+        assert!(self.z.is_finite() && !self.z.is_nan());
+        assert!(self.e.is_finite() && !self.e.is_nan());
+        assert!(self.f.is_finite() && !self.f.is_nan());
+
         format!(
-            "X{} Y{} Z{} E{}\n",
-            self.x, self.y, self.z, self.e
+            "X{} Y{} Z{} E{} F{}\n",
+            self.x, self.y, self.z, self.e, self.f
         )
     }
 }
 impl Emit for Vertex {
     fn emit(&self) -> String {
-        format!("; id: {}\n", self.id) + &self.from.emit() + &self.to.emit()
+        let out = String::from("G1 ");
+        if self.from.x != self.to.x {
+            assert!(self.to.x.is_finite() && !self.to.x.is_nan());
+            out += &format!("X{} ", self.to.x);
+        }
+        if self.from.y != self.to.y {
+            assert!(self.to.y.is_finite() && !self.to.y.is_nan());
+            out += &format!("Y{} ", self.to.y);
+        }
+        if self.from.z != self.to.z {
+            assert!(self.to.z.is_finite() && !self.to.z.is_nan());
+            out += &format!("Z{} ", self.to.z);
+        }
+        if self.to.e != 0.0 {
+            assert!(self.to.e.is_finite() && !self.to.e.is_nan());
+            out += &format!("E{} ", self.to.e);
+        }
+        if self.from.f != self.to.f {
+            assert!(self.to.f.is_finite() && !self.to.f.is_nan());
+            out += &format!("F{} ", self.to.f);
+        }
+        out
     }
 }
 impl Emit for Node {
@@ -560,22 +566,7 @@ impl Emit for Parsed {
             out += &node.emit();
         }
         out + "\n"
-    }/*
-    fn debug_emit(&self) -> String {
-        let mut out = String::new();
-        for (line, _) in &self.instructions {
-            out += &line.emit();
-            if let Line::G1(g1) = line {
-                out += &format!(
-                    "; id:{} | label: {:?} | feature: {:?}\n",
-                    g1.move_id,
-                    self.ann[g1.ann_i()].label,
-                    self.ann[g1.ann_i()].feature
-                );
-            }
-        }
-        out + "\n"
-    }*/
+    }
 }
 
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -707,298 +698,3 @@ const TEST_G1_ONLY: &str = "G28\n\
                             G1 E10\n\
                             G1 x1e5\n\
                             G1 X5\n";
-
-
-/*
-#[test]
-fn g28_test() {
-    let g28 = "G28\n";
-    let gcode = ParsedGCode::build(g28).expect("failed to parse");
-    if let Some((_, state)) = gcode.instructions.front() {
-        if state.homed {
-            return;
-        }
-    }
-    panic!("failed to home");
-}
-#[test]
-fn check_g1_index() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("adsf");
-    assert_eq!(gcode.g1_moves, 5);
-    let mut cursor = gcode.instructions.cursor_front_mut();
-    let mut count = 0;
-    while !cursor.at_end() {
-        if let Some((Line::G1(g1), _)) = cursor.current() {
-            count += 1;
-            assert_eq!(count, g1.move_id);
-        }
-        let _ = cursor.next();
-    }
-    assert_eq!(gcode.g1_moves, count);
-}
-#[test]
-fn get_g1_index_return() {
-    let mut gcode = ParsedGCode::build(TEST_INPUT).expect("asdf");
-    let mut cursor = gcode.instructions.cursor_front_mut();
-    while let Err(_) = cursor.at_g1() {
-        cursor.next().expect("no g1 found");
-    }
-    cursor.move_next_g1(gcode.g1_moves).expect("no next g1");
-    while !cursor.is_last_g1(gcode.g1_moves) {
-        let init = cursor.current().unwrap() as *const (Line, State);
-        let _ = cursor.get_prev_g1(gcode.g1_moves).expect("asdf");
-        assert_eq!(cursor.current().unwrap() as *const (Line, State), init);
-        cursor.move_next_g1(gcode.g1_moves).expect("asdf");
-    }
-}
-#[test]
-fn single_g1() {
-    let input = "G28\nG1 X0 Y0 Z0 e1 f-1.12345\n";
-    let mut gcode = ParsedGCode::build(input).expect("failed to parse");
-    let mut cursor = gcode.instructions.cursor_front_mut();
-    cursor.next().expect("end of list");
-    if let Some((Line::G1(_g1), state)) = cursor.current() {
-        assert_eq!(state.x, 0.0);
-        assert_eq!(state.y, 0.0);
-        assert_eq!(state.z, 0.0);
-        assert_eq!(state.e, 1.0);
-        assert_eq!(state.f, -1.12345);
-    } else {
-        panic!("failed to parse single g1");
-    }
-}
-#[test]
-fn check_line_test() {
-    assert_eq!(false, check_line(&VecDeque::from(['A', 'A', 'A'])));
-    assert_eq!(
-        true,
-        check_line(&VecDeque::from([
-            'G', '1', 'X', '-', '1', '.', '1', 'Z', '2'
-        ]))
-    );
-    assert_eq!(
-        false,
-        check_line(&VecDeque::from([
-            'G', '1', 'X', '1', '.', '1', 'Z', '2', 'A'
-        ]))
-    );
-}
-#[test]
-fn parse_line() {
-    let line = "M200 S1234 F129384.1234";
-    let line = clean_line(line);
-
-    let line = read_line(line);
-
-    let ins = Line::build(line, None);
-    let params = VecDeque::from([Word('S', 1234.0, None), Word('F', 129384.1234, None)]);
-    assert_eq!(
-        ins,
-        Line::Instruction(Instruction {
-            first_word: Word('M', 200.0, None),
-            params: Some(params),
-        })
-    );
-}
-
-#[test]
-fn parse_random() {
-    let input = "alksdhfbilwyfboqi3471bf049837gfo1bi4ubf1ilkh34bf";
-    let line = clean_line(input);
-    let line = read_line(line);
-
-    assert_eq!(
-        VecDeque::from([Word(
-            'X',
-            NEG_INFINITY,
-            Some(String::from(input).to_ascii_uppercase())
-        )]),
-        line
-    );
-}
-
-#[test]
-
-fn dist_test() {
-    let a = State {
-        x: 1.0,
-        y: 1.0,
-        z: 1.0,
-        e: 0.0,
-        f: 0.0,
-        homed: false,
-        g1_emit: String::new(),
-    };
-    let b = State {
-        x: 10.0,
-        y: 10.0,
-        z: 10.0,
-        e: 0.0,
-        f: 0.0,
-        homed: false,
-        g1_emit: String::new(),
-    };
-
-    assert_eq!(a.dist(&b), (9.0_f32.powf(2.0) * 3.0).sqrt())
-}
-#[test]
-fn init_state() {
-    let input = "G28\nG1x1y1\n";
-    let gcode = ParsedGCode::build(input);
-    let Ok(gcode) = gcode else {
-        panic!("{:?}", gcode);
-    };
-    let mut cur = gcode.instructions.cursor_front();
-    cur.next().expect("end of list");
-    if let Some((Line::G1(_g1), state)) = cur.current() {
-        let blah = (state.x, state.y, state.z, state.e, state.f, state.homed);
-        let test = (1.0, 1.0, 0.0, 0.0, 0.0, true);
-        assert_eq!(blah, test);
-    } else {
-        panic!(" couldn't find first g1")
-    }
-}
-#[test]
-fn check_state() {
-    let input = "G28\nG1 X0 Y0 Z0 E0 F1000\n
-    G1 X1 Y2 Z3 E4 F2000\n
-    G1 X2 Y2 Z2 E-1.1 F1000\n
-    G1 X0 Y0 Z0 E100 F1\n";
-    let a = [
-        [0.0, 0.0, 0.0, 0.0, 1000.0],
-        [1.0, 2.0, 3.0, 4.0, 2000.0],
-        [2.0, 2.0, 2.0, 2.9, 1000.0],
-        [0.0, 0.0, 0.0, 102.9, 1.0],
-    ];
-    let mut i = 0;
-    let mut gcode = ParsedGCode::build(input).expect("asdf");
-    let mut cursor = gcode.instructions.cursor_front_mut();
-    while let Err(_) = cursor.at_g1() {
-        cursor.next().expect("end of list");
-    }
-    while !cursor.at_end() {
-        let Some((Line::G1(_g1), state)) = cursor.current() else {
-            panic!("asdf");
-        };
-        assert_eq!(a[i][0], state.x);
-        assert_eq!(a[i][1], state.y);
-        assert_eq!(a[i][2], state.z);
-        assert_eq!(a[i][3], state.e);
-        assert_eq!(a[i][4], state.f);
-        i += 1;
-        cursor.move_next_g1(gcode.g1_moves).expect("no g1 found");
-    }
-}
-#[test]
-fn sub_all_test() {
-    for count in 2..10 {
-        let mut gcode = ParsedGCode::build(TEST_G1_ONLY).expect("asdf");
-        gcode.subdivide(count);
-        assert_eq!(
-            (gcode.g1_moves + (gcode.g1_moves - 1) * count),
-            gcode.instructions.len() as i32 - 1 /* subtract the G28 */
-        );
-    }
-}
-#[test]
-fn trans_test() {
-    let input = "G28\n\
-                        G1 X0 Y1 Z1\n\
-                        G1 X1 E1\n\
-                        G1 X2 E1\n\
-                        G1 X3 E1\n";
-    let mut gcode = ParsedGCode::build(input).expect("asdf");
-    let mut cursor = gcode.instructions.cursor_front_mut();
-
-    while let Some((_line, state)) = cursor.current() {
-        if state.x == 2.0 {
-            break;
-        }
-        let _ = cursor.next();
-    }
-
-    let _ = cursor.translate_g1(0.5, 0.0, 0.0, gcode.g1_moves);
-    cursor = gcode.instructions.cursor_front_mut();
-
-    let t0 = G1 {
-        move_id: 1,
-        x: Some(0.0),
-        y: Some(1.0),
-        z: Some(1.0),
-        e: None,
-        f: None,
-    };
-    let t1 = G1 {
-        move_id: 2,
-        x: Some(1.0),
-        y: None,
-        z: None,
-        e: Some(1.0),
-        f: None,
-    };
-    let t2 = G1 {
-        move_id: 3,
-        x: Some(2.5),
-        y: Some(1.0),
-        z: Some(1.0),
-        e: Some(1.5),
-        f: None,
-    };
-    let t3 = G1 {
-        move_id: 4,
-        x: Some(3.0),
-        y: None,
-        z: None,
-        e: Some(0.5),
-        f: None,
-    };
-    let test = [t0, t1, t2, t3];
-
-    let mut i = 0;
-    while !cursor.at_end() {
-        let (Line::G1(curr), _) = cursor.current().unwrap().clone() else {
-            panic!("asdf");
-        };
-        assert_eq!(curr, test[i]);
-        let _ = cursor.next();
-        i += 1;
-    }
-}
-#[test]
-fn parse_m() {
-    let line = " M 123 ; asdkfhalk ";
-    let line = clean_line(line);
-    let line = read_line(line);
-    assert_eq!(line, VecDeque::from([Word('M', 123.0, None)]));
-}
-#[test]
-fn sub_seg_test() {
-    // THIS IS BROKEN
-    let input = "G28\nG1 X1 Y1 Z1 E1;asdfasdfasdf \n
-    G1 X20 Y20 Z11 E10\nG1 Z100\n
-    ;asdfasdfasdf\n";
-    let mut gcode = ParsedGCode::build(input).expect("asdf");
-    let mut cursor = gcode.instructions.cursor_front_mut();
-    cursor.next().expect("end of list");
-    cursor.next().expect("end of list");
-    let seg_count = 111111;
-    let _ = cursor.subdiv_seg(seg_count, gcode.g1_moves);
-    let _ = gcode.instructions.pop_front();
-    let _ = gcode.instructions.pop_front();
-    if let Some((Line::G1(g1), _)) = gcode.instructions.front() {
-        assert_eq!(g1.e, Some(10.0 / seg_count as f32));
-    }
-    assert_eq!(gcode.instructions.len() as i32, seg_count + 2);
-}
-#[test]
-fn tot_dist_test() {
-    let input = "G28\nG1 X0 Y0 Z0\n
-    G1 X1 Y0 Z0 \n
-    G1 X1 Y1 Z0 \n
-    G1 X1 Y1 Z1 \n
-    G1 X10 Y1 Z1\n";
-    let mut gcode = ParsedGCode::build(input).expect("asdf");
-    let mut _cursor = gcode.instructions.cursor_front_mut();
-    assert_eq!(12.0, gcode.tot_dist());
-}
-*/
