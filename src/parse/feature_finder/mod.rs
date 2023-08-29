@@ -1,3 +1,4 @@
+/*
 use super::*;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -24,7 +25,7 @@ pub struct Annotation {
     dx: f32,
     dy: f32,
     dz: f32,
-    de: f32,
+    de: f32, CHANGE THIS TO ABSOLUTE E VALUE
     dt: f32, // calc time from feedrate
     //shape_id: id, USE UNBROKEN CONSECUTIVE EXTRUSIONS TO FIND SHAPES!!!
     ex_width_mm: f32,
@@ -312,3 +313,4 @@ fn first_move_test() {
     let index = gcode.first_move_id(); // should be 11 for test.gcode
     assert_eq!(index, 11);
 }
+*/

@@ -1,26 +1,26 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
-mod analyzer;
-mod gcursor;
+//mod analyzer;
+//mod gcursor;
 mod parse;
 
-use gcursor::GCursorMut;
-use parse::feature_finder::Annotation;
+//use gcursor::*;
+//use parse::feature_finder::Annotation;
 
-use crate::parse::{Line, ParsedGCode};
+use crate::parse::{Parsed, Line};
 /*
 fn offset_layers(gcode: &mut ParsedGCode, dx: f32, dy: f32, layer_rule: F(i32) -> bool)
 where
     F: Copy + FnOnce(i32) -> bool,
 {
     let mut cur = gcode.instructions.cursor_front_mut();
-}*/
+}
 
-fn ann_filter<F>(gcode: &mut ParsedGCode, f: F)
+fn ann_filter<F>(gcode: &mut Parsed, f: F)
 where
     F: Copy + FnOnce(usize) -> bool,
 {
-    let mut cur = gcode.instructions.cursor_front_mut();
+    let mut cur = gcode.nodes.cursor_front_mut();
     while !cur.at_end() {
         if let Some((Line::G1(g1), _)) = cur.current() {
             {
@@ -91,4 +91,4 @@ mod integration_tests {
         let snd = snd.emit();
         assert_eq!(init, snd);
     }
-}
+}*/

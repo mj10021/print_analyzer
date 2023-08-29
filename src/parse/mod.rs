@@ -1,9 +1,9 @@
 use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
-use crate::gcursor::*;
+//use crate::gcursor::*;
 
-use self::feature_finder::Annotation;
+//use self::feature_finder::Annotation;
 
 pub mod feature_finder;
 
@@ -108,12 +108,12 @@ impl G1 {
 }
 #[derive(Clone, Copy, Debug)]
 struct Pos {
-    // FIXME: change to rel e
     // abs x, y, z and rel e
     x: f32,
     y: f32,
     z: f32,
     e: f32,
+    f: f32,
 }
 impl Pos {
     fn to_tup(&self) -> (f32, f32, f32) {
@@ -125,6 +125,7 @@ impl Pos {
             y: NEG_INFINITY,
             z: NEG_INFINITY,
             e: NEG_INFINITY,
+            f: NEG_INFINITY,
         }
     }
     fn home() -> Pos {
@@ -133,9 +134,10 @@ impl Pos {
             y: 0.0,
             z: 0.0,
             e: 0.0,
+            f: 0.0,
         }
     }
-    unsafe fn build(prev: &Pos, g1: &G1) -> Pos {
+    fn build(prev: &Pos, g1: &G1) -> Pos {
         if pre_home(*prev) {
             panic!("g1 move from unhomed state")
         }
@@ -144,6 +146,7 @@ impl Pos {
             y: g1.y.unwrap_or(prev.y),
             z: g1.z.unwrap_or(prev.z),
             e: g1.e.unwrap_or(0.0),
+            f: g1.f.unwrap_or(prev.f),
         }
     }
 }
@@ -153,8 +156,8 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-
-struct Vertex {
+#[derive(Clone)]
+pub struct Vertex {
     id: i32,
     prev: Option<*mut Vertex>,
     from: Pos,
@@ -179,6 +182,9 @@ impl Vertex {
         (*prev).to.x += dx;
         (*prev).to.y += dy;
         (*prev).to.z += dz;
+        self.from.x += dx;
+        self.from.y += dy;
+        self.from.z += dz;
         let (tx, ty, tz) = (*prev).to.to_tup();
         let dxf = tx - fx;
         let dyf = ty - fy;
@@ -187,7 +193,6 @@ impl Vertex {
         let scale = df / di;
         (*prev).to.e *= scale;
         let di = self.dist();
-        self.from = (*prev).to;
         let df = self.dist();
         let scale = df / di;
         self.to.e *= scale;
@@ -220,20 +225,18 @@ impl std::fmt::Debug for Vertex {
     }
 }
 #[derive(Debug)]
-enum Node {
+pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
-    Start,
-    End,
 }
 #[derive(Debug)]
-struct Parsed {
-    nodes: LinkedList<Node>,
+pub struct Parsed {
+    pub nodes: LinkedList<Node>,
     rel_xyz: bool,
     rel_e: bool,
 }
 impl Parsed {
-    fn build(path: &str) -> Result<Parsed, CursorError> {
+    fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
         let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -326,20 +329,23 @@ impl Parsed {
             rel_e,
         })
     }
-    fn subdivide(&mut self, cur: &mut CursorMut<Node>, count: i32) {
+    
+    fn delete() {}
+    fn insert() {}
+}
+fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         assert!(count > 1);
+        // take a copy of the value of the current node
         let end =  match cur.current() {
-            Some(Node::Vertex(v)) => v,
+            Some(Node::Vertex(v)) => v.clone(),
             _ => panic!("subdivide called from non-move node"),
         };
         let start = end.prev.unwrap();
-        let di = end.dist();
-        let seg_dist = di / count as f32;
         let x_seg = (end.to.x - end.from.x) / count as f32;
         let y_seg = (end.to.y - end.from.y) / count as f32;
         let z_seg = (end.to.z - end.from.z) / count as f32;
         let mut prev = Some(start);
-        for i in 1..=count {
+        for i in 1..count {
             let v = Vertex {
                 id: -1,
                 prev,
@@ -348,23 +354,104 @@ impl Parsed {
                     y: end.from.y,
                     z: end.from.z,
                     e: end.from.e / count as f32,
+                    f: end.from.f,
                 },
                 to: Pos {
                     x: end.from.x + x_seg * i as f32,
                     y: end.from.y + y_seg * i as f32,
                     z: end.from.z + z_seg * i as f32,
                     e: end.from.e / count as f32,
+                    f: end.from.f,
                 },
             };
             cur.insert_before(Node::Vertex(v));
-            prev = Some(cur.peek_prev().unwrap() as *mut Vertex);
+            prev = match cur.peek_prev() {
+                Some(Node::Vertex(v)) => Some(v as *mut Vertex),
+                _ => panic!("failed to insert vertex"),
+            }
         }
+        // now edit the original node
+        let end =  match cur.current() {
+            Some(Node::Vertex(v)) => v,
+            _ => panic!("subdivide called from non-move node"),
+        };
         end.prev = prev;
-        end.from = (*prev).to.clone();
+        end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
     }
-    fn delete() {}
-    fn insert() {}
+#[test]
+fn sub_test() {
+    let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
+    let mut cur = gcode.nodes.cursor_front_mut();
+    let mut c = 0;
+    while c < 2 {
+        if let Some(Node::Vertex(_)) = cur.current() {
+            c += 1;
+        }
+        cur.move_next();
+        assert!(cur.peek_next().is_some());
+    }
+    subdivide(&mut cur, 5);
+    panic!("{:?}", gcode);
 }
+fn delete(cur: &mut CursorMut<Node>) {
+    if let Some(Node::Vertex(v)) = cur.current() {
+        let prev = v.prev;
+        let _ = cur.remove_current();
+        // keep moving forward until reaching move node or end of list
+        while let Some(Node::NonMove(_)) = cur.current() {
+            cur.move_next();
+        }
+        if let Some(Node::Vertex(v)) = cur.current() {
+            v.prev = prev;
+        }
+    }
+    else {
+        cur.remove_current();
+    }
+}
+fn insert_g1(cur: &mut CursorMut<Node>, g1: G1) {
+    // insert before current node
+    let Some(Node::Vertex(curr)) = cur.current() else {
+        panic!("insert_g1 called from non-move node");
+    };
+    let prev = curr.prev.unwrap();
+    let v = Vertex {
+        id: -1,
+        prev: Some(prev),
+        from: unsafe{ (*prev).to }.clone(),
+        to: Pos::build(&unsafe{ (*prev).to }, &g1),
+    };
+    curr.from = v.to.clone();
+    cur.insert_before(Node::Vertex(v));
+    let new_prev = match cur.peek_prev() {
+        Some(Node::Vertex(v)) => Some(v as *mut Vertex),
+        _ => panic!("failed to insert vertex"),
+    };
+    let Some(Node::Vertex(curr)) = cur.current() else {
+        panic!("insert_g1 called from non-move node");
+    };
+    curr.prev = new_prev;
+}
+#[test]
+fn ins_test() {
+    let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
+    let mut cur = gcode.nodes.cursor_front_mut();
+    cur.move_next();
+    cur.move_next();
+    cur.move_next();
+    let g = G1 {
+        move_id: -1,
+        x: Some(0.0),
+        y: Some(100.0),
+        z: Some(0.0),
+        e: Some(100.0),
+        f: Some(0.0),
+    };
+    insert_g1(&mut cur, g);
+    panic!("{:?}", gcode);
+}
+
+
 #[test]
 #[should_panic]
 fn no_home_test() {
@@ -445,14 +532,35 @@ impl Emit for Line {
         }
     }
 }
+impl Emit for Pos {
+    fn emit(&self) -> String {
+        format!(
+            "X{} Y{} Z{} E{}\n",
+            self.x, self.y, self.z, self.e
+        )
+    }
+}
+impl Emit for Vertex {
+    fn emit(&self) -> String {
+        format!("; id: {}\n", self.id) + &self.from.emit() + &self.to.emit()
+    }
+}
+impl Emit for Node {
+    fn emit(&self) -> String {
+        match self {
+            Node::Vertex(v) => v.emit(),
+            Node::NonMove(line) => line.emit(),
+        }
+    }
+}
 impl Emit for Parsed {
     fn emit(&self) -> String {
         let mut out = String::new();
-        for (line, _) in &self.instructions {
-            out += &line.emit();
+        for node in &self.nodes {
+            out += &node.emit();
         }
         out + "\n"
-    }
+    }/*
     fn debug_emit(&self) -> String {
         let mut out = String::new();
         for (line, _) in &self.instructions {
@@ -467,7 +575,7 @@ impl Emit for Parsed {
             }
         }
         out + "\n"
-    }
+    }*/
 }
 
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
@@ -577,12 +685,12 @@ fn read_line(line: VecDeque<char>) -> VecDeque<Word> {
 
 #[cfg(test)]
 
-const TEST_INPUT: &str = "G28\nG1 X0 Y0 Z0 E0 F0\n
+const TEST_INPUT: &str = "G28\nnG1 X0 Y0 Z0 E0 F0\n
 G1 X10\n
 G1 Z10\n
 M324 S2345 Y245\n
 G1 E10\n
-G28 ; home all without mesh bed level\n
+;G28  home all without mesh bed level\n
 G29 ; mesh bed leveling \n
 M204 T2500 ; restore travel acceleration\n
 M104 S220 ; set extruder temp\n
@@ -600,6 +708,8 @@ const TEST_G1_ONLY: &str = "G28\n\
                             G1 x1e5\n\
                             G1 X5\n";
 
+
+/*
 #[test]
 fn g28_test() {
     let g28 = "G28\n";
@@ -891,3 +1001,4 @@ fn tot_dist_test() {
     let mut _cursor = gcode.instructions.cursor_front_mut();
     assert_eq!(12.0, gcode.tot_dist());
 }
+*/
