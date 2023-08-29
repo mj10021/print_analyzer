@@ -90,7 +90,7 @@ impl Annotation {
                             } else {
                                 Label::Retraction
                             }
-                        } else if to.f.is_some() {
+                        } else if from.f !=  to.f {
                             Label::FeedrateChangeOnly
                         } else {
                             panic!("{:?}\r\n\r\n{:?}", to, from)
@@ -129,7 +129,7 @@ struct Layer {
     height: f32,
 }
 impl Layer {
-    fn build_planar(gcode: &mut ParsedGCode) -> Vec<Layer> {
+    fn build_planar(gcode: &mut Parsed) -> Vec<Layer> {
         let mut out = Vec::new();
         let first_move_id = gcode.first_move_id();
         let mut cur = gcode.instructions.cursor_front();
@@ -151,11 +151,6 @@ impl Layer {
         }
         out
     }
-}
-fn find_all(gcode: &mut ParsedGCode) {
-    find_retractions(gcode);
-    //let _ = find_new_layer(gcode);
-    find_shapes(gcode);
 }
 fn find_retractions(gcode: &mut ParsedGCode) {
     let mut cur = gcode.instructions.cursor_front();
