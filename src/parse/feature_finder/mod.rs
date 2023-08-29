@@ -1,109 +1,7 @@
 
 use super::*;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Label {
-    Uninitialized,
-    FirstG1,
-    PrePrintMove,
-    TravelMove,
-    ExtrusionMove,
-    LiftZ,
-    LowerZ,
-    MysteryMove,
-    Retraction,
-    Wipe,
-    FeedrateChangeOnly,
-}
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Annotation {
-    pub label: Label,
-    pub feature: Option<Feature>,
-    dx: f32,
-    dy: f32,
-    dz: f32,
-    de: f32,
-    dt: f32, // calc time from feedrate
-    //shape_id: id, USE UNBROKEN CONSECUTIVE EXTRUSIONS TO FIND SHAPES!!!
-    ex_width_mm: f32,
-}
-impl Annotation {
-    pub fn new() -> Annotation {
-        Annotation {
-            label: Label::Uninitialized,
-            feature: None,
-            dx: NEG_INFINITY,
-            dy: NEG_INFINITY,
-            dz: NEG_INFINITY,
-            de: NEG_INFINITY,
-            dt: NEG_INFINITY,
-            ex_width_mm: 0.0,
-        }
-    }
-    fn get_time(&self, feedrate: f32) -> f32 {
-        // because all axes move at the same time, use the longest axis distance to calculate time
-        let max_axis_dist =
-            (self.dx.abs()).max(self.dy.abs().max(self.dz.abs().max(self.de.abs())));
-        return (max_axis_dist / feedrate) * 60.0;
-    }
-    fn get_ex_width(&self, layer_height: f32) -> f32 {
-        let move_dist = (self.dx.powf(2.0) + self.dy.powf(2.0) + self.dz.powf(2.0)).sqrt();
-        let in_area = ((1.75/2.0) * std::f32::consts::PI).powf(2.0);
-        let ex = (in_area * self.de) / move_dist;
-        return ex / layer_height;
-    }
-    pub fn build(gcode: &mut Parsed) -> std::collections::HashMap<i32, Annotation> {
-        let mut ann = std::collections::HashMap::new();
-        let first_move = gcode.first_move_id();
 
-        for node in gcode.nodes.iter() {
-            match node {
-                Node::Vertex( Vertex { id, prev, from, to  }) => {
-                    let mut a =  Annotation {
-                        label: Label::Uninitialized,
-                        feature: None,
-                        dx: to.x - from.x,
-                        dy: to.y - from.y,
-                        dz: to.z - from.z,
-                        de: to.e,
-                        dt: 0.0,
-                        ex_width_mm: 0.0,
-                    };
-                    a.ex_width_mm = a.get_ex_width(0.2);
-                    a.dt = a.get_time(to.f);
-                    a.label = {
-                        if *id == 1 {
-                            Label::FirstG1
-                        } else if *id < first_move {
-                            Label::PrePrintMove
-                        } else if a.de > 0.0 {
-                            Label::ExtrusionMove
-                        } else if a.dz > 0.0 {
-                            Label::LiftZ
-                        } else if a.dz < 0.0 {
-                            Label::LowerZ
-                        } else if a.dx != 0.0 || a.dy != 0.0 {
-                            Label::TravelMove
-                        } else if a.de < 0.0 {
-                            if a.dx > 0.0 || a.dy > 0.0 {
-                                Label::Wipe
-                            } else {
-                                Label::Retraction
-                            }
-                        } else if from.f !=  to.f {
-                            Label::FeedrateChangeOnly
-                        } else {
-                            panic!("{:?}\r\n\r\n{:?}", to, from)
-                        } //{ Label::MysteryMove }
-                    };
-                    ann.insert(id, a);
-                },
-                _ => (),
-            }
-        }
-        ann
-    }
-}
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Feature {
     FirstMove,
@@ -152,24 +50,23 @@ impl Layer {
         out
     }
 }
-fn find_retractions(gcode: &mut ParsedGCode) {
-    let mut cur = gcode.instructions.cursor_front();
+fn find_retractions(gcode: &mut Parsed) {
     let mut last_retraction = -1;
     let mut last_deretraction = -1;
-    while cur.peek_next().is_some() {
-        if let Some((Line::G1(g1), _)) = cur.current() {
-            if let Some(de) = g1.e {
-                if de < 0.0 {
-                    gcode.ann[g1.ann_i()].feature = Some(Feature::Retraction);
-                    last_retraction = g1.move_id;
+    for node in gcode.nodes {
+        match node {
+            Node::Vertex( Vertex { id, prev, from, to  }) => {
+                if to.e < 0.0 {
+                    gcode.ann[id].feature = Some(Feature::Retraction);
+                    last_retraction = id;
                 }
-                if de > 0.0 && last_retraction > last_deretraction {
-                    gcode.ann[g1.ann_i()].feature = Some(Feature::DeRetraction);
-                    last_deretraction = g1.move_id;
+                if to.e > 0.0 && last_retraction > last_deretraction {
+                    gcode.ann[id].feature = Some(Feature::DeRetraction);
+                    last_deretraction = id;
                 }
-            }
+            },
+            _ => (),
         }
-        cur.move_next();
     }
 }
 

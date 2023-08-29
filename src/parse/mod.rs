@@ -1,9 +1,7 @@
 use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
-//use crate::gcursor::*;
-
-//use self::feature_finder::Annotation;
+use self::feature_finder::Feature;
 
 pub mod feature_finder;
 
@@ -231,6 +229,7 @@ pub enum Node {
 #[derive(Debug)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
+    pub annotations: std::collections::HashMap<i32, Annotation>,
     rel_xyz: bool,
     rel_e: bool,
 }
@@ -326,6 +325,7 @@ impl Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
+            annotations: std::collections::HashMap::new(),
         })
     }
     fn first_move_id(&self) -> i32 {
@@ -343,6 +343,108 @@ impl Parsed {
     
     fn delete() {}
     fn insert() {}
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Label {
+    Uninitialized,
+    FirstG1,
+    PrePrintMove,
+    TravelMove,
+    ExtrusionMove,
+    LiftZ,
+    LowerZ,
+    MysteryMove,
+    Retraction,
+    Wipe,
+    FeedrateChangeOnly,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Annotation {
+    pub label: Label,
+    pub feature: Option<Feature>,
+    dx: f32,
+    dy: f32,
+    dz: f32,
+    de: f32,
+    dt: f32, // calc time from feedrate
+    ex_width_mm: f32,
+}
+impl Annotation {
+    pub fn new() -> Annotation {
+        Annotation {
+            label: Label::Uninitialized,
+            feature: None,
+            dx: NEG_INFINITY,
+            dy: NEG_INFINITY,
+            dz: NEG_INFINITY,
+            de: NEG_INFINITY,
+            dt: NEG_INFINITY,
+            ex_width_mm: 0.0,
+        }
+    }
+    fn get_time(&self, feedrate: f32) -> f32 {
+        // because all axes move at the same time, use the longest axis distance to calculate time
+        let max_axis_dist =
+            (self.dx.abs()).max(self.dy.abs().max(self.dz.abs().max(self.de.abs())));
+        return (max_axis_dist / feedrate) * 60.0;
+    }
+    fn get_ex_width(&self, layer_height: f32) -> f32 {
+        let move_dist = (self.dx.powf(2.0) + self.dy.powf(2.0) + self.dz.powf(2.0)).sqrt();
+        let in_area = ((1.75/2.0) * std::f32::consts::PI).powf(2.0);
+        let ex = (in_area * self.de) / move_dist;
+        return ex / layer_height;
+    }
+    pub fn build(gcode: &Parsed) -> std::collections::HashMap<i32, Annotation> {
+        let mut ann = std::collections::HashMap::new();
+        let first_move = gcode.first_move_id();
+
+        for node in gcode.nodes.iter() {
+            match node {
+                Node::Vertex( Vertex { id, prev, from, to  }) => {
+                    let mut a =  Annotation {
+                        label: Label::Uninitialized,
+                        feature: None,
+                        dx: to.x - from.x,
+                        dy: to.y - from.y,
+                        dz: to.z - from.z,
+                        de: to.e,
+                        dt: 0.0,
+                        ex_width_mm: 0.0,
+                    };
+                    a.ex_width_mm = a.get_ex_width(0.2);
+                    a.dt = a.get_time(to.f);
+                    a.label = {
+                        if *id == 1 {
+                            Label::FirstG1
+                        } else if *id < first_move {
+                            Label::PrePrintMove
+                        } else if a.de > 0.0 {
+                            Label::ExtrusionMove
+                        } else if a.dz > 0.0 {
+                            Label::LiftZ
+                        } else if a.dz < 0.0 {
+                            Label::LowerZ
+                        } else if a.dx != 0.0 || a.dy != 0.0 {
+                            Label::TravelMove
+                        } else if a.de < 0.0 {
+                            if a.dx > 0.0 || a.dy > 0.0 {
+                                Label::Wipe
+                            } else {
+                                Label::Retraction
+                            }
+                        } else if from.f !=  to.f {
+                            Label::FeedrateChangeOnly
+                        } else {
+                            panic!("{:?}\r\n\r\n{:?}", to, from)
+                        } //{ Label::MysteryMove }
+                    };
+                    ann.insert(id.clone(), a);
+                },
+                _ => (),
+            }
+        }
+        ann
+    }
 }
 fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         assert!(count > 1);

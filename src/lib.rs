@@ -1,10 +1,8 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 //mod analyzer;
-//mod gcursor;
 mod parse;
 
-//use gcursor::*;
 //use parse::feature_finder::Annotation;
 
 use crate::parse::{Parsed, Line};
