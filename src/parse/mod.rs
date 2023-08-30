@@ -672,6 +672,7 @@ impl Emit for Vertex {
             assert!(self.to.f.is_finite() && !self.to.f.is_nan());
             out += &format!("F{} ", self.to.f);
         }
+        out += "\n";
         out
     }
 }
