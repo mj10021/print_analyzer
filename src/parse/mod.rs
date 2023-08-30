@@ -350,6 +350,15 @@ impl Parsed {
         }
         -1
     }
+    fn recalc_ids(&mut self) {
+        let mut id = 1;
+        for node in self.nodes.iter_mut() {
+            if let Node::Vertex(v) = node {
+                v.id = id;
+                id += 1;
+            }
+        }
+    }
 
     fn delete() {}
     fn insert() {}
