@@ -1,10 +1,10 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 
-mod parse;
 mod analyzer;
+mod parse;
 
-use parse::*; 
+use parse::*;
 
 fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
     let location = Pos {
@@ -20,7 +20,6 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
                 let dist = v.to.dist(&location);
                 if dist < radius {
                     v.to.e = 0.0;
-
                 }
             }
             _ => (),
@@ -37,18 +36,24 @@ fn erode_test() {
     let mut f = File::create("erosion_output.gcode").expect("failed to create file");
     let _ = f.write_all(&gcode.as_bytes());
 }
-
+fn modify<F>(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, mod_fn: fn(&mut Vertex)) {
+    for node in gcode.nodes.iter_mut() {
+        match node {
+            Node::Vertex(v) => {
+                if filter(v) {
+                    mod_fn(v);
+                }
+            }
+            _ => (),
+        }
+    }
+}
 
 // fn insert_before(feature)
 // fn modify(feature)
 // fn replace_with(feature, gcode_sequence)
 // fn insert_after(feature)
 // fn filter(feature)
-
-
-
-
-
 
 /*
 fn offset_layers(gcode: &mut ParsedGCode, dx: f32, dy: f32, layer_rule: F(i32) -> bool)

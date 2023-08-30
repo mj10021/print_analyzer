@@ -4,10 +4,6 @@ use super::*;
 pub enum Feature {
     FirstMove,
     NewLayer(i32),
-    LayerChangeSequence(u32),
-    ShapeChangeSequence(u32),
-    ShapeStart,
-    ShapeEnd,
     Retraction,
     DeRetraction,
 }
@@ -45,14 +41,14 @@ impl Shape {
                                 start_vtx,
                                 end_vtx: v.id,
                                 len: dist,
-                                z: v.to.z
+                                z: v.to.z,
                             };
                             out.push_back(s);
                             dist = 0.0;
                             start_vtx = -1;
                         }
                     }
-                },
+                }
                 _ => (),
             }
         }
@@ -115,13 +111,12 @@ fn layer_finder_test() {
     l.pop_front();
     let mut z = l.pop_front().unwrap().z;
     for layer in l {
-        assert!(layer.z - z - 0.4 < 0.00001, "layer z: {}, prev z: {}", layer.z, z);
+        assert!(
+            layer.z - z - 0.4 < 0.00001,
+            "layer z: {}, prev z: {}",
+            layer.z,
+            z
+        );
         z = layer.z;
     }
 }
-// analysis rules:
-// - travel moves are usually much faster than print moves
-// - whether retraction or z hop is on or off, there is some sequence of moves
-//      that are inserted between every shape
-// - different features (ext perim, inner perim, infill) can have different widths (flow)
-//      and different speeds but don't always

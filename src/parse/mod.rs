@@ -350,7 +350,7 @@ impl Parsed {
         }
         -1
     }
-    
+
     fn delete() {}
     fn insert() {}
 }
@@ -400,7 +400,7 @@ impl Annotation {
     }
     fn get_ex_width(&self, layer_height: f32) -> f32 {
         let move_dist = (self.dx.powf(2.0) + self.dy.powf(2.0) + self.dz.powf(2.0)).sqrt();
-        let in_area = ((1.75/2.0) * std::f32::consts::PI).powf(2.0);
+        let in_area = ((1.75 / 2.0) * std::f32::consts::PI).powf(2.0);
         let ex = (in_area * self.de) / move_dist;
         return ex / layer_height;
     }
@@ -410,8 +410,13 @@ impl Annotation {
 
         for node in gcode.nodes.iter() {
             match node {
-                Node::Vertex( Vertex { id, prev: _, from, to  }) => {
-                    let mut a =  Annotation {
+                Node::Vertex(Vertex {
+                    id,
+                    prev: _,
+                    from,
+                    to,
+                }) => {
+                    let mut a = Annotation {
                         label: Label::Uninitialized,
                         feature: None,
                         dx: to.x - from.x,
@@ -442,14 +447,14 @@ impl Annotation {
                             } else {
                                 Label::Retraction
                             }
-                        } else if from.f !=  to.f {
+                        } else if from.f != to.f {
                             Label::FeedrateChangeOnly
                         } else {
                             panic!("{:?}\r\n\r\n{:?}", to, from)
                         } //{ Label::MysteryMove }
                     };
                     ann.insert(id.clone(), a);
-                },
+                }
                 _ => (),
             }
         }
@@ -457,50 +462,50 @@ impl Annotation {
     }
 }
 fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
-        assert!(count > 1);
-        // take a copy of the value of the current node
-        let end =  match cur.current() {
-            Some(Node::Vertex(v)) => v.clone(),
-            _ => panic!("subdivide called from non-move node"),
+    assert!(count > 1);
+    // take a copy of the value of the current node
+    let end = match cur.current() {
+        Some(Node::Vertex(v)) => v.clone(),
+        _ => panic!("subdivide called from non-move node"),
+    };
+    let start = end.prev.unwrap();
+    let x_seg = (end.to.x - end.from.x) / count as f32;
+    let y_seg = (end.to.y - end.from.y) / count as f32;
+    let z_seg = (end.to.z - end.from.z) / count as f32;
+    let mut prev = Some(start);
+    for i in 1..count {
+        let v = Vertex {
+            id: -1,
+            prev,
+            from: Pos {
+                x: end.from.x,
+                y: end.from.y,
+                z: end.from.z,
+                e: end.from.e / count as f32,
+                f: end.from.f,
+            },
+            to: Pos {
+                x: end.from.x + x_seg * i as f32,
+                y: end.from.y + y_seg * i as f32,
+                z: end.from.z + z_seg * i as f32,
+                e: end.from.e / count as f32,
+                f: end.from.f,
+            },
         };
-        let start = end.prev.unwrap();
-        let x_seg = (end.to.x - end.from.x) / count as f32;
-        let y_seg = (end.to.y - end.from.y) / count as f32;
-        let z_seg = (end.to.z - end.from.z) / count as f32;
-        let mut prev = Some(start);
-        for i in 1..count {
-            let v = Vertex {
-                id: -1,
-                prev,
-                from: Pos {
-                    x: end.from.x,
-                    y: end.from.y,
-                    z: end.from.z,
-                    e: end.from.e / count as f32,
-                    f: end.from.f,
-                },
-                to: Pos {
-                    x: end.from.x + x_seg * i as f32,
-                    y: end.from.y + y_seg * i as f32,
-                    z: end.from.z + z_seg * i as f32,
-                    e: end.from.e / count as f32,
-                    f: end.from.f,
-                },
-            };
-            cur.insert_before(Node::Vertex(v));
-            prev = match cur.peek_prev() {
-                Some(Node::Vertex(v)) => Some(v as *mut Vertex),
-                _ => panic!("failed to insert vertex"),
-            }
+        cur.insert_before(Node::Vertex(v));
+        prev = match cur.peek_prev() {
+            Some(Node::Vertex(v)) => Some(v as *mut Vertex),
+            _ => panic!("failed to insert vertex"),
         }
-        // now edit the original node
-        let end =  match cur.current() {
-            Some(Node::Vertex(v)) => v,
-            _ => panic!("subdivide called from non-move node"),
-        };
-        end.prev = prev;
-        end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
     }
+    // now edit the original node
+    let end = match cur.current() {
+        Some(Node::Vertex(v)) => v,
+        _ => panic!("subdivide called from non-move node"),
+    };
+    end.prev = prev;
+    end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
+}
 #[test]
 fn sub_test() {
     let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
@@ -527,8 +532,7 @@ fn delete(cur: &mut CursorMut<Node>) {
         if let Some(Node::Vertex(v)) = cur.current() {
             v.prev = prev;
         }
-    }
-    else {
+    } else {
         cur.remove_current();
     }
 }
@@ -541,8 +545,8 @@ fn insert_g1(cur: &mut CursorMut<Node>, g1: G1) {
     let v = Vertex {
         id: -1,
         prev: Some(prev),
-        from: unsafe{ (*prev).to }.clone(),
-        to: Pos::build(&unsafe{ (*prev).to }, &g1),
+        from: unsafe { (*prev).to }.clone(),
+        to: Pos::build(&unsafe { (*prev).to }, &g1),
     };
     curr.from = v.to.clone();
     cur.insert_before(Node::Vertex(v));
@@ -573,7 +577,6 @@ fn ins_test() {
     insert_g1(&mut cur, g);
     panic!("{:?}", gcode);
 }
-
 
 #[test]
 #[should_panic]

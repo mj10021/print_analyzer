@@ -11,7 +11,9 @@ fn find_center_coord(gcode: &mut Parsed) -> (f32, f32, f32) {
 
     for node in gcode.nodes.iter() {
         match node {
-            Node::NonMove(_) => { continue; }
+            Node::NonMove(_) => {
+                continue;
+            }
             Node::Vertex(v) => {
                 if v.id < first_move {
                     continue;
