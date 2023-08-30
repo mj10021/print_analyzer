@@ -1,11 +1,55 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
-//mod analyzer;
+
 mod parse;
+mod analyzer;
 
-//use parse::feature_finder::Annotation;
+use parse::*; 
 
-use crate::parse::{Parsed, Line};
+fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
+    let location = Pos {
+        x: location.0,
+        y: location.1,
+        z: location.2,
+        ..Pos::unhomed()
+    };
+
+    for node in gcode.nodes.iter_mut() {
+        match node {
+            Node::Vertex(v) => {
+                let dist = v.to.dist(&location);
+                if dist < radius {
+                    v.to.e = 0.0;
+
+                }
+            }
+            _ => (),
+        }
+    }
+}
+#[test]
+fn erode_test() {
+    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    erode(&mut gcode, (82.0, 97.0, 10.0), 5.0);
+    let gcode = gcode.emit();
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("erosion_output.gcode").expect("failed to create file");
+    let _ = f.write_all(&gcode.as_bytes());
+}
+
+
+// fn insert_before(feature)
+// fn modify(feature)
+// fn replace_with(feature, gcode_sequence)
+// fn insert_after(feature)
+// fn filter(feature)
+
+
+
+
+
+
 /*
 fn offset_layers(gcode: &mut ParsedGCode, dx: f32, dy: f32, layer_rule: F(i32) -> bool)
 where
@@ -48,30 +92,7 @@ fn ann_filter_test() {
     let _ = f.write_all(gcode.emit().as_bytes());
 }
 
-#[cfg(test)]
-#[test]
-fn transform_test() {
-    use crate::gcursor::*;
-    use crate::parse::*;
-    use std::f32::consts::PI;
-    let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let mut cur = gcode.instructions.cursor_front_mut();
-    while let Err(_) = cur.at_g1() {
-        cur.next().expect("asdf");
-    }
-    cur.move_next_g1(gcode.g1_moves).expect("asdf");
-    while !cur.is_last_g1(gcode.g1_moves) {
-        if let Some((Line::G1(g1), _)) = cur.current() {
-            let i = g1.move_id as f32;
-            let _ = cur.translate_g1((i * (PI / 8.0)).sin(), 0.0, 0.0, gcode.g1_moves);
-        }
-        cur.move_next_g1(gcode.g1_moves).expect("asdf");
-    }
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("transform_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.emit().as_bytes());
-}
+
 mod integration_tests {
 
     #[cfg(test)]

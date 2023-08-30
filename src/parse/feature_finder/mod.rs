@@ -11,7 +11,7 @@ pub enum Feature {
     Retraction,
     DeRetraction,
 }
-
+#[derive(Debug)]
 struct Shape {
     start_vtx: i32,
     end_vtx: i32,
@@ -65,8 +65,18 @@ struct Layer {
     shapes: Vec<Shape>,
     z: f32,
 }
+impl std::fmt::Debug for Layer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Layer")
+            .field("start_id", &self.start_id)
+            .field("end_id", &self.end_id)
+            .field("z", &self.z)
+            .finish()
+    }
+}
 impl Layer {
-    fn build_planar(shapes: VecDeque<Shape>) -> Vec<Layer> {
+    fn build_planar(gcode: &Parsed) -> Vec<Layer> {
+        let shapes = Shape::build_planar(gcode);
         let mut out = Vec::new();
         let mut curr_z = 0.0;
         let mut temp_shapes: Vec<Shape> = Vec::new();
@@ -92,12 +102,22 @@ impl Layer {
 }
 #[test]
 fn shape_finder_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse");
+    let gcode = Parsed::build("test.gcode").expect("failed to parse");
     let s = Shape::build_planar(&gcode);
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("shape_finder_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit().as_bytes());
+    panic!("{:?}", s);
+}
+#[test]
+fn layer_finder_test() {
+    let gcode = Parsed::build("test.gcode").expect("failed to parse");
+    let l = Layer::build_planar(&gcode);
+    let mut l = VecDeque::from(l);
+    l.pop_front();
+    l.pop_front();
+    let mut z = l.pop_front().unwrap().z;
+    for layer in l {
+        assert!(layer.z - z - 0.4 < 0.00001, "layer z: {}, prev z: {}", layer.z, z);
+        z = layer.z;
+    }
 }
 // analysis rules:
 // - travel moves are usually much faster than print moves
@@ -105,38 +125,3 @@ fn shape_finder_test() {
 //      that are inserted between every shape
 // - different features (ext perim, inner perim, infill) can have different widths (flow)
 //      and different speeds but don't always
-
-#[cfg(test)]
-#[test]
-fn planar_z_test() {
-    let mut gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    // find_new_layer(&mut gcode);
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("planar_z_test.gcode").expect("failed to create file");
-    let _ = f.write_all(gcode.debug_emit().as_bytes());
-}
-#[test]
-fn find_retractions_test() {
-    let test = "G28\n\
-                        G1 X0 Y-2 Z.2 F1234\n\
-                        G1 X80 E22.22\n\
-                        G1 E-0.2\n\
-                        G1 X50 Y50\n\
-                        G1 X80 Y50 E2\n\
-                        G1 X80 Y80 E2\n\
-                        G1 E-0.2\n\
-                        G1 X50 Y80 E2\n";
-    let mut gcode = ParsedGCode::build(test).expect("asdf");
-    find_retractions(&mut gcode);
-    assert_eq!(gcode.ann[2].feature, Some(Feature::Retraction));
-    assert_eq!(gcode.ann[3].feature, Some(Feature::DeRetraction));
-    assert_eq!(gcode.ann[6].feature, Some(Feature::Retraction));
-    assert_eq!(gcode.ann[7].feature, Some(Feature::DeRetraction));
-}
-#[test]
-fn first_move_test() {
-    let gcode = ParsedGCode::build("test.gcode").expect("asdf");
-    let index = gcode.first_move_id(); // should be 11 for test.gcode
-    assert_eq!(index, 11);
-}

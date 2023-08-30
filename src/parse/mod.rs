@@ -14,14 +14,14 @@ pub enum Line {
     Raw(String),
 }
 impl Line {
-    fn build(mut line: VecDeque<Word>, g1_count: Option<i32>) -> Line {
+    fn build(mut line: VecDeque<Word>) -> Line {
         let Word(letter, num, _) = line[0];
         let num = num as i32;
         match (letter, num, letter.is_ascii_alphabetic()) {
             ('N', _, _) => {
                 let _ = line.pop_front();
                 let _ = line.pop_front();
-                Line::build(line, None)
+                Line::build(line)
             }
             (_, _, true) => Line::Instruction(Instruction::build(line)),
             (_, _, false) => {
@@ -100,19 +100,19 @@ impl G1 {
     }
 }
 #[derive(Clone, Copy, Debug)]
-struct Pos {
+pub struct Pos {
     // abs x, y, z and rel e
-    x: f32,
-    y: f32,
-    z: f32,
-    e: f32,
-    f: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub e: f32,
+    pub f: f32,
 }
 impl Pos {
     fn to_tup(&self) -> (f32, f32, f32) {
         (self.x, self.y, self.z)
     }
-    fn unhomed() -> Pos {
+    pub fn unhomed() -> Pos {
         Pos {
             x: NEG_INFINITY,
             y: NEG_INFINITY,
@@ -142,6 +142,9 @@ impl Pos {
             f: g1.f.unwrap_or(prev.f),
         }
     }
+    pub fn dist(&self, p: &Pos) -> f32 {
+        ((self.x - p.x).powf(2.0) + (self.y - p.y).powf(2.0) + (self.z - p.z).powf(2.0)).sqrt()
+    }
 }
 fn pre_home(p: Pos) -> bool {
     if p.x == NEG_INFINITY || p.y == NEG_INFINITY || p.z == NEG_INFINITY || p.e == NEG_INFINITY {
@@ -151,10 +154,10 @@ fn pre_home(p: Pos) -> bool {
 }
 #[derive(Clone)]
 pub struct Vertex {
-    id: i32,
+    pub id: i32,
     prev: Option<*mut Vertex>,
-    from: Pos,
-    to: Pos,
+    pub from: Pos,
+    pub to: Pos,
 }
 impl Vertex {
     fn dist(&self) -> f32 {
@@ -162,6 +165,13 @@ impl Vertex {
             + (self.to.y - self.from.y).powf(2.0)
             + (self.to.z - self.from.z).powf(2.0))
         .sqrt()
+    }
+    fn get_vector(&self) -> (f32, f32, f32) {
+        let scale = self.dist();
+        let dx = (self.to.x - self.from.x) / scale;
+        let dy = (self.to.y - self.from.y) / scale;
+        let dz = (self.to.z - self.from.z) / scale;
+        (dx, dy, dz)
     }
     unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         assert!(self.prev.is_some());
@@ -234,7 +244,7 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
-    fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
+    pub fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
         let mut g1_moves = 0;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
@@ -317,7 +327,7 @@ impl Parsed {
                     }
                     _ => {}
                 }
-                let node = Node::NonMove(Line::build(line, None));
+                let node = Node::NonMove(Line::build(line));
                 parsed.push_back(node);
             }
         }
@@ -328,7 +338,7 @@ impl Parsed {
             annotations: std::collections::HashMap::new(),
         })
     }
-    fn first_move_id(&self) -> i32 {
+    pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
         let min_y = 5.0;
         for node in self.nodes.iter() {
@@ -400,7 +410,7 @@ impl Annotation {
 
         for node in gcode.nodes.iter() {
             match node {
-                Node::Vertex( Vertex { id, prev, from, to  }) => {
+                Node::Vertex( Vertex { id, prev: _, from, to  }) => {
                     let mut a =  Annotation {
                         label: Label::Uninitialized,
                         feature: None,
