@@ -56,6 +56,7 @@ impl Shape {
     }
 }
 struct Layer {
+    num: i32,
     start_id: i32,
     end_id: i32,
     shapes: Vec<Shape>,
@@ -74,18 +75,21 @@ impl Layer {
     fn build_planar(gcode: &Parsed) -> Vec<Layer> {
         let shapes = Shape::build_planar(gcode);
         let mut out = Vec::new();
+        let mut i = 0;
         let mut curr_z = 0.0;
         let mut temp_shapes: Vec<Shape> = Vec::new();
         for shape in shapes {
             if shape.z != curr_z {
                 if temp_shapes.len() > 0 {
                     out.push(Layer {
+                        num: i,
                         start_id: temp_shapes[0].start_vtx,
                         end_id: temp_shapes[temp_shapes.len() - 1].end_vtx,
                         shapes: temp_shapes,
                         z: curr_z,
                     });
                 }
+                i += 1;
                 curr_z = shape.z;
                 temp_shapes = Vec::new();
                 temp_shapes.push(shape);

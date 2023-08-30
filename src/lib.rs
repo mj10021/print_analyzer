@@ -44,14 +44,14 @@ fn modify(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, mod_fn: fn(&mut Verte
                     mod_fn(v);
                 }
             }
-            _ => (),
+            _ => { continue; },
         }
     }
 }
 #[test]
 fn mod_test() {
     let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
-    modify(&mut gcode, |v| v.to.x > 0.0, |v| v.to.e *= 2.0);
+    modify(&mut gcode, |v| ((v.to.z.trunc()) as i32) % 2 == 0, |v| v.to.x *= 1.1);
     let gcode = gcode.emit();
     use std::fs::File;
     use std::io::prelude::*;
