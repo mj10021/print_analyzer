@@ -54,6 +54,9 @@ impl Shape {
         }
         out
     }
+    fn get_center(&self) -> (f32, f32, f32) {
+        
+    }
 }
 struct Layer {
     num: i32,
@@ -72,6 +75,8 @@ impl std::fmt::Debug for Layer {
     }
 }
 impl Layer {
+    // FIXME: layer and shape should be maps of vertex to shape and
+    // either vertex to layer or shape to layer not sure
     fn build_planar(gcode: &Parsed) -> Vec<Layer> {
         let shapes = Shape::build_planar(gcode);
         let mut out = Vec::new();
