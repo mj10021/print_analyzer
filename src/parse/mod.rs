@@ -331,7 +331,7 @@ impl Parsed {
     fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
         let min_y = 5.0;
-        for node in self.nodes {
+        for node in self.nodes.iter() {
             if let Node::Vertex(v) = node {
                 if v.to.x > min_x && v.to.y > min_y {
                     return v.id;
@@ -629,7 +629,7 @@ impl Emit for Pos {
 }
 impl Emit for Vertex {
     fn emit(&self) -> String {
-        let out = String::from("G1 ");
+        let mut out = String::from("G1 ");
         if self.from.x != self.to.x {
             assert!(self.to.x.is_finite() && !self.to.x.is_nan());
             out += &format!("X{} ", self.to.x);
