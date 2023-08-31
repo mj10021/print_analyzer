@@ -1,7 +1,7 @@
-use std::collections::{linked_list::CursorMut, LinkedList, VecDeque};
+use std::collections::{HashMap, linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
-use self::feature_finder::Feature;
+use self::feature_finder::Layer;
 
 pub mod feature_finder;
 
@@ -127,7 +127,7 @@ impl Pos {
             y: 0.0,
             z: 0.0,
             e: 0.0,
-            f: 0.0,
+            f: NEG_INFINITY,
         }
     }
     fn build(prev: &Pos, g1: &G1) -> Pos {
@@ -239,7 +239,8 @@ pub enum Node {
 #[derive(Debug)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
-    pub annotations: std::collections::HashMap<i32, Annotation>,
+    pub annotations: HashMap<i32, Annotation>,
+    pub layers: HashMap<i32, Layer>,
     rel_xyz: bool,
     rel_e: bool,
 }
@@ -331,12 +332,15 @@ impl Parsed {
                 parsed.push_back(node);
             }
         }
-        Ok(Parsed {
+        let mut p = Parsed {
             nodes: parsed,
+            layers: HashMap::new(),
             rel_xyz,
             rel_e,
-            annotations: std::collections::HashMap::new(),
-        })
+            annotations: HashMap::new(),
+        };
+        p.layers = Layer::build_planar(&p);
+        Ok(p)
     }
     pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
@@ -380,7 +384,6 @@ pub enum Label {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Annotation {
     pub label: Label,
-    pub feature: Option<Feature>,
     dx: f32,
     dy: f32,
     dz: f32,
@@ -392,7 +395,6 @@ impl Annotation {
     pub fn new() -> Annotation {
         Annotation {
             label: Label::Uninitialized,
-            feature: None,
             dx: NEG_INFINITY,
             dy: NEG_INFINITY,
             dz: NEG_INFINITY,
@@ -427,7 +429,6 @@ impl Annotation {
                 }) => {
                     let mut a = Annotation {
                         label: Label::Uninitialized,
-                        feature: None,
                         dx: to.x - from.x,
                         dy: to.y - from.y,
                         dz: to.z - from.z,
@@ -651,6 +652,9 @@ impl Emit for Pos {
 }
 impl Emit for Vertex {
     fn emit(&self) -> String {
+        if self == Vertex::home() {
+            return "G28\n".to_string();
+        }
         let mut out = String::from("G1 ");
         if self.from.x != self.to.x {
             assert!(self.to.x.is_finite() && !self.to.x.is_nan());
