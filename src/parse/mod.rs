@@ -1,4 +1,4 @@
-use std::collections::{HashMap, linked_list::CursorMut, LinkedList, VecDeque};
+use std::collections::{BTreeMap, linked_list::CursorMut, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
 use self::feature_finder::Layer;
@@ -99,7 +99,7 @@ impl G1 {
         self.move_id as usize - 1
     }
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pos {
     // abs x, y, z and rel e
     pub x: f32,
@@ -130,7 +130,7 @@ impl Pos {
             f: NEG_INFINITY,
         }
     }
-    fn build(prev: &Pos, g1: &G1) -> Pos {
+    pub fn build(prev: &Pos, g1: &G1) -> Pos {
         if pre_home(*prev) {
             panic!("g1 move from unhomed state")
         }
@@ -152,10 +152,10 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Vertex {
     pub id: i32,
-    prev: Option<*mut Vertex>,
+    pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
 }
@@ -229,18 +229,20 @@ impl std::fmt::Debug for Vertex {
 }
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
+    LayerStart,
+    LayerEnd,
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
 #[derive(Debug)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
-    pub annotations: HashMap<i32, Annotation>,
-    pub layers: HashMap<i32, Layer>,
+    pub annotations: BTreeMap<i32, Annotation>,
+    pub layers: BTreeMap<i32, Layer>,
     rel_xyz: bool,
     rel_e: bool,
 }
@@ -334,12 +336,31 @@ impl Parsed {
         }
         let mut p = Parsed {
             nodes: parsed,
-            layers: HashMap::new(),
+            layers: BTreeMap::new(),
             rel_xyz,
             rel_e,
-            annotations: HashMap::new(),
+            annotations: BTreeMap::new(),
         };
+        p.annotations = Annotation::build(&p);
         p.layers = Layer::build_planar(&p);
+        let mut cur = p.nodes.cursor_front_mut();
+        let mut last = 1;
+        let mut end = -1;
+        while cur.peek_next().is_some() {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if let Some(Layer{num: n, end_id, ..}) = p.layers.get(&v.id) {
+                    if *n > last {
+                        last = *n;
+                        end = *end_id;
+                        cur.insert_before(Node::LayerStart);
+                    }
+                    else if v.id == end {
+                        cur.insert_after(Node::LayerEnd);
+                    }
+                }
+            }
+            cur.move_next();               
+        }
         Ok(p)
     }
     pub fn first_move_id(&self) -> i32 {
@@ -415,8 +436,8 @@ impl Annotation {
         let ex = (in_area * self.de) / move_dist;
         return ex / layer_height;
     }
-    pub fn build(gcode: &Parsed) -> std::collections::HashMap<i32, Annotation> {
-        let mut ann = std::collections::HashMap::new();
+    pub fn build(gcode: &Parsed) -> std::collections::BTreeMap<i32, Annotation> {
+        let mut ann = std::collections::BTreeMap::new();
         let first_move = gcode.first_move_id();
 
         for node in gcode.nodes.iter() {
@@ -449,14 +470,14 @@ impl Annotation {
                             Label::LiftZ
                         } else if a.dz < 0.0 {
                             Label::LowerZ
-                        } else if a.dx != 0.0 || a.dy != 0.0 {
-                            Label::TravelMove
                         } else if a.de < 0.0 {
-                            if a.dx > 0.0 || a.dy > 0.0 {
+                            if a.dx.abs() > 0.0 || a.dy.abs() > 0.0 {
                                 Label::Wipe
                             } else {
                                 Label::Retraction
                             }
+                        } else if a.dx.abs() != 0.0 || a.dy.abs() != 0.0 {
+                            Label::TravelMove
                         } else if from.f != to.f {
                             Label::FeedrateChangeOnly
                         } else {
@@ -471,123 +492,6 @@ impl Annotation {
         ann
     }
 }
-fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
-    assert!(count > 1);
-    // take a copy of the value of the current node
-    let end = match cur.current() {
-        Some(Node::Vertex(v)) => v.clone(),
-        _ => panic!("subdivide called from non-move node"),
-    };
-    let start = end.prev.unwrap();
-    let x_seg = (end.to.x - end.from.x) / count as f32;
-    let y_seg = (end.to.y - end.from.y) / count as f32;
-    let z_seg = (end.to.z - end.from.z) / count as f32;
-    let mut prev = Some(start);
-    for i in 1..count {
-        let v = Vertex {
-            id: -1,
-            prev,
-            from: Pos {
-                x: end.from.x,
-                y: end.from.y,
-                z: end.from.z,
-                e: end.from.e / count as f32,
-                f: end.from.f,
-            },
-            to: Pos {
-                x: end.from.x + x_seg * i as f32,
-                y: end.from.y + y_seg * i as f32,
-                z: end.from.z + z_seg * i as f32,
-                e: end.from.e / count as f32,
-                f: end.from.f,
-            },
-        };
-        cur.insert_before(Node::Vertex(v));
-        prev = match cur.peek_prev() {
-            Some(Node::Vertex(v)) => Some(v as *mut Vertex),
-            _ => panic!("failed to insert vertex"),
-        }
-    }
-    // now edit the original node
-    let end = match cur.current() {
-        Some(Node::Vertex(v)) => v,
-        _ => panic!("subdivide called from non-move node"),
-    };
-    end.prev = prev;
-    end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
-}
-#[test]
-fn sub_test() {
-    let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
-    let mut cur = gcode.nodes.cursor_front_mut();
-    let mut c = 0;
-    while c < 2 {
-        if let Some(Node::Vertex(_)) = cur.current() {
-            c += 1;
-        }
-        cur.move_next();
-        assert!(cur.peek_next().is_some());
-    }
-    subdivide(&mut cur, 5);
-    panic!("{:?}", gcode);
-}
-fn delete(cur: &mut CursorMut<Node>) {
-    if let Some(Node::Vertex(v)) = cur.current() {
-        let prev = v.prev;
-        let _ = cur.remove_current();
-        // keep moving forward until reaching move node or end of list
-        while let Some(Node::NonMove(_)) = cur.current() {
-            cur.move_next();
-        }
-        if let Some(Node::Vertex(v)) = cur.current() {
-            v.prev = prev;
-        }
-    } else {
-        cur.remove_current();
-    }
-}
-fn insert_g1(cur: &mut CursorMut<Node>, g1: G1) {
-    // insert before current node
-    let Some(Node::Vertex(curr)) = cur.current() else {
-        panic!("insert_g1 called from non-move node");
-    };
-    let prev = curr.prev.unwrap();
-    let v = Vertex {
-        id: -1,
-        prev: Some(prev),
-        from: unsafe { (*prev).to }.clone(),
-        to: Pos::build(&unsafe { (*prev).to }, &g1),
-    };
-    curr.from = v.to.clone();
-    cur.insert_before(Node::Vertex(v));
-    let new_prev = match cur.peek_prev() {
-        Some(Node::Vertex(v)) => Some(v as *mut Vertex),
-        _ => panic!("failed to insert vertex"),
-    };
-    let Some(Node::Vertex(curr)) = cur.current() else {
-        panic!("insert_g1 called from non-move node");
-    };
-    curr.prev = new_prev;
-}
-#[test]
-fn ins_test() {
-    let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
-    let mut cur = gcode.nodes.cursor_front_mut();
-    cur.move_next();
-    cur.move_next();
-    cur.move_next();
-    let g = G1 {
-        move_id: -1,
-        x: Some(0.0),
-        y: Some(100.0),
-        z: Some(0.0),
-        e: Some(100.0),
-        f: Some(0.0),
-    };
-    insert_g1(&mut cur, g);
-    panic!("{:?}", gcode);
-}
-
 #[test]
 #[should_panic]
 fn no_home_test() {
@@ -652,7 +556,7 @@ impl Emit for Pos {
 }
 impl Emit for Vertex {
     fn emit(&self) -> String {
-        if self == Vertex::home() {
+        if self.to.x == 0.0 && self.to.y == 0.0 && self.to.z == 0.0 && self.to.e == 0.0 && self.id == 0 {
             return "G28\n".to_string();
         }
         let mut out = String::from("G1 ");
@@ -685,6 +589,8 @@ impl Emit for Node {
         match self {
             Node::Vertex(v) => v.emit(),
             Node::NonMove(line) => line.emit(),
+            Node::LayerStart => "; LAYER START\n".to_string(),
+            Node::LayerEnd => "; LAYER END\n".to_string(),
         }
     }
 }
@@ -693,8 +599,14 @@ impl Emit for Parsed {
         let mut out = String::new();
         for node in &self.nodes {
             out += &node.emit();
+/*            if let Node::Vertex(v) = node {
+                let ann = self.annotations.get(&v.id);
+                let l = self.layers.get(&v.id);
+                out += &format!("; {:?}\n", ann);
+                out += &format!("; {:?}\n", l);
+            }*/
         }
-        out + "\n"
+        out
     }
 }
 

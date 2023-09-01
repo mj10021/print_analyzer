@@ -39,7 +39,7 @@ impl Shape {
                             assert!(start_vtx != -1);
                             let s = Shape {
                                 start_vtx,
-                                end_vtx: v.id,
+                                end_vtx: v.id - 1,
                                 len: dist,
                                 z: v.to.z,
                             };
@@ -59,9 +59,9 @@ impl Shape {
     }
 }
 pub struct Layer {
-    num: i32,
+    pub num: i32,
     start_id: i32,
-    end_id: i32,
+    pub end_id: i32,
     shapes: Vec<Shape>,
     z: f32,
 }
@@ -75,11 +75,9 @@ impl std::fmt::Debug for Layer {
     }
 }
 impl Layer {
-    // FIXME: layer and shape should be maps of vertex to shape and
-    // either vertex to layer or shape to layer not sure
-    pub fn build_planar(gcode: &Parsed) -> HashMap<i32, Layer> {
+    pub fn build_planar(gcode: &Parsed) -> BTreeMap<i32, Layer> {
         let shapes = Shape::build_planar(gcode);
-        let mut out = HashMap::new();
+        let mut out = BTreeMap::new();
         let mut i = 0;
         let mut curr_z = 0.0;
         let mut temp_shapes: Vec<Shape> = Vec::new();

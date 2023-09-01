@@ -3,9 +3,86 @@
 
 mod analyzer;
 mod parse;
+mod process;
 
 use parse::*;
+use process::*;
+use parse::feature_finder::Layer;
+use std::collections::VecDeque;
 
+fn edit_seam(gcode: &mut Parsed, glob: VecDeque<Node>) {
+    let mut cur = gcode.nodes.cursor_front_mut();
+    while cur.peek_next().is_some() {
+        if let Some(Node::LayerStart) = cur.current() {
+            cur.move_next();
+            while cur.current().unwrap() != &Node::LayerEnd {
+                cur.remove_current();
+            }
+            // FIXME: once the moves between layers are popped,
+            // need to recalculate the prev to curr vertex and then subdivide
+            // to create the ramped seam
+            cur.move_next(); // this is the first move of the next layer
+            subdivide(&mut cur, 10);
+        }
+    }
+
+
+
+
+    let mut layer2 = false;
+    for node in gcode.nodes.iter() {
+        if let Node::Vertex(v) = node {
+            // first skip the first layer
+            if let Some(Layer {num: 2, ..}) = gcode.layers.get(&v.id) {
+                layer2 = true;
+            }
+            if !layer2 {
+                continue;
+            }
+            // then take a blob of all the nodes between layers and replace with new blob 
+            if !gcode.layers.contains_key(&v.id) {
+                todo!();
+
+            }
+        }
+    }
+}
+
+
+
+/*
+fn spread_seam(gcode: &mut Parsed, wipe_dist: f32) {
+    let l = gcode.layers;
+    let mut seam_ends: Vec<i32> = Vec::new();
+    let first_layer = l.iter().next().unwrap().1;
+    let Layer {
+        num: _,
+        start_id: _,
+        end_id: first_seam,
+        shapes: _,
+        z: _
+    } = first_layer;
+    seam_ends.push(*first_seam);
+    for (id, layer) in l {
+        let Layer {
+            num: _,
+            start_id: start,
+            end_id: end,
+            shapes: _,
+            z: _
+        };
+        seam_ends.push(end);
+    }
+    let mut cur = gcode.nodes.cursor_front_mut();
+    while cur.peek_next().is_some() {
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if seam_ends.contains(&v.id) {
+                let cur_z = v.to.z;
+
+            }
+        }
+    }
+}*/
 fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
     let location = Pos {
         x: location.0,
