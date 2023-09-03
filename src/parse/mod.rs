@@ -160,7 +160,7 @@ pub struct Vertex {
     pub to: Pos,
 }
 impl Vertex {
-    fn dist(&self) -> f32 {
+    pub fn dist(&self) -> f32 {
         ((self.to.x - self.from.x).powf(2.0)
             + (self.to.y - self.from.y).powf(2.0)
             + (self.to.z - self.from.z).powf(2.0))
@@ -238,7 +238,7 @@ pub enum Node {
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
     pub annotations: BTreeMap<i32, Annotation>,
@@ -399,6 +399,7 @@ pub enum Label {
     LowerZ,
     MysteryMove,
     Retraction,
+    DeRetraction,
     Wipe,
     FeedrateChangeOnly,
 }
@@ -408,7 +409,7 @@ pub struct Annotation {
     dx: f32,
     dy: f32,
     dz: f32,
-    de: f32,
+    pub de: f32,
     dt: f32, // calc time from feedrate
     ex_width_mm: f32,
 }
@@ -465,7 +466,11 @@ impl Annotation {
                         } else if *id < first_move {
                             Label::PrePrintMove
                         } else if a.de > 0.0 {
-                            Label::ExtrusionMove
+                            if a.dx.abs() > 0.0 || a.dy.abs() > 0.0 {
+                                Label::ExtrusionMove
+                            } else {
+                                Label::DeRetraction
+                            }
                         } else if a.dz > 0.0 {
                             Label::LiftZ
                         } else if a.dz < 0.0 {
@@ -481,8 +486,8 @@ impl Annotation {
                         } else if from.f != to.f {
                             Label::FeedrateChangeOnly
                         } else {
-                            panic!("{:?}\r\n\r\n{:?}", to, from)
-                        } //{ Label::MysteryMove }
+                            Label::MysteryMove
+                        }
                     };
                     ann.insert(id.clone(), a);
                 }
@@ -580,6 +585,7 @@ impl Emit for Vertex {
             assert!(self.to.f.is_finite() && !self.to.f.is_nan());
             out += &format!("F{} ", self.to.f);
         }
+        out += &format!("; {:?}", self.prev);
         out += "\n";
         out
     }

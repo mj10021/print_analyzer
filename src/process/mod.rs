@@ -15,6 +15,12 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
             cur.remove_current();
         } else { cur.move_next(); }
     }
+    while cur.peek_next().is_some() {
+        if let Some(Node::Vertex(_)) = cur.current() {
+            break;
+        }
+        cur.move_next();
+    }
     let Some(Node::Vertex(curr)) = cur.current() else {
         panic!("blending from non-move node");
     };
@@ -22,7 +28,35 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
     curr.from = unsafe { (*prev.unwrap()).to }.clone();
 
 }
-
+#[test]
+fn merge_test() {
+    let mut gcode = Parsed::build("test.gcode").expect("failed to parse");
+    let mut cur = gcode.nodes.cursor_front_mut();
+    while cur.peek_next().is_some() {
+        if let Some(Node::LayerStart) = cur.current() {
+            break;
+        }
+        cur.move_next();
+    }
+    let Some(Node::Vertex(v)) = cur.peek_next() else {
+        panic!("failed to find vertex");
+    };
+    let until = v.id;
+    while cur.peek_prev().is_some() {
+        if let Some(Node::LayerEnd) = cur.current() {
+            break;
+        }
+        cur.move_prev();
+    }
+    loop {
+        if let Some(Node::Vertex(v)) = cur.current() {
+                break;
+        }
+        cur.move_next();
+    }
+    merge_verteces(&mut cur, until);
+    panic!("{:?}", gcode);
+}
 
 pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     assert!(count > 1);

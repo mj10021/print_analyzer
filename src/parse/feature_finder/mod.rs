@@ -7,7 +7,7 @@ pub enum Feature {
     Retraction,
     DeRetraction,
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
     start_vtx: i32,
     end_vtx: i32,
@@ -58,6 +58,7 @@ impl Shape {
         todo!();
     }
 }
+#[derive(PartialEq)]
 pub struct Layer {
     pub num: i32,
     start_id: i32,

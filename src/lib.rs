@@ -7,48 +7,56 @@ mod process;
 
 use parse::*;
 use process::*;
-use parse::feature_finder::Layer;
-use std::collections::VecDeque;
 
-fn edit_seam(gcode: &mut Parsed, glob: VecDeque<Node>) {
+fn blend_seam(gcode: &mut Parsed) {
     let mut cur = gcode.nodes.cursor_front_mut();
+    let mut flow = -1.0;
+    let mut prev: Option<*mut Vertex> = None;
     while cur.peek_next().is_some() {
-        if let Some(Node::LayerStart) = cur.current() {
+        // keep track of the last extrusion move the cursor passed
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if let Some(a)  = gcode.annotations.get(&v.id) {
+                if a.label == Label::ExtrusionMove {
+                    prev = Some(v as *mut Vertex);
+                    flow = a.de / v.dist();
+                }
+            }       
+        }
+        if let Some(Node::LayerEnd) = cur.current() {
             cur.move_next();
-            while cur.current().unwrap() != &Node::LayerEnd {
+            // FIXME: NEED TO CHECK IF AT LAST LAYER
+            while cur.current().unwrap() != &Node::LayerStart {
+                if cur.peek_next().is_none() {
+                    break;
+                }
                 cur.remove_current();
             }
-            // FIXME: once the moves between layers are popped,
-            // need to recalculate the prev to curr vertex and then subdivide
-            // to create the ramped seam
             cur.move_next(); // this is the first move of the next layer
+            let Some(Node::Vertex(v)) = cur.current() else {
+                break;
+                //panic!("failed to find vertex");
+            };
+            unsafe { (*(prev.unwrap())).to = v.from.clone(); };
+            unsafe { (*(prev.unwrap())).to.e = flow * (*(prev.unwrap())).dist(); };
+            v.prev = prev;
+
             subdivide(&mut cur, 10);
         }
-    }
-
-
-
-
-    let mut layer2 = false;
-    for node in gcode.nodes.iter() {
-        if let Node::Vertex(v) = node {
-            // first skip the first layer
-            if let Some(Layer {num: 2, ..}) = gcode.layers.get(&v.id) {
-                layer2 = true;
-            }
-            if !layer2 {
-                continue;
-            }
-            // then take a blob of all the nodes between layers and replace with new blob 
-            if !gcode.layers.contains_key(&v.id) {
-                todo!();
-
-            }
-        }
+        cur.move_next();
     }
 }
 
-
+#[test]
+fn seam_blend_test() {
+    let mut gcode = Parsed::build("test_onewall.gcode").expect("failed to parse gcode");
+    blend_seam(&mut gcode);
+    let gcode = gcode.emit();
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("seam_output.gcode").expect("failed to create file");
+    let _ = f.write_all(&gcode.as_bytes());
+    todo!();
+}
 
 /*
 fn spread_seam(gcode: &mut Parsed, wipe_dist: f32) {
@@ -150,14 +158,15 @@ mod integration_tests {
     #[test]
     fn import_emit_reemit() {
         let f = "test.gcode";
-        let init = Parsed::build(f).expect("failed to parse gcode");
-        let init = init.emit();
+        let p_init = Parsed::build(f).expect("failed to parse gcode");
+        let init = p_init.emit();
         use std::fs::File;
         use std::io::prelude::*;
         let mut f = File::create("test_output.gcode").expect("failed to create file");
         let _ = f.write_all(&init.as_bytes());
         let snd = Parsed::build("test_output.gcode").expect("asdf");
         let snd = snd.emit();
-        assert_eq!(init, snd);
+        let snd = Parsed::build(&snd).expect("failed to parse reemitted file");
+        assert_eq!(p_init, snd);
     }
 }
