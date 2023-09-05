@@ -59,6 +59,7 @@ fn merge_test() {
 }
 
 pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
+    // FIXME: I NEED TO CHECK THE MATH HERE!!!!!!!!
     assert!(count > 1);
     // take a copy of the value of the current node
     let end = match cur.current() {
@@ -69,6 +70,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     let x_seg = (end.to.x - end.from.x) / count as f32;
     let y_seg = (end.to.y - end.from.y) / count as f32;
     let z_seg = (end.to.z - end.from.z) / count as f32;
+    let e_seg = end.to.e / count as f32;
     let mut prev = Some(start);
     for i in 1..count {
         let v = Vertex {
@@ -78,15 +80,15 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
                 x: end.from.x,
                 y: end.from.y,
                 z: end.from.z,
-                e: end.from.e / count as f32,
+                e: end.from.e,
                 f: end.from.f,
             },
             to: Pos {
                 x: end.from.x + x_seg * i as f32,
                 y: end.from.y + y_seg * i as f32,
                 z: end.from.z + z_seg * i as f32,
-                e: end.from.e / count as f32,
-                f: end.from.f,
+                e: e_seg,
+                f: end.to.f,
             },
         };
         cur.insert_before(Node::Vertex(v));
@@ -100,8 +102,10 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         Some(Node::Vertex(v)) => v,
         _ => panic!("subdivide called from non-move node"),
     };
+    end.to.e *= 1.0 / count as f32;
     end.prev = prev;
     end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
+    // panic!("{:?}", debug);
 }
 #[test]
 fn sub_test() {

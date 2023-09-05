@@ -166,14 +166,24 @@ impl Vertex {
             + (self.to.z - self.from.z).powf(2.0))
         .sqrt()
     }
-    fn get_vector(&self) -> (f32, f32, f32) {
+    pub fn get_vector(&self) -> (f32, f32, f32) {
         let scale = self.dist();
-        let dx = (self.to.x - self.from.x) / scale;
-        let dy = (self.to.y - self.from.y) / scale;
-        let dz = (self.to.z - self.from.z) / scale;
+        let mut dx = (self.to.x - self.from.x) / scale;
+        let mut dy = (self.to.y - self.from.y) / scale;
+        let mut dz = (self.to.z - self.from.z) / scale;
+        if dx.is_infinite() || dx.is_nan() {
+            dx = 0.0;
+        }
+        if dy.is_infinite() || dy.is_nan() {
+            dy = 0.0;
+        }
+        if dz.is_infinite() || dz.is_nan() {
+            dz = 0.0;
+        }
         (dx, dy, dz)
     }
-    unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+    pub unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+        // FIXME: CHECK THIS!!!!!
         assert!(self.prev.is_some());
         let prev = self.prev.unwrap();
         let (fx, fy, fz) = (*prev).from.to_tup();
@@ -375,12 +385,17 @@ impl Parsed {
         }
         -1
     }
-    fn recalc_ids(&mut self) {
+    pub fn update_nodes(&mut self) {
         let mut id = 1;
         for node in self.nodes.iter_mut() {
             if let Node::Vertex(v) = node {
                 v.id = id;
                 id += 1;
+                if v.prev.is_some() {
+                    unsafe {
+                        v.from = (*(v.prev.unwrap())).to.clone();
+                    }
+                }
             }
         }
     }
@@ -585,7 +600,6 @@ impl Emit for Vertex {
             assert!(self.to.f.is_finite() && !self.to.f.is_nan());
             out += &format!("F{} ", self.to.f);
         }
-        out += &format!("; {:?}", self.prev);
         out += "\n";
         out
     }
@@ -605,12 +619,13 @@ impl Emit for Parsed {
         let mut out = String::new();
         for node in &self.nodes {
             out += &node.emit();
-/*            if let Node::Vertex(v) = node {
-                let ann = self.annotations.get(&v.id);
+            /* if let Node::Vertex(v) = node {
+                if let Some(ann) = self.annotations.get(&v.id) {
+                    out += &format!("; {:?}\n", ann);
+                }
                 let l = self.layers.get(&v.id);
-                out += &format!("; {:?}\n", ann);
                 out += &format!("; {:?}\n", l);
-            }*/
+            } */
         }
         out
     }

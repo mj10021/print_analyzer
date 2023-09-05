@@ -24,7 +24,7 @@ impl Shape {
             match node {
                 Node::Vertex(v) => {
                     if !in_shape {
-                        if v.to.e > 0.0 && (v.to.x > 0.0 || v.to.y > 0.0) {
+                        if let Some(Annotation { label: Label::ExtrusionMove, .. } ) = gcode.annotations.get(&v.id) {
                             in_shape = true;
                             start_vtx = v.id;
                             dist += v.dist();
@@ -32,7 +32,7 @@ impl Shape {
                             continue;
                         }
                     } else {
-                        if v.to.e > 0.0 && (v.to.x > 0.0 || v.to.y > 0.0) {
+                        if let Some(Annotation { label: Label::ExtrusionMove, .. } ) = gcode.annotations.get(&v.id) {
                             dist += v.dist();
                         } else {
                             in_shape = false;
