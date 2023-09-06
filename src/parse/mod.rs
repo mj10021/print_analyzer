@@ -225,6 +225,8 @@ impl Vertex {
         // I think right now this is looking at deretractions and getting infinite flow
         // needs to link to the last extrusion move, not the last g1
         assert!(self.prev.is_some());
+        assert!(self.label == Label::ExtrusionMove);
+        assert!((*(self.prev.unwrap())).label == Label::ExtrusionMove);
         let prev = self.prev.unwrap();
         let (xi, yi, zi) = (*prev).from.to_tup();
         let (xf, yf, zf) = (*prev).to.to_tup();
@@ -444,6 +446,7 @@ impl Parsed {
                         v.from = (*(v.prev.unwrap())).to.clone();
                     }
                 }
+                v.label(0);
             }
         }
     }
@@ -669,14 +672,11 @@ impl Emit for Parsed {
         let mut out = String::new();
         for node in &self.nodes {
             out += &node.emit();
-            /* if let Node::Vertex(v) = node {
-                if let Some(ann) = self.annotations.get(&v.id) {
-                    out += &format!("; {:?}\n", ann);
-                }
-                let l = self.layers.get(&v.id);
-                out += &format!("; {:?}\n", l);
-            } */
+            if let Node::Vertex(v) = node {
+                out += &format!("; {:?}\n", v.label);
+            }
         }
+        out += "\n";
         out
     }
 }

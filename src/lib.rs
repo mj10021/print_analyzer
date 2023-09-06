@@ -139,15 +139,25 @@ fn map_test() {
     use std::f32::consts::FRAC_PI_2;
     use nalgebra::{Vector3, Rotation3};
     let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    let mut cur = gcode.nodes.cursor_front_mut();
+    while cur.peek_next().is_some() {
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.label == Label::ExtrusionMove && v.prev.is_some() && unsafe { (*(v.prev.unwrap())).label  == Label::ExtrusionMove } {
+                subdivide(&mut cur, 10);
+            }
+        }
+        cur.move_next();
+    }
+    gcode.update_nodes();
     for node in gcode.nodes.iter_mut() {
         if let Node::Vertex(v) = node {
             let (x, y, z) = v.get_vector();
             let vec = Vector3::new(x, y, z);
             let rot = Rotation3::from_euler_angles(0.0, 0.0, FRAC_PI_2);
             let vec = rot * vec;
-            if v.prev.is_some() {
+            if v.prev.is_some() && v.label == Label::ExtrusionMove && unsafe { (*(v.prev.unwrap())).label  == Label::ExtrusionMove } {
                 unsafe {
-                    v.translate(/*(vec.x * v.id as f32).sin(), (vec.y * v.id as f32).sin()*/ 0.0, 0.0, 0.0);
+                    v.translate((vec.x * v.id as f32).sin(), (vec.y * v.id as f32).sin(), 0.0);
                 }
             }
         }
