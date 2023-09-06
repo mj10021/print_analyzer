@@ -147,7 +147,7 @@ fn map_test() {
             let vec = rot * vec;
             if v.prev.is_some() {
                 unsafe {
-                    v.translate((vec.x * v.id as f32).sin(), (vec.y * v.id as f32).sin(), 0.0);
+                    v.translate(/*(vec.x * v.id as f32).sin(), (vec.y * v.id as f32).sin()*/ 0.0, 0.0, 0.0);
                 }
             }
         }

@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, linked_list::CursorMut, LinkedList, VecDeque};
+use std::collections::{BTreeMap, LinkedList, VecDeque};
 use std::f32::NEG_INFINITY;
 
 use self::feature_finder::Layer;
@@ -155,11 +155,48 @@ fn pre_home(p: Pos) -> bool {
 #[derive(Clone, PartialEq)]
 pub struct Vertex {
     pub id: i32,
+    pub label: Label,
     pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
 }
 impl Vertex {
+    fn label(&mut self, first_move: i32) {
+        let dx = self.to.x - self.from.x;
+        let dy = self.to.y - self.from.y;
+        let dz = self.to.z - self.from.z;
+        let de = self.to.e;
+        self.label = {
+            if self.id == 1 {
+                Label::FirstG1
+            } else if self.id < first_move {
+                Label::PrePrintMove
+            } else if de > 0.0 {
+                if dx.abs() > 0.0 || dy.abs() > 0.0 {
+                    Label::ExtrusionMove
+                } else {
+                    Label::DeRetraction
+                }
+            } else if dz > 0.0 {
+                Label::LiftZ
+            } else if dz < 0.0 {
+                Label::LowerZ
+            } else if de < 0.0 {
+                if dx.abs() > 0.0 || dy.abs() > 0.0 {
+                    Label::Wipe
+                } else {
+                    Label::Retraction
+                }
+            } else if dx.abs() != 0.0 || dy.abs() != 0.0 {
+                Label::TravelMove
+            } else if self.from.f != self.to.f {
+                Label::FeedrateChangeOnly
+            } else {
+                Label::MysteryMove
+            }
+        };
+
+    }
     pub fn dist(&self) -> f32 {
         ((self.to.x - self.from.x).powf(2.0)
             + (self.to.y - self.from.y).powf(2.0)
@@ -184,13 +221,16 @@ impl Vertex {
     }
     pub unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         // FIXME: CHECK THIS!!!!!
+        // NEEDS TO ONLY USE EXTRUSION MOVES!!!
+        // I think right now this is looking at deretractions and getting infinite flow
+        // needs to link to the last extrusion move, not the last g1
         assert!(self.prev.is_some());
         let prev = self.prev.unwrap();
-        let (fx, fy, fz) = (*prev).from.to_tup();
-        let (tx, ty, tz) = (*prev).to.to_tup();
-        let dxi = tx - fx;
-        let dyi = ty - fy;
-        let dzi = tz - fz;
+        let (xi, yi, zi) = (*prev).from.to_tup();
+        let (xf, yf, zf) = (*prev).to.to_tup();
+        let dxi = xf - xi;
+        let dyi = yf - yi;
+        let dzi = zf - zi;
         let di = (dxi.powf(2.0) + dyi.powf(2.0) + dzi.powf(2.0)).sqrt();
         (*prev).to.x += dx;
         (*prev).to.y += dy;
@@ -198,16 +238,22 @@ impl Vertex {
         self.from.x += dx;
         self.from.y += dy;
         self.from.z += dz;
-        let (tx, ty, tz) = (*prev).to.to_tup();
-        let dxf = tx - fx;
-        let dyf = ty - fy;
-        let dzf = tz - fz;
+        let (xf, yf, zf) = (*prev).to.to_tup();
+        let dxf = xf - xi;
+        let dyf = yf - yi;
+        let dzf = zf - zi;
         let df = (dxf.powf(2.0) + dyf.powf(2.0) + dzf.powf(2.0)).sqrt();
-        let scale = df / di;
+        let mut scale = df / di;
+        if scale.is_infinite() || scale.is_nan() {
+            scale = 0.0;
+        }
         (*prev).to.e *= scale;
-        let di = self.dist();
+        // let di = self.dist();
         let df = self.dist();
-        let scale = df / di;
+        let mut scale = df / di;
+        if scale.is_infinite() || scale.is_nan() {
+            scale = 0.0;
+        }
         self.to.e *= scale;
     }
     fn mod_flow(&mut self, coeff: f32) {
@@ -288,6 +334,7 @@ impl Parsed {
                 assert!(prev.is_none(), "homing from previously homed state");
                 let vrtx = Vertex {
                     id: 0,
+                    label: Label::Home,
                     to: Pos::home(),
                     from: Pos::unhomed(),
                     prev,
@@ -305,13 +352,14 @@ impl Parsed {
                 g1_moves += 1;
                 let g1 = G1::build(line, g1_moves);
                 unsafe {
-                    // this seems wrong
-                    let vrtx = Vertex {
+                    let mut vrtx = Vertex {
                         id: g1_moves,
+                        label: Label::Uninitialized,
                         to: Pos::build(&(*(prev.unwrap())).to, &g1),
                         from: (*(prev.unwrap())).to.clone(),
                         prev,
                     };
+                    vrtx.label(0); // FIXME: need correct first move id
 
                     let node = Node::Vertex(vrtx);
                     parsed.push_back(node);
@@ -406,6 +454,7 @@ impl Parsed {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Label {
     Uninitialized,
+    Home,
     FirstG1,
     PrePrintMove,
     TravelMove,
@@ -460,6 +509,7 @@ impl Annotation {
             match node {
                 Node::Vertex(Vertex {
                     id,
+                    label: Label::Uninitialized,
                     prev: _,
                     from,
                     to,

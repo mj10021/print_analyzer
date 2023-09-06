@@ -75,6 +75,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     for i in 1..count {
         let v = Vertex {
             id: -1,
+            label: Label::Uninitialized,
             prev,
             from: Pos {
                 x: end.from.x,
@@ -145,6 +146,7 @@ fn insert_g1(cur: &mut CursorMut<Node>, g1: G1) {
     let prev = curr.prev.unwrap();
     let v = Vertex {
         id: -1,
+        label: Label::Uninitialized,
         prev: Some(prev),
         from: unsafe { (*prev).to }.clone(),
         to: Pos::build(&unsafe { (*prev).to }, &g1),
