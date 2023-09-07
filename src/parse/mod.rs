@@ -181,13 +181,13 @@ impl Vertex {
                 Label::LiftZ
             } else if dz < 0.0 {
                 Label::LowerZ
-            } else if de < 0.0 {
+            } else if de < 0.000001 {
                 if dx.abs() > 0.0 || dy.abs() > 0.0 {
                     Label::Wipe
                 } else {
                     Label::Retraction
                 }
-            } else if dx.abs() != 0.0 || dy.abs() != 0.0 {
+            } else if dx.abs() > 0.000001 || dy.abs() > 0.000001 {
                 Label::TravelMove
             } else if self.from.f != self.to.f {
                 Label::FeedrateChangeOnly

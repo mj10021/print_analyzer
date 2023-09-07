@@ -1,0 +1,7816 @@
+M73 P0 R11
+M201 X2500 Y2500 Z400 E5000
+M203 X180 Y180 Z12 E80
+M204 P2000 R1250 T2500
+M205 X8 Y8 Z2 E10
+M205 S0 T0
+M862.3P"MINI"
+G90
+M83
+M104 S170
+M140 S60
+M109 R170
+M190 S60
+M204 T1250
+G1 X0 Y0 Z0 
+; FirstG1
+G29
+M204 T2500
+M104 S220
+G92 E0
+G1 X179 Y-2 F2400 
+; Wipe
+G1 Z3 F720 
+; LiftZ
+M109 S220
+G1 X170 F1000 
+; Wipe
+G1 Z0.2 F720 
+; LowerZ
+G1 X110 F900 
+; Wipe
+G1 X40 F700 
+; Wipe
+G92 E0
+M221 S95
+G21
+G90
+M83
+M900 K0.06
+M107
+G92 E0
+M73 P1 R11
+G1 E-3 F2700 
+; Retraction
+M73 P2 R11
+G1 F720 
+; Retraction
+G1 Z0.3 
+; LiftZ
+G1 Z0.5 
+; LiftZ
+G1 X78.662 Y77.959 F9000 
+; Wipe
+G1 Z0.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P800
+G1 X81 Y77.164 E0.25738 
+; ExtrusionMove
+G1 X99 E1.87602 
+; ExtrusionMove
+G1 X100.695 Y77.559 E0.18139 
+; ExtrusionMove
+G1 X102.041 Y78.662 E0.18137 
+; ExtrusionMove
+G1 X102.836 Y81 
+; Wipe
+G1 Y99 
+; Wipe
+G1 X102.441 Y100.695 
+; Wipe
+G1 X101.338 Y102.041 
+; Wipe
+G1 X99 Y102.836 
+; Wipe
+G1 X81 
+; Wipe
+M73 P2 R10
+G1 X79.305 Y102.441 
+; Wipe
+G1 X77.959 Y101.338 
+; Wipe
+G1 X77.164 Y99 E0.25738 
+; ExtrusionMove
+G1 Y81 E1.87602 
+; ExtrusionMove
+G1 X77.559 Y79.305 E0.18139 
+; ExtrusionMove
+M73 P3 R10
+G1 X78.586 Y78.052 E0.16885 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X80.957 Y77.18 E-0.9 
+; Wipe
+G1 Z0.5 F720 
+; LiftZ
+G1 X97.514 Y97.514 F9000 
+; Wipe
+G1 Z0.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P800
+G1 X82.486 
+; Wipe
+G1 Y82.486 E1.56626 
+; ExtrusionMove
+G1 X97.514 E1.56626 
+; ExtrusionMove
+G1 Y97.394 
+; Wipe
+M204 P1000
+G1 X98.35 Y98.35 F9000 
+; Wipe
+M204 P800
+G1 F1200 
+; Retraction
+G1 X81.65 
+; Wipe
+G1 Y81.65 E1.74052 
+; ExtrusionMove
+G1 X98.35 E1.74052 
+; ExtrusionMove
+G1 Y98.23 
+; Wipe
+M204 P1000
+M73 P4 R10
+G1 X97.577 Y98.143 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X95.824 Y98.248 
+; Wipe
+G1 Z0.5 F720 
+; LiftZ
+G1 X97.18 Y84.542 F9000 
+; Wipe
+G1 Z0.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P800
+G1 X95.834 Y83.196 E0.20207 
+; ExtrusionMove
+G1 X94.631 
+; Wipe
+G1 X96.804 Y85.369 E0.32622 
+; ExtrusionMove
+G1 Y86.573 
+; Wipe
+G1 X93.427 Y83.196 E0.50698 
+; ExtrusionMove
+G1 X92.223 
+; Wipe
+G1 X96.804 Y87.777 E0.68773 
+; ExtrusionMove
+G1 Y88.98 
+; Wipe
+G1 X91.02 Y83.196 E0.86833 
+; ExtrusionMove
+G1 X89.816 
+; Wipe
+G1 X96.804 Y90.184 E1.04908 
+; ExtrusionMove
+G1 Y91.388 
+; Wipe
+G1 X88.612 Y83.196 E1.22983 
+; ExtrusionMove
+G1 X87.409 
+; Wipe
+G1 X96.804 Y92.591 E1.41043 
+; ExtrusionMove
+G1 Y93.795 
+; Wipe
+G1 X86.205 Y83.196 E1.59119 
+; ExtrusionMove
+G1 X85.001 
+; Wipe
+G1 X96.804 Y94.999 E1.77194 
+; ExtrusionMove
+G1 Y96.202 
+; Wipe
+M73 P5 R10
+G1 X83.798 Y83.196 E1.95254 
+; ExtrusionMove
+G1 X83.196 
+; Wipe
+G1 Y83.798 
+; Wipe
+G1 X96.202 Y96.804 E1.95254 
+; ExtrusionMove
+G1 X94.999 
+; Wipe
+G1 X83.196 Y85.001 E1.77194 
+; ExtrusionMove
+G1 Y86.205 
+; Wipe
+G1 X93.795 Y96.804 E1.59119 
+; ExtrusionMove
+G1 X92.591 
+; Wipe
+G1 X83.196 Y87.409 E1.41043 
+; ExtrusionMove
+G1 Y88.612 
+; Wipe
+G1 X91.388 Y96.804 E1.22983 
+; ExtrusionMove
+G1 X90.184 
+; Wipe
+G1 X83.196 Y89.816 E1.04908 
+; ExtrusionMove
+G1 Y91.02 
+; Wipe
+G1 X88.98 Y96.804 E0.86833 
+; ExtrusionMove
+G1 X87.777 
+; Wipe
+G1 X83.196 Y92.223 E0.68773 
+; ExtrusionMove
+G1 Y93.427 
+; Wipe
+G1 X86.573 Y96.804 E0.50698 
+; ExtrusionMove
+M73 P6 R10
+G1 X85.369 
+; Wipe
+G1 X83.196 Y94.631 E0.32622 
+; ExtrusionMove
+G1 Y95.834 
+; Wipe
+G1 X84.542 Y97.18 E0.20207 
+; ExtrusionMove
+M204 P1000
+M106 S84.15
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X83.196 Y95.834 E-0.67813 
+; Wipe
+G1 Y95.211 E-0.22187 
+; Wipe
+G1 Z0.5 F720 
+; LiftZ
+G1 Z0.7 
+; LiftZ
+G1 Z0.9 
+; LiftZ
+G1 X77.164 F9000 
+; Wipe
+G1 Z0.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1642 
+; Retraction
+G1 Y81 E1.9241 
+; ExtrusionMove
+G1 X77.559 Y79.305 E0.23564 
+; ExtrusionMove
+G1 X78.662 Y77.959 E0.23562 
+; ExtrusionMove
+G1 X81 Y77.164 E0.33435 
+; ExtrusionMove
+G1 X99 E2.43711 
+; ExtrusionMove
+G1 X100.695 Y77.559 E0.23564 
+; ExtrusionMove
+G1 X102.041 Y78.662 E0.23562 
+; ExtrusionMove
+G1 X102.836 Y81 
+; Wipe
+G1 Y99 
+; Wipe
+G1 X102.441 Y100.695 
+; Wipe
+G1 X101.338 Y102.041 
+; Wipe
+G1 X99 Y102.836 
+; Wipe
+G1 X81 
+; Wipe
+G1 X79.305 Y102.441 
+; Wipe
+G1 X77.959 Y101.338 
+; Wipe
+G1 X77.164 Y99 E0.33435 
+; ExtrusionMove
+G1 Y95.331 E0.49677 
+; ExtrusionMove
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y92.805 E-0.9 
+; Wipe
+G1 Z0.9 F720 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z0.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1642 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P7 R10
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1500 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z0.9 F720 
+; LiftZ
+G1 X83.177 Y83.022 F9000 
+; Wipe
+G1 Z0.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F1642 
+; Retraction
+G1 X83.088 Y82.933 E0.02118 
+; ExtrusionMove
+G1 X82.966 Y82.966 
+; Wipe
+G1 X82.933 Y83.088 
+; Wipe
+G1 X83.022 Y83.177 E0.02118 
+; ExtrusionMove
+G1 X83.144 Y83.144 E0.02126 
+; ExtrusionMove
+G1 X82.956 Y84.445 
+; Wipe
+G1 X84.445 Y82.956 E0.28511 
+; ExtrusionMove
+G1 X85.596 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y85.596 
+; Wipe
+G1 Y86.748 
+; Wipe
+G1 X86.748 Y82.956 E0.72608 
+; ExtrusionMove
+G1 X87.899 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y87.899 
+; Wipe
+G1 Y89.05 
+; Wipe
+G1 X89.05 Y82.956 E1.16687 
+; ExtrusionMove
+G1 X90.202 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y90.202 
+; Wipe
+G1 Y91.353 
+; Wipe
+G1 X91.353 Y82.956 E1.60784 
+; ExtrusionMove
+G1 X92.505 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y92.505 
+; Wipe
+G1 Y93.656 
+; Wipe
+M73 P8 R10
+G1 X93.656 Y82.956 E2.04881 
+; ExtrusionMove
+G1 X94.807 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y94.807 
+; Wipe
+G1 Y95.959 
+; Wipe
+G1 X95.959 Y82.956 E2.48978 
+; ExtrusionMove
+G1 X97.044 Y83.023 E0.14718 
+; ExtrusionMove
+G1 X83.023 Y97.044 
+; Wipe
+G1 X84.174 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y84.174 E2.46432 
+; ExtrusionMove
+G1 Y85.325 
+; Wipe
+G1 X85.325 Y97.044 
+; Wipe
+G1 X86.477 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y86.477 E2.02335 
+; ExtrusionMove
+G1 Y87.628 
+; Wipe
+G1 X87.628 Y97.044 
+; Wipe
+G1 X88.78 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y88.78 E1.58237 
+; ExtrusionMove
+G1 Y89.931 
+; Wipe
+G1 X89.931 Y97.044 
+; Wipe
+G1 X91.082 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y91.082 E1.14159 
+; ExtrusionMove
+G1 Y92.234 
+; Wipe
+M73 P9 R10
+G1 X92.234 Y97.044 
+; Wipe
+G1 X93.385 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y93.385 E0.70062 
+; ExtrusionMove
+G1 Y94.536 
+; Wipe
+G1 X94.536 Y97.044 
+; Wipe
+G1 X95.688 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y95.688 E0.25964 
+; ExtrusionMove
+G1 X97.097 Y96.954 
+; Wipe
+G1 X97.014 Y96.871 E0.01823 
+; ExtrusionMove
+G1 X96.901 Y96.901 
+; Wipe
+G1 X96.871 Y97.014 
+; Wipe
+G1 X96.954 Y97.097 E0.01823 
+; ExtrusionMove
+G1 X97.066 Y97.066 E0.01805 
+; ExtrusionMove
+M204 P1000
+M106 S170.85
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.954 Y97.097 
+; Wipe
+G1 X96.871 Y97.014 E-0.04182 
+; Wipe
+G1 X96.901 Y96.901 E-0.04165 
+; Wipe
+G1 X97.014 Y96.871 E-0.04165 
+; Wipe
+G1 X97.097 Y96.954 E-0.04182 
+; Wipe
+G1 X97.044 Y95.688 E-0.45141 
+; Wipe
+G1 X96.567 Y96.165 
+; Wipe
+G1 Z0.9 F720 
+; LiftZ
+G1 Z1.1 
+; LiftZ
+G1 Z1.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z1.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1287 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1287 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P10 R10
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z1.3 F720 
+; LiftZ
+G1 X83.022 Y96.823 F9000 
+; Wipe
+G1 Z1.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F1287 
+; Retraction
+G1 X82.933 Y96.912 
+; Wipe
+G1 X82.966 Y97.034 
+; Wipe
+G1 X83.088 Y97.067 E0.02126 
+; ExtrusionMove
+G1 X83.177 Y96.978 E0.02118 
+; ExtrusionMove
+G1 X83.144 Y96.856 E0.02126 
+; ExtrusionMove
+G1 X82.956 Y95.555 E0.17798 
+; ExtrusionMove
+G1 X84.445 Y97.044 E0.28511 
+; ExtrusionMove
+G1 X85.596 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y94.404 E0.5055 
+; ExtrusionMove
+G1 Y93.252 E0.15598 
+; ExtrusionMove
+G1 X86.748 Y97.044 E0.72608 
+; ExtrusionMove
+G1 X87.899 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y92.101 E0.94647 
+; ExtrusionMove
+G1 Y90.95 E0.15584 
+; ExtrusionMove
+G1 X89.05 Y97.044 E1.16687 
+; ExtrusionMove
+G1 X90.202 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y89.798 E1.38745 
+; ExtrusionMove
+G1 Y88.647 E0.15584 
+; ExtrusionMove
+G1 X91.353 Y97.044 E1.60784 
+; ExtrusionMove
+G1 X92.505 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y87.495 E1.82842 
+; ExtrusionMove
+G1 Y86.344 E0.15584 
+; ExtrusionMove
+G1 X93.656 Y97.044 E2.04881 
+; ExtrusionMove
+G1 X94.807 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y85.193 E2.2692 
+; ExtrusionMove
+G1 Y84.041 E0.15598 
+; ExtrusionMove
+G1 X95.959 Y97.044 E2.48978 
+; ExtrusionMove
+G1 X97.044 Y96.977 E0.14718 
+; ExtrusionMove
+M73 P11 R10
+G1 X83.023 Y82.956 E2.68471 
+; ExtrusionMove
+G1 X84.174 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y95.826 E2.46432 
+; ExtrusionMove
+G1 Y94.675 E0.15584 
+; ExtrusionMove
+G1 X85.325 Y82.956 E2.24393 
+; ExtrusionMove
+G1 X86.477 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y93.523 E2.02335 
+; ExtrusionMove
+G1 Y92.372 E0.15584 
+; ExtrusionMove
+G1 X87.628 Y82.956 E1.80295 
+; ExtrusionMove
+G1 X88.78 E0.15598 
+; ExtrusionMove
+M73 P11 R9
+G1 X97.044 Y91.22 E1.58237 
+; ExtrusionMove
+G1 Y90.069 E0.15584 
+; ExtrusionMove
+G1 X89.931 Y82.956 E1.36198 
+; ExtrusionMove
+G1 X91.082 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y88.918 E1.14159 
+; ExtrusionMove
+G1 Y87.766 E0.15598 
+; ExtrusionMove
+G1 X92.234 Y82.956 E0.92101 
+; ExtrusionMove
+G1 X93.385 E0.15584 
+; ExtrusionMove
+M73 P12 R9
+G1 X97.044 Y86.615 E0.70062 
+; ExtrusionMove
+G1 Y85.464 E0.15584 
+; ExtrusionMove
+G1 X94.536 Y82.956 E0.48023 
+; ExtrusionMove
+G1 X95.688 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y84.312 E0.25964 
+; ExtrusionMove
+G1 X97.066 Y82.934 E0.1866 
+; ExtrusionMove
+G1 X97.097 Y83.046 
+; Wipe
+G1 X97.014 Y83.129 
+; Wipe
+G1 X96.901 Y83.099 
+; Wipe
+G1 X96.871 Y82.986 E0.01816 
+; ExtrusionMove
+G1 X96.954 Y82.903 E0.01823 
+; ExtrusionMove
+M204 P1000
+M106 S255
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.871 Y82.986 
+; Wipe
+G1 X96.901 Y83.099 
+; Wipe
+G1 X97.014 Y83.129 E-0.04165 
+; Wipe
+G1 X97.097 Y83.046 E-0.04182 
+; Wipe
+G1 X97.066 Y82.934 E-0.0414 
+; Wipe
+G1 X97.044 Y84.312 
+; Wipe
+G1 X96.646 Y83.914 E-0.20068 
+; Wipe
+G1 Z1.3 F720 
+; LiftZ
+G1 Z1.5 
+; LiftZ
+G1 Z1.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z1.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P13 R9
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z1.7 F720 
+; LiftZ
+G1 X97.044 Y93.712 F9000 
+; Wipe
+G1 Z1.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.212 E0.33849 
+; ExtrusionMove
+G1 X96.886 Y91.31 
+; Wipe
+G1 X96.314 Y91.747 
+; Wipe
+G1 X95.859 Y92.184 
+; Wipe
+G1 X95.498 Y92.621 
+; Wipe
+G1 X94.969 Y93.494 
+; Wipe
+G1 X94.613 Y94.368 
+; Wipe
+G1 X94.39 Y95.241 
+; Wipe
+G1 X94.362 Y96.115 
+; Wipe
+G1 X94.522 Y96.552 
+; Wipe
+G1 X94.928 Y96.988 
+; Wipe
+G1 X95.015 Y97.044 E0.01401 
+; ExtrusionMove
+G1 X92.112 
+; Wipe
+G1 X92.06 Y96.988 E0.01035 
+; ExtrusionMove
+G1 X91.378 Y96.552 
+; Wipe
+G1 X90.599 Y96.115 
+; Wipe
+G1 X89.898 Y95.678 
+; Wipe
+G1 X89.325 Y95.241 
+; Wipe
+G1 X88.871 Y94.805 
+; Wipe
+G1 X88.509 Y94.368 E0.07683 
+; ExtrusionMove
+G1 X87.981 Y93.494 E0.13825 
+; ExtrusionMove
+G1 X87.625 Y92.621 E0.12765 
+; ExtrusionMove
+G1 X87.402 Y91.747 E0.12213 
+; ExtrusionMove
+G1 X87.374 Y90.874 E0.11826 
+; ExtrusionMove
+G1 X87.533 Y90.437 E0.06296 
+; ExtrusionMove
+G1 X87.94 Y90 E0.08085 
+; ExtrusionMove
+G1 X88.622 Y89.563 E0.10967 
+; ExtrusionMove
+G1 X89.401 Y89.126 E0.12094 
+; ExtrusionMove
+G1 X90.102 Y88.69 E0.11177 
+; ExtrusionMove
+G1 X90.675 Y88.253 E0.09757 
+; ExtrusionMove
+G1 X91.129 Y87.816 E0.08532 
+; ExtrusionMove
+G1 X91.491 Y87.379 E0.07683 
+; ExtrusionMove
+G1 X92.019 Y86.506 E0.13814 
+; ExtrusionMove
+G1 X92.375 Y85.632 E0.12778 
+; ExtrusionMove
+G1 X92.598 Y84.759 E0.122 
+; ExtrusionMove
+G1 X92.626 Y83.885 E0.1184 
+; ExtrusionMove
+G1 X92.467 Y83.448 E0.06296 
+; ExtrusionMove
+G1 X92.06 Y83.012 E0.08076 
+; ExtrusionMove
+G1 X91.974 Y82.956 
+; Wipe
+G1 X94.877 E0.39305 
+; ExtrusionMove
+G1 X94.928 Y83.012 
+; Wipe
+G1 X95.61 Y83.448 E0.1096 
+; ExtrusionMove
+G1 X96.389 Y83.885 E0.12094 
+; ExtrusionMove
+G1 X97.044 Y84.293 E0.10448 
+; ExtrusionMove
+G1 Y86.793 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y84.293 E-0.89063 
+; Wipe
+G1 X97.022 Y84.279 
+; Wipe
+G1 Z1.7 F720 
+; LiftZ
+G1 X84.189 Y82.956 F9000 
+; Wipe
+G1 Z1.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+M73 P14 R9
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.224 
+; Wipe
+G1 X83.114 Y84.322 E0.02517 
+; ExtrusionMove
+G1 X83.686 Y84.759 E0.09746 
+; ExtrusionMove
+G1 X84.141 Y85.195 E0.08532 
+; ExtrusionMove
+G1 X84.502 Y85.632 
+; Wipe
+G1 X85.031 Y86.506 
+; Wipe
+G1 X85.387 Y87.379 
+; Wipe
+G1 X85.61 Y88.253 
+; Wipe
+G1 X85.638 Y89.126 
+; Wipe
+G1 X85.478 Y89.563 
+; Wipe
+G1 X85.072 Y90 
+; Wipe
+G1 X84.39 Y90.437 
+; Wipe
+G1 X83.611 Y90.874 
+; Wipe
+G1 X82.956 Y91.281 
+; Wipe
+G1 Y93.781 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y91.281 E-0.89063 
+; Wipe
+G1 X82.978 Y91.267 E-0.00937 
+; Wipe
+G1 Z1.7 F720 
+; LiftZ
+G1 Z1.9 
+; LiftZ
+G1 Z2.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z1.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+M73 P15 R9
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z2.1 F720 
+; LiftZ
+G1 X82.956 Y93.973 F9000 
+; Wipe
+G1 Z1.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.473 E0.33849 
+; ExtrusionMove
+G1 X83.885 Y91.05 E0.13821 
+; ExtrusionMove
+G1 X84.759 Y90.782 E0.12377 
+; ExtrusionMove
+G1 X85.632 Y90.669 E0.11919 
+; ExtrusionMove
+G1 X86.069 Y90.764 E0.06055 
+; ExtrusionMove
+G1 X86.506 Y91.142 E0.07823 
+; ExtrusionMove
+G1 X86.943 Y91.891 
+; Wipe
+G1 X87.379 Y92.758 
+; Wipe
+G1 X87.816 Y93.522 
+; Wipe
+G1 X88.253 Y94.133 
+; Wipe
+G1 X88.69 Y94.613 
+; Wipe
+G1 X89.126 Y94.993 E0.07831 
+; ExtrusionMove
+G1 X90 Y95.551 E0.1404 
+; ExtrusionMove
+G1 X90.874 Y95.938 E0.12942 
+; ExtrusionMove
+G1 X91.747 Y96.207 E0.12368 
+; ExtrusionMove
+G1 X92.621 Y96.32 E0.11932 
+; ExtrusionMove
+G1 X93.057 Y96.224 E0.06045 
+; ExtrusionMove
+G1 X93.494 Y95.847 E0.07814 
+; ExtrusionMove
+G1 X93.931 Y95.098 E0.11741 
+; ExtrusionMove
+G1 X94.368 Y94.23 E0.13158 
+; ExtrusionMove
+G1 X94.805 Y93.467 E0.11905 
+; ExtrusionMove
+G1 X95.241 Y92.855 E0.10174 
+; ExtrusionMove
+G1 X95.678 Y92.375 E0.08789 
+; ExtrusionMove
+G1 X96.115 Y91.995 E0.07841 
+; ExtrusionMove
+G1 X97.044 Y91.413 E0.14843 
+; ExtrusionMove
+G1 Y84.484 E0.93815 
+; ExtrusionMove
+G1 X96.115 Y84.062 
+; Wipe
+G1 X95.241 Y83.793 
+; Wipe
+G1 X94.368 Y83.68 
+; Wipe
+G1 X93.931 Y83.776 
+; Wipe
+G1 X93.494 Y84.153 
+; Wipe
+G1 X93.057 Y84.902 
+; Wipe
+G1 X92.621 Y85.77 
+; Wipe
+G1 X92.184 Y86.533 
+; Wipe
+G1 X91.747 Y87.145 
+; Wipe
+G1 X91.31 Y87.625 
+; Wipe
+G1 X90.874 Y88.005 
+; Wipe
+G1 X90 Y88.563 
+; Wipe
+G1 X89.126 Y88.95 
+; Wipe
+G1 X88.253 Y89.218 
+; Wipe
+M73 P16 R9
+G1 X87.379 Y89.331 
+; Wipe
+G1 X86.943 Y89.236 
+; Wipe
+G1 X86.506 Y88.858 
+; Wipe
+G1 X86.069 Y88.109 E0.11741 
+; ExtrusionMove
+G1 X85.632 Y87.242 E0.13146 
+; ExtrusionMove
+G1 X85.195 Y86.478 E0.11917 
+; ExtrusionMove
+G1 X84.759 Y85.867 E0.10163 
+; ExtrusionMove
+G1 X84.322 Y85.387 E0.08789 
+; ExtrusionMove
+G1 X83.885 Y85.007 
+; Wipe
+G1 X82.956 Y84.424 
+; Wipe
+G1 Y82.956 E0.19876 
+; ExtrusionMove
+G1 X83.988 E0.13973 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.424 
+; Wipe
+G1 X82.978 Y84.438 E-0.00937 
+; Wipe
+G1 Z2.1 F720 
+; LiftZ
+G1 Z2.3 
+; LiftZ
+G1 Z2.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z2.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P17 R9
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z2.5 F720 
+; LiftZ
+G1 X82.956 Y94.107 F9000 
+; Wipe
+G1 Z2.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.607 E0.33849 
+; ExtrusionMove
+G1 X83.885 Y91.32 E0.13165 
+; ExtrusionMove
+G1 X84.759 Y91.226 E0.11902 
+; ExtrusionMove
+G1 X85.632 Y91.392 E0.12032 
+; ExtrusionMove
+G1 X86.069 Y91.651 E0.06878 
+; ExtrusionMove
+G1 X86.506 Y92.076 E0.08253 
+; ExtrusionMove
+G1 X87.379 Y93.256 
+; Wipe
+G1 X88.253 Y94.29 
+; Wipe
+G1 X89.126 Y94.975 E0.15024 
+; ExtrusionMove
+G1 X90 Y95.409 E0.13212 
+; ExtrusionMove
+G1 X90.874 Y95.668 E0.12342 
+; ExtrusionMove
+G1 X91.747 Y95.762 E0.11888 
+; ExtrusionMove
+G1 X92.621 Y95.597 E0.12043 
+; ExtrusionMove
+G1 X93.057 Y95.338 E0.06866 
+; ExtrusionMove
+G1 X93.494 Y94.912 E0.08263 
+; ExtrusionMove
+G1 X94.368 Y93.733 E0.19871 
+; ExtrusionMove
+G1 X95.241 Y92.699 E0.18322 
+; ExtrusionMove
+G1 X96.115 Y92.013 E0.15043 
+; ExtrusionMove
+G1 X97.044 Y91.563 E0.13976 
+; ExtrusionMove
+G1 Y84.618 E0.94032 
+; ExtrusionMove
+G1 X96.115 Y84.332 
+; Wipe
+G1 X95.241 Y84.238 
+; Wipe
+G1 X94.368 Y84.403 
+; Wipe
+G1 X93.931 Y84.662 
+; Wipe
+G1 X93.494 Y85.088 
+; Wipe
+G1 X92.621 Y86.267 
+; Wipe
+G1 X91.747 Y87.301 
+; Wipe
+G1 X90.874 Y87.987 
+; Wipe
+G1 X90 Y88.421 
+; Wipe
+G1 X89.126 Y88.68 
+; Wipe
+G1 X88.253 Y88.774 
+; Wipe
+G1 X87.379 Y88.608 
+; Wipe
+G1 X86.943 Y88.349 
+; Wipe
+G1 X86.506 Y87.924 
+; Wipe
+G1 X85.632 Y86.744 E0.19882 
+; ExtrusionMove
+G1 X84.759 Y85.71 E0.18322 
+; ExtrusionMove
+G1 X83.885 Y85.025 
+; Wipe
+G1 X82.956 Y84.574 
+; Wipe
+G1 Y82.956 E0.21907 
+; ExtrusionMove
+M73 P18 R9
+G1 X83.838 E0.11942 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.574 
+; Wipe
+G1 X82.98 Y84.585 E-0.00938 
+; Wipe
+G1 Z2.5 F720 
+; LiftZ
+G1 Z2.7 
+; LiftZ
+G1 Z2.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z2.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P19 R9
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z2.9 F720 
+; LiftZ
+G1 X82.956 Y94.195 F9000 
+; Wipe
+G1 Z2.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.695 E0.33849 
+; ExtrusionMove
+G1 X83.885 Y91.536 E0.12761 
+; ExtrusionMove
+G1 X84.759 Y91.584 E0.11851 
+; ExtrusionMove
+G1 X85.632 Y91.909 E0.12613 
+; ExtrusionMove
+G1 X86.069 Y92.223 E0.07286 
+; ExtrusionMove
+G1 X86.506 Y92.644 E0.08216 
+; ExtrusionMove
+G1 X87.379 Y93.634 
+; Wipe
+G1 X88.253 Y94.46 E0.16282 
+; ExtrusionMove
+G1 X89.126 Y94.999 E0.13891 
+; ExtrusionMove
+G1 X90 Y95.314 E0.12579 
+; ExtrusionMove
+G1 X90.874 Y95.452 E0.1198 
+; ExtrusionMove
+G1 X91.747 Y95.404 E0.11838 
+; ExtrusionMove
+G1 X92.621 Y95.079 E0.12625 
+; ExtrusionMove
+G1 X93.057 Y94.766 E0.07267 
+; ExtrusionMove
+G1 X93.494 Y94.345 E0.08216 
+; ExtrusionMove
+G1 X94.368 Y93.354 E0.1789 
+; ExtrusionMove
+G1 X95.241 Y92.528 E0.16272 
+; ExtrusionMove
+G1 X96.115 Y91.989 E0.13903 
+; ExtrusionMove
+G1 X97.044 Y91.666 E0.13317 
+; ExtrusionMove
+G1 Y84.706 E0.94235 
+; ExtrusionMove
+G1 X96.115 Y84.548 
+; Wipe
+G1 X95.241 Y84.596 
+; Wipe
+G1 X94.368 Y84.921 
+; Wipe
+G1 X93.931 Y85.234 
+; Wipe
+G1 X93.494 Y85.655 
+; Wipe
+G1 X92.621 Y86.646 
+; Wipe
+G1 X91.747 Y87.472 
+; Wipe
+G1 X90.874 Y88.011 
+; Wipe
+G1 X90 Y88.325 
+; Wipe
+G1 X89.126 Y88.464 
+; Wipe
+G1 X88.253 Y88.416 
+; Wipe
+G1 X87.379 Y88.091 
+; Wipe
+G1 X86.943 Y87.777 
+; Wipe
+G1 X86.506 Y87.356 
+; Wipe
+G1 X85.632 Y86.366 E0.1788 
+; ExtrusionMove
+G1 X84.759 Y85.54 
+; Wipe
+G1 X83.885 Y85.001 
+; Wipe
+G1 X82.956 Y84.678 
+; Wipe
+G1 Y82.956 E0.23315 
+; ExtrusionMove
+G1 X83.735 E0.10547 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.678 
+; Wipe
+G1 X82.98 Y84.686 E-0.00902 
+; Wipe
+G1 Z2.9 F720 
+; LiftZ
+G1 Z3.1 
+; LiftZ
+G1 Z3.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z3.1 F720 
+; LowerZ
+M73 P20 R9
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P20 R8
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P21 R8
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z3.3 F720 
+; LiftZ
+G1 X82.956 Y94.242 F9000 
+; Wipe
+G1 Z3.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.742 E0.33849 
+; ExtrusionMove
+G1 X83.012 Y91.73 E0.00775 
+; ExtrusionMove
+G1 X83.885 Y91.706 E0.11824 
+; ExtrusionMove
+G1 X84.759 Y91.879 E0.12063 
+; ExtrusionMove
+G1 X85.632 Y92.325 E0.13273 
+; ExtrusionMove
+G1 X86.506 Y93.094 E0.15762 
+; ExtrusionMove
+G1 X87.379 Y93.975 
+; Wipe
+G1 X88.253 Y94.651 E0.1496 
+; ExtrusionMove
+G1 X89.126 Y95.06 E0.13053 
+; ExtrusionMove
+G1 X90 Y95.259 E0.12136 
+; ExtrusionMove
+G1 X90.874 Y95.282 E0.11838 
+; ExtrusionMove
+G1 X91.747 Y95.109 E0.1205 
+; ExtrusionMove
+G1 X92.621 Y94.663 E0.13285 
+; ExtrusionMove
+G1 X93.494 Y93.895 E0.15743 
+; ExtrusionMove
+G1 X94.368 Y93.014 E0.16802 
+; ExtrusionMove
+G1 X95.241 Y92.338 E0.14949 
+; ExtrusionMove
+G1 X96.115 Y91.929 E0.13065 
+; ExtrusionMove
+G1 X97.044 Y91.728 E0.12869 
+; ExtrusionMove
+G1 Y84.754 E0.94425 
+; ExtrusionMove
+G1 X96.115 Y84.718 
+; Wipe
+G1 X95.241 Y84.891 
+; Wipe
+G1 X94.368 Y85.337 
+; Wipe
+G1 X93.494 Y86.105 
+; Wipe
+G1 X92.621 Y86.986 
+; Wipe
+G1 X91.747 Y87.662 
+; Wipe
+G1 X90.874 Y88.071 
+; Wipe
+G1 X90 Y88.27 
+; Wipe
+G1 X89.126 Y88.294 
+; Wipe
+G1 X88.253 Y88.121 
+; Wipe
+G1 X87.379 Y87.675 
+; Wipe
+G1 X86.506 Y86.906 
+; Wipe
+G1 X85.632 Y86.025 E0.16802 
+; ExtrusionMove
+G1 X84.759 Y85.349 
+; Wipe
+G1 X83.885 Y84.94 
+; Wipe
+G1 X82.956 Y84.74 
+; Wipe
+G1 Y82.956 E0.24155 
+; ExtrusionMove
+G1 X83.673 E0.09708 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.74 
+; Wipe
+G1 X82.981 Y84.745 E-0.00902 
+; Wipe
+G1 Z3.3 F720 
+; LiftZ
+G1 Z3.5 
+; LiftZ
+G1 Z3.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z3.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P22 R8
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P23 R8
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z3.7 F720 
+; LiftZ
+G1 X97.044 Y94.253 F9000 
+; Wipe
+G1 Z3.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.753 E0.33849 
+; ExtrusionMove
+G1 X96.115 Y91.833 
+; Wipe
+G1 X95.241 Y92.122 
+; Wipe
+G1 X94.368 Y92.676 
+; Wipe
+G1 X92.621 Y94.302 
+; Wipe
+G1 X91.747 Y94.86 
+; Wipe
+G1 X90.874 Y95.152 
+; Wipe
+G1 X90 Y95.241 
+; Wipe
+G1 X89.126 Y95.155 
+; Wipe
+G1 X88.253 Y94.867 
+; Wipe
+G1 X87.379 Y94.312 
+; Wipe
+G1 X85.632 Y92.686 
+; Wipe
+G1 X84.759 Y92.128 
+; Wipe
+G1 X83.885 Y91.837 
+; Wipe
+G1 X82.956 Y91.753 
+; Wipe
+G1 Y84.764 E0.94628 
+; ExtrusionMove
+G1 X83.885 Y84.845 E0.12626 
+; ExtrusionMove
+G1 X84.759 Y85.133 E0.12459 
+; ExtrusionMove
+G1 X85.632 Y85.688 E0.14006 
+; ExtrusionMove
+G1 X87.379 Y87.314 E0.32314 
+; ExtrusionMove
+G1 X88.253 Y87.872 E0.1404 
+; ExtrusionMove
+G1 X89.126 Y88.163 E0.12459 
+; ExtrusionMove
+G1 X90 Y88.253 E0.11896 
+; ExtrusionMove
+G1 X90.874 Y88.167 E0.11891 
+; ExtrusionMove
+G1 X91.747 Y87.878 E0.12451 
+; ExtrusionMove
+G1 X92.621 Y87.324 E0.14011 
+; ExtrusionMove
+G1 X94.368 Y85.698 E0.32314 
+; ExtrusionMove
+G1 X95.241 Y85.14 E0.14028 
+; ExtrusionMove
+G1 X96.115 Y84.848 E0.12477 
+; ExtrusionMove
+G1 X97.044 Y84.764 E0.1263 
+; ExtrusionMove
+G1 Y82.956 E0.24479 
+; ExtrusionMove
+G1 X96.352 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.24652 
+; Wipe
+G1 Y84.764 
+; Wipe
+G1 X97.018 Y84.766 
+; Wipe
+G1 Z3.7 F720 
+; LiftZ
+G1 Z3.9 
+; LiftZ
+G1 Z4.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z3.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+M73 P24 R8
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+M73 P25 R8
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z4.1 F720 
+; LiftZ
+G1 X97.044 Y94.241 F9000 
+; Wipe
+G1 Z3.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.741 E0.33849 
+; ExtrusionMove
+G1 X96.988 Y91.728 
+; Wipe
+G1 X96.115 Y91.702 
+; Wipe
+G1 X95.241 Y91.871 
+; Wipe
+G1 X94.368 Y92.314 
+; Wipe
+G1 X93.494 Y93.081 
+; Wipe
+G1 X92.621 Y93.965 
+; Wipe
+G1 X91.747 Y94.645 
+; Wipe
+G1 X90.874 Y95.057 
+; Wipe
+G1 X90 Y95.26 
+; Wipe
+G1 X89.126 Y95.286 
+; Wipe
+G1 X88.253 Y95.117 
+; Wipe
+G1 X87.379 Y94.675 
+; Wipe
+G1 X86.506 Y93.907 
+; Wipe
+G1 X85.632 Y93.023 E0.16831 
+; ExtrusionMove
+G1 X84.759 Y92.344 
+; Wipe
+G1 X83.885 Y91.931 
+; Wipe
+G1 X82.956 Y91.727 
+; Wipe
+G1 Y84.753 E0.94425 
+; ExtrusionMove
+G1 X83.885 Y84.714 E0.12589 
+; ExtrusionMove
+G1 X84.759 Y84.883 E0.12053 
+; ExtrusionMove
+G1 X85.632 Y85.325 E0.13249 
+; ExtrusionMove
+G1 X86.506 Y86.093 E0.15753 
+; ExtrusionMove
+G1 X87.379 Y86.977 
+; Wipe
+G1 X88.253 Y87.656 E0.14985 
+; ExtrusionMove
+G1 X89.126 Y88.069 E0.13076 
+; ExtrusionMove
+G1 X90 Y88.272 E0.12149 
+; ExtrusionMove
+G1 X90.874 Y88.298 E0.11839 
+; ExtrusionMove
+G1 X91.747 Y88.129 E0.12039 
+; ExtrusionMove
+G1 X92.621 Y87.686 E0.13267 
+; ExtrusionMove
+G1 X93.494 Y86.919 E0.15734 
+; ExtrusionMove
+G1 X94.368 Y86.035 E0.16831 
+; ExtrusionMove
+G1 X95.241 Y85.355 E0.14983 
+; ExtrusionMove
+G1 X96.115 Y84.943 E0.13082 
+; ExtrusionMove
+G1 X97.044 Y84.738 E0.12881 
+; ExtrusionMove
+G1 Y82.956 E0.24127 
+; ExtrusionMove
+G1 X96.326 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.25579 
+; Wipe
+G1 Y84.738 
+; Wipe
+G1 X97.018 Y84.744 
+; Wipe
+G1 Z4.1 F720 
+; LiftZ
+G1 Z4.3 
+; LiftZ
+G1 Z4.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z4.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P26 R8
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z4.5 F720 
+; LiftZ
+G1 X97.044 Y94.193 F9000 
+; Wipe
+M73 P27 R8
+G1 Z4.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.693 E0.33849 
+; ExtrusionMove
+G1 X96.115 Y91.531 
+; Wipe
+G1 X95.241 Y91.575 
+; Wipe
+G1 X94.368 Y91.896 
+; Wipe
+G1 X93.931 Y92.208 
+; Wipe
+G1 X93.494 Y92.63 
+; Wipe
+G1 X92.621 Y93.624 
+; Wipe
+G1 X91.747 Y94.455 
+; Wipe
+G1 X90.874 Y94.998 
+; Wipe
+G1 X90 Y95.316 
+; Wipe
+G1 X89.126 Y95.458 
+; Wipe
+G1 X88.253 Y95.414 
+; Wipe
+G1 X87.379 Y95.092 
+; Wipe
+G1 X86.943 Y94.78 
+; Wipe
+G1 X86.506 Y94.359 
+; Wipe
+G1 X85.632 Y93.364 E0.17931 
+; ExtrusionMove
+G1 X84.759 Y92.533 
+; Wipe
+G1 X83.885 Y91.99 
+; Wipe
+G1 X82.956 Y91.664 
+; Wipe
+G1 Y84.704 E0.94235 
+; ExtrusionMove
+G1 X83.885 Y84.542 E0.12768 
+; ExtrusionMove
+G1 X84.759 Y84.586 E0.11849 
+; ExtrusionMove
+G1 X85.632 Y84.908 E0.12598 
+; ExtrusionMove
+G1 X86.069 Y85.22 E0.0727 
+; ExtrusionMove
+G1 X86.506 Y85.641 E0.08216 
+; ExtrusionMove
+G1 X87.379 Y86.636 
+; Wipe
+G1 X88.253 Y87.467 E0.16329 
+; ExtrusionMove
+G1 X89.126 Y88.01 E0.1392 
+; ExtrusionMove
+G1 X90 Y88.327 E0.12588 
+; ExtrusionMove
+G1 X90.874 Y88.469 E0.11989 
+; ExtrusionMove
+G1 X91.747 Y88.425 E0.11835 
+; ExtrusionMove
+G1 X92.621 Y88.104 E0.12606 
+; ExtrusionMove
+G1 X93.057 Y87.792 E0.07259 
+; ExtrusionMove
+G1 X93.494 Y87.37 E0.08225 
+; ExtrusionMove
+G1 X94.368 Y86.376 E0.17921 
+; ExtrusionMove
+G1 X95.241 Y85.545 E0.16319 
+; ExtrusionMove
+G1 X96.115 Y85.002 E0.13931 
+; ExtrusionMove
+G1 X97.044 Y84.675 E0.13335 
+; ExtrusionMove
+G1 Y82.956 E0.23274 
+; ExtrusionMove
+G1 X96.263 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.27823 
+; Wipe
+G1 Y84.675 
+; Wipe
+G1 X97.019 Y84.684 
+; Wipe
+G1 Z4.5 F720 
+; LiftZ
+G1 Z4.7 
+; LiftZ
+G1 Z4.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z4.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P28 R8
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z4.9 F720 
+; LiftZ
+G1 X97.044 Y94.103 F9000 
+; Wipe
+G1 Z4.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.603 E0.33849 
+; ExtrusionMove
+G1 X96.115 Y91.313 
+; Wipe
+G1 X95.241 Y91.215 
+; Wipe
+G1 X94.368 Y91.374 
+; Wipe
+G1 X93.931 Y91.631 
+; Wipe
+G1 X93.494 Y92.057 
+; Wipe
+G1 X92.621 Y93.243 
+; Wipe
+G1 X91.747 Y94.285 
+; Wipe
+M73 P29 R8
+G1 X90.874 Y94.975 
+; Wipe
+G1 X90 Y95.413 
+; Wipe
+G1 X89.126 Y95.675 
+; Wipe
+G1 X88.253 Y95.774 
+; Wipe
+G1 X87.379 Y95.614 
+; Wipe
+G1 X86.943 Y95.358 
+; Wipe
+G1 X86.506 Y94.932 
+; Wipe
+G1 X85.632 Y93.745 E0.19958 
+; ExtrusionMove
+G1 X84.759 Y92.704 E0.18395 
+; ExtrusionMove
+G1 X83.885 Y92.013 
+; Wipe
+G1 X82.956 Y91.559 
+; Wipe
+G1 Y84.615 E0.94018 
+; ExtrusionMove
+G1 X83.885 Y84.325 E0.13177 
+; ExtrusionMove
+G1 X84.759 Y84.226 E0.11909 
+; ExtrusionMove
+G1 X85.632 Y84.386 E0.12017 
+; ExtrusionMove
+G1 X86.069 Y84.642 E0.06857 
+; ExtrusionMove
+G1 X86.506 Y85.068 E0.08263 
+; ExtrusionMove
+G1 X87.379 Y86.255 
+; Wipe
+G1 X88.253 Y87.296 
+; Wipe
+G1 X89.126 Y87.987 E0.15075 
+; ExtrusionMove
+G1 X90 Y88.424 E0.1323 
+; ExtrusionMove
+G1 X90.874 Y88.687 E0.12358 
+; ExtrusionMove
+G1 X91.747 Y88.785 E0.11894 
+; ExtrusionMove
+G1 X92.621 Y88.626 E0.12028 
+; ExtrusionMove
+G1 X93.057 Y88.369 E0.06852 
+; ExtrusionMove
+G1 X93.494 Y87.943 E0.08263 
+; ExtrusionMove
+G1 X94.368 Y86.757 E0.19947 
+; ExtrusionMove
+G1 X95.241 Y85.715 E0.18405 
+; ExtrusionMove
+M73 P29 R7
+G1 X96.115 Y85.025 E0.15077 
+; ExtrusionMove
+G1 X97.044 Y84.571 E0.14 
+; ExtrusionMove
+G1 Y82.956 E0.21866 
+; ExtrusionMove
+G1 X96.158 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.31564 
+; Wipe
+G1 Y84.571 
+; Wipe
+G1 X97.021 Y84.582 
+; Wipe
+G1 Z4.9 F720 
+; LiftZ
+G1 Z5.1 
+; LiftZ
+G1 Z5.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z5.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P30 R7
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z5.3 F720 
+; LiftZ
+G1 X97.044 Y93.968 F9000 
+; Wipe
+G1 Z5.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.468 E0.33849 
+; ExtrusionMove
+G1 X96.115 Y91.041 
+; Wipe
+G1 X95.241 Y90.767 
+; Wipe
+G1 X94.368 Y90.642 
+; Wipe
+G1 X93.931 Y90.728 
+; Wipe
+G1 X93.494 Y91.099 
+; Wipe
+G1 X93.057 Y91.859 
+; Wipe
+G1 X92.621 Y92.74 
+; Wipe
+G1 X92.184 Y93.512 
+; Wipe
+G1 X91.747 Y94.129 
+; Wipe
+G1 X91.31 Y94.612 
+; Wipe
+G1 X90.874 Y94.995 
+; Wipe
+G1 X90 Y95.556 
+; Wipe
+G1 X89.126 Y95.947 
+; Wipe
+G1 X88.253 Y96.221 
+; Wipe
+G1 X87.379 Y96.346 
+; Wipe
+G1 X86.943 Y96.261 
+; Wipe
+G1 X86.506 Y95.889 
+; Wipe
+G1 X86.069 Y95.129 E0.1187 
+; ExtrusionMove
+G1 X85.632 Y94.248 E0.13315 
+; ExtrusionMove
+G1 X85.195 Y93.476 E0.12011 
+; ExtrusionMove
+M73 P31 R7
+G1 X84.759 Y92.859 E0.10229 
+; ExtrusionMove
+G1 X84.322 Y92.376 E0.08819 
+; ExtrusionMove
+G1 X83.885 Y91.994 
+; Wipe
+G1 X82.956 Y91.407 
+; Wipe
+G1 Y84.479 E0.93802 
+; ExtrusionMove
+G1 X83.885 Y84.053 E0.13838 
+; ExtrusionMove
+G1 X84.759 Y83.779 E0.12401 
+; ExtrusionMove
+G1 X85.632 Y83.654 E0.11941 
+; ExtrusionMove
+G1 X86.069 Y83.739 E0.06028 
+; ExtrusionMove
+G1 X86.506 Y84.111 E0.0777 
+; ExtrusionMove
+G1 X86.943 Y84.871 
+; Wipe
+G1 X87.379 Y85.752 
+; Wipe
+G1 X87.816 Y86.524 
+; Wipe
+G1 X88.253 Y87.141 
+; Wipe
+G1 X88.69 Y87.624 
+; Wipe
+G1 X89.126 Y88.006 E0.07848 
+; ExtrusionMove
+G1 X90 Y88.568 E0.14069 
+; ExtrusionMove
+G1 X90.874 Y88.959 E0.12964 
+; ExtrusionMove
+G1 X91.747 Y89.233 E0.12389 
+; ExtrusionMove
+G1 X92.621 Y89.358 E0.11954 
+; ExtrusionMove
+G1 X93.057 Y89.272 E0.06017 
+; ExtrusionMove
+G1 X93.494 Y88.901 E0.07761 
+; ExtrusionMove
+G1 X93.931 Y88.141 E0.1187 
+; ExtrusionMove
+G1 X94.368 Y87.26 E0.13315 
+; ExtrusionMove
+G1 X94.805 Y86.488 E0.12011 
+; ExtrusionMove
+G1 X95.241 Y85.871 E0.10229 
+; ExtrusionMove
+G1 X95.678 Y85.388 E0.08819 
+; ExtrusionMove
+G1 X96.115 Y85.005 E0.07868 
+; ExtrusionMove
+G1 X97.044 Y84.419 E0.14872 
+; ExtrusionMove
+G1 Y82.956 E0.19808 
+; ExtrusionMove
+G1 X96.007 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.36943 
+; Wipe
+G1 Y84.419 
+; Wipe
+G1 X97.022 Y84.433 
+; Wipe
+G1 Z5.3 F720 
+; LiftZ
+G1 Z5.5 
+; LiftZ
+G1 Z5.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z5.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P32 R7
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z5.7 F720 
+; LiftZ
+G1 X97.044 Y93.775 F9000 
+; Wipe
+G1 Z5.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.275 E0.33849 
+; ExtrusionMove
+G1 X96.405 Y90.874 
+; Wipe
+G1 X95.635 Y90.437 
+; Wipe
+G1 X94.959 Y90 
+; Wipe
+G1 X94.551 Y89.563 E0.08095 
+; ExtrusionMove
+G1 X94.385 Y89.126 E0.06329 
+; ExtrusionMove
+G1 X94.404 Y88.253 E0.11823 
+; ExtrusionMove
+G1 X94.622 Y87.379 E0.12196 
+; ExtrusionMove
+G1 X94.974 Y86.506 E0.12745 
+; ExtrusionMove
+G1 X95.499 Y85.632 E0.13804 
+; ExtrusionMove
+G1 X95.858 Y85.195 E0.07657 
+; ExtrusionMove
+G1 X96.309 Y84.759 E0.08493 
+; ExtrusionMove
+G1 X96.877 Y84.322 E0.09703 
+; ExtrusionMove
+G1 X97.044 Y84.217 E0.02671 
+; ExtrusionMove
+G1 Y82.956 E0.17073 
+; ExtrusionMove
+G1 X95.805 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.44139 
+; Wipe
+G1 Y84.217 
+; Wipe
+G1 X97.022 Y84.231 
+; Wipe
+G1 Z5.7 F720 
+; LiftZ
+G1 X82.956 Y86.787 F9000 
+; Wipe
+G1 Z5.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y84.287 E0.33849 
+; ExtrusionMove
+G1 X83.595 Y83.885 E0.10221 
+; ExtrusionMove
+M73 P33 R7
+G1 X84.365 Y83.448 E0.11987 
+; ExtrusionMove
+G1 X85.041 Y83.012 E0.10891 
+; ExtrusionMove
+G1 X85.092 Y82.956 E0.01026 
+; ExtrusionMove
+G1 X88.057 E0.40145 
+; ExtrusionMove
+G1 X87.971 Y83.012 
+; Wipe
+G1 X87.562 Y83.448 
+; Wipe
+G1 X87.397 Y83.885 
+; Wipe
+G1 X87.415 Y84.759 
+; Wipe
+G1 X87.633 Y85.632 
+; Wipe
+G1 X87.985 Y86.506 
+; Wipe
+G1 X88.51 Y87.379 
+; Wipe
+G1 X88.869 Y87.816 
+; Wipe
+G1 X89.321 Y88.253 E0.08512 
+; ExtrusionMove
+G1 X89.889 Y88.69 E0.09703 
+; ExtrusionMove
+G1 X90.584 Y89.126 E0.11108 
+; ExtrusionMove
+G1 X91.353 Y89.563 E0.11976 
+; ExtrusionMove
+G1 X92.029 Y90 E0.10899 
+; ExtrusionMove
+G1 X92.438 Y90.437 
+; Wipe
+G1 X92.603 Y90.874 
+; Wipe
+G1 X92.585 Y91.747 
+; Wipe
+G1 X92.367 Y92.621 
+; Wipe
+G1 X92.015 Y93.494 
+; Wipe
+G1 X91.49 Y94.368 
+; Wipe
+G1 X91.131 Y94.805 
+; Wipe
+G1 X90.679 Y95.241 
+; Wipe
+G1 X90.111 Y95.678 
+; Wipe
+G1 X89.416 Y96.115 
+; Wipe
+G1 X88.647 Y96.552 
+; Wipe
+G1 X87.971 Y96.988 
+; Wipe
+G1 X87.919 Y97.044 
+; Wipe
+G1 X84.955 
+; Wipe
+G1 X85.041 Y96.988 E0.0139 
+; ExtrusionMove
+G1 X85.449 Y96.552 E0.08085 
+; ExtrusionMove
+G1 X85.615 Y96.115 E0.06329 
+; ExtrusionMove
+G1 X85.596 Y95.241 E0.11836 
+; ExtrusionMove
+G1 X85.378 Y94.368 E0.12183 
+; ExtrusionMove
+G1 X85.026 Y93.494 E0.12757 
+; ExtrusionMove
+G1 X84.501 Y92.621 E0.13793 
+; ExtrusionMove
+G1 X84.142 Y92.184 E0.07657 
+; ExtrusionMove
+G1 X83.691 Y91.747 
+; Wipe
+G1 X83.123 Y91.31 
+; Wipe
+G1 X82.956 Y91.206 
+; Wipe
+G1 Y93.706 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y91.206 E-0.89063 
+; Wipe
+G1 X82.978 Y91.22 E-0.00937 
+; Wipe
+G1 Z5.7 F720 
+; LiftZ
+G1 Z5.9 
+; LiftZ
+G1 Z6.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z5.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P34 R7
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z6.1 F720 
+; LiftZ
+G1 X97.044 Y93.542 F9000 
+; Wipe
+G1 Z5.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.042 E0.33849 
+; ExtrusionMove
+G1 X96.857 Y90.874 
+; Wipe
+G1 X95.739 Y90 
+; Wipe
+G1 X95.314 Y89.563 E0.08253 
+; ExtrusionMove
+G1 X95.037 Y89.126 E0.07005 
+; ExtrusionMove
+G1 X94.823 Y88.253 E0.1217 
+; ExtrusionMove
+G1 X94.876 Y87.379 E0.11855 
+; ExtrusionMove
+G1 X95.103 Y86.506 E0.12213 
+; ExtrusionMove
+G1 X95.505 Y85.632 E0.13025 
+; ExtrusionMove
+G1 X96.149 Y84.759 E0.14688 
+; ExtrusionMove
+G1 X97.044 Y83.954 E0.16298 
+; ExtrusionMove
+G1 Y82.956 E0.13512 
+; ExtrusionMove
+G1 X95.541 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.53544 
+; Wipe
+G1 Y83.954 
+; Wipe
+G1 X97.025 Y83.971 
+; Wipe
+G1 Z6.1 F720 
+; LiftZ
+G1 X82.956 Y86.553 F9000 
+; Wipe
+G1 Z5.9 F720 
+; LowerZ
+M73 P35 R7
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y84.053 E0.33849 
+; ExtrusionMove
+G1 X83.143 Y83.885 E0.03404 
+; ExtrusionMove
+G1 X84.315 Y82.956 E0.20249 
+; ExtrusionMove
+G1 X88.822 E0.61023 
+; ExtrusionMove
+G1 X88.326 Y83.448 
+; Wipe
+G1 X88.048 Y83.885 
+; Wipe
+G1 X87.834 Y84.759 
+; Wipe
+G1 X87.888 Y85.632 
+; Wipe
+G1 X88.114 Y86.506 
+; Wipe
+G1 X88.516 Y87.379 
+; Wipe
+G1 X89.161 Y88.253 
+; Wipe
+G1 X90.132 Y89.126 E0.17679 
+; ExtrusionMove
+G1 X91.249 Y90 E0.19203 
+; ExtrusionMove
+G1 X91.674 Y90.437 
+; Wipe
+G1 X91.952 Y90.874 
+; Wipe
+G1 X92.166 Y91.747 
+; Wipe
+G1 X92.112 Y92.621 
+; Wipe
+G1 X91.886 Y93.494 
+; Wipe
+G1 X91.484 Y94.368 
+; Wipe
+G1 X90.839 Y95.241 
+; Wipe
+G1 X89.868 Y96.115 
+; Wipe
+G1 X88.697 Y97.044 
+; Wipe
+G1 X84.19 
+; Wipe
+G1 X84.686 Y96.552 E0.09459 
+; ExtrusionMove
+G1 X84.963 Y96.115 E0.07005 
+; ExtrusionMove
+G1 X85.177 Y95.241 E0.12183 
+; ExtrusionMove
+G1 X85.124 Y94.368 E0.11842 
+; ExtrusionMove
+G1 X84.897 Y93.494 E0.12226 
+; ExtrusionMove
+G1 X84.495 Y92.621 E0.13013 
+; ExtrusionMove
+G1 X83.851 Y91.747 E0.14699 
+; ExtrusionMove
+G1 X82.956 Y90.942 
+; Wipe
+G1 Y93.442 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y90.942 E-0.89063 
+; Wipe
+G1 X82.976 Y90.96 E-0.00937 
+; Wipe
+G1 Z6.1 F720 
+; LiftZ
+G1 Z6.3 
+; LiftZ
+G1 Z6.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z6.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P36 R7
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z6.5 F720 
+; LiftZ
+G1 X97.044 Y93.212 F9000 
+; Wipe
+G1 Z6.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y90.712 E0.33849 
+; ExtrusionMove
+G1 X96.264 Y90 
+; Wipe
+G1 X95.844 Y89.563 E0.08206 
+; ExtrusionMove
+G1 X95.521 Y89.126 E0.07358 
+; ExtrusionMove
+G1 X95.162 Y88.253 E0.1278 
+; ExtrusionMove
+G1 X95.08 Y87.379 E0.11886 
+; ExtrusionMove
+G1 X95.187 Y86.506 E0.11908 
+; ExtrusionMove
+G1 X95.471 Y85.632 E0.12443 
+; ExtrusionMove
+G1 X95.974 Y84.759 E0.13642 
+; ExtrusionMove
+G1 X96.756 Y83.885 E0.15879 
+; ExtrusionMove
+G1 X97.044 Y83.622 E0.05281 
+; ExtrusionMove
+G1 Y82.956 E0.09017 
+; ExtrusionMove
+G1 X95.21 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+M73 P37 R7
+G1 F7200 
+; Retraction
+G1 X97.044 E-0.65336 
+; Wipe
+G1 Y83.622 
+; Wipe
+G1 X97.025 Y83.64 
+; Wipe
+G1 Z6.5 F720 
+; LiftZ
+G1 X82.956 Y86.224 F9000 
+; Wipe
+G1 Z6.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y83.724 E0.33849 
+; ExtrusionMove
+G1 X83.789 Y82.956 E0.1534 
+; ExtrusionMove
+G1 X89.337 E0.75117 
+; ExtrusionMove
+G1 X88.856 Y83.448 
+; Wipe
+G1 X88.533 Y83.885 
+; Wipe
+G1 X88.173 Y84.759 
+; Wipe
+G1 X88.091 Y85.632 
+; Wipe
+G1 X88.199 Y86.506 
+; Wipe
+G1 X88.482 Y87.379 
+; Wipe
+G1 X88.986 Y88.253 
+; Wipe
+G1 X89.768 Y89.126 
+; Wipe
+G1 X90.724 Y90 E0.17538 
+; ExtrusionMove
+G1 X91.144 Y90.437 
+; Wipe
+G1 X91.467 Y90.874 
+; Wipe
+G1 X91.827 Y91.747 
+; Wipe
+G1 X91.909 Y92.621 
+; Wipe
+G1 X91.801 Y93.494 
+; Wipe
+G1 X91.518 Y94.368 
+; Wipe
+G1 X91.014 Y95.241 
+; Wipe
+G1 X90.232 Y96.115 
+; Wipe
+G1 X89.223 Y97.044 
+; Wipe
+G1 X83.675 
+; Wipe
+G1 X84.156 Y96.552 E0.09316 
+; ExtrusionMove
+G1 X84.479 Y96.115 E0.07358 
+; ExtrusionMove
+G1 X84.838 Y95.241 E0.12793 
+; ExtrusionMove
+G1 X84.92 Y94.368 E0.11872 
+; ExtrusionMove
+G1 X84.813 Y93.494 E0.11922 
+; ExtrusionMove
+G1 X84.529 Y92.621 E0.1243 
+; ExtrusionMove
+G1 X84.026 Y91.747 E0.13653 
+; ExtrusionMove
+G1 X83.244 Y90.874 E0.15869 
+; ExtrusionMove
+G1 X82.956 Y90.611 
+; Wipe
+G1 Y93.111 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y90.611 E-0.89063 
+; Wipe
+G1 X82.975 Y90.629 E-0.00937 
+; Wipe
+G1 Z6.5 F720 
+; LiftZ
+G1 Z6.7 
+; LiftZ
+G1 Z6.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z6.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P38 R7
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P38 R6
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z6.9 F720 
+; LiftZ
+G1 X97.044 Y92.852 F9000 
+; Wipe
+G1 Z6.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y90.352 E0.33849 
+; ExtrusionMove
+G1 X96.698 Y90 E0.06683 
+; ExtrusionMove
+G1 X95.919 Y89.126 E0.15852 
+; ExtrusionMove
+G1 X95.443 Y88.253 E0.13463 
+; ExtrusionMove
+G1 X95.239 Y87.379 E0.12152 
+; ExtrusionMove
+G1 X95.232 Y86.506 E0.1182 
+; ExtrusionMove
+G1 X95.401 Y85.632 E0.12053 
+; ExtrusionMove
+M73 P39 R6
+G1 X95.778 Y84.759 E0.12875 
+; ExtrusionMove
+G1 X96.42 Y83.885 E0.14683 
+; ExtrusionMove
+G1 X97.044 Y83.251 E0.12044 
+; ExtrusionMove
+G1 Y82.956 E0.03994 
+; ExtrusionMove
+G1 X89.764 
+; Wipe
+G1 X88.93 Y83.885 
+; Wipe
+G1 X88.455 Y84.759 
+; Wipe
+G1 X88.25 Y85.632 
+; Wipe
+G1 X88.244 Y86.506 
+; Wipe
+G1 X88.413 Y87.379 
+; Wipe
+G1 X88.789 Y88.253 
+; Wipe
+G1 X89.431 Y89.126 
+; Wipe
+G1 X90.291 Y90 
+; Wipe
+G1 X91.07 Y90.874 
+; Wipe
+G1 X91.545 Y91.747 
+; Wipe
+G1 X91.75 Y92.621 
+; Wipe
+G1 X91.756 Y93.494 
+; Wipe
+G1 X91.587 Y94.368 
+; Wipe
+G1 X91.211 Y95.241 
+; Wipe
+G1 X90.569 Y96.115 
+; Wipe
+G1 X89.66 Y97.044 
+; Wipe
+G1 X83.248 
+; Wipe
+G1 X84.081 Y96.115 E0.16894 
+; ExtrusionMove
+G1 X84.557 Y95.241 E0.13475 
+; ExtrusionMove
+G1 X84.761 Y94.368 E0.12138 
+; ExtrusionMove
+G1 X84.768 Y93.494 E0.11834 
+; ExtrusionMove
+G1 X84.599 Y92.621 E0.12039 
+; ExtrusionMove
+G1 X84.222 Y91.747 E0.12888 
+; ExtrusionMove
+G1 X83.58 Y90.874 E0.14672 
+; ExtrusionMove
+G1 X82.956 Y90.239 E0.12054 
+; ExtrusionMove
+G1 Y87.739 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y90.239 
+; Wipe
+G1 X82.974 Y90.258 
+; Wipe
+G1 Z6.9 F720 
+; LiftZ
+G1 Z7.1 
+; LiftZ
+G1 Z7.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z7.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P40 R6
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z7.3 F720 
+; LiftZ
+G1 X97.044 Y92.441 F9000 
+; Wipe
+G1 Z7.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.941 E0.33849 
+; ExtrusionMove
+G1 X96.271 Y89.126 E0.15209 
+; ExtrusionMove
+G1 X95.682 Y88.253 E0.14259 
+; ExtrusionMove
+G1 X95.359 Y87.379 E0.12616 
+; ExtrusionMove
+G1 X95.24 Y86.506 E0.11929 
+; ExtrusionMove
+G1 X95.297 Y85.632 E0.11859 
+; ExtrusionMove
+G1 X95.554 Y84.759 E0.12322 
+; ExtrusionMove
+G1 X96.078 Y83.885 E0.13797 
+; ExtrusionMove
+G1 X96.929 Y82.956 E0.17058 
+; ExtrusionMove
+G1 X90.162 
+; Wipe
+G1 X89.282 Y83.885 
+; Wipe
+M73 P41 R6
+G1 X88.694 Y84.759 
+; Wipe
+G1 X88.371 Y85.632 
+; Wipe
+G1 X88.252 Y86.506 
+; Wipe
+G1 X88.308 Y87.379 
+; Wipe
+G1 X88.565 Y88.253 
+; Wipe
+G1 X89.09 Y89.126 
+; Wipe
+G1 X90.718 Y90.874 
+; Wipe
+G1 X91.306 Y91.747 
+; Wipe
+G1 X91.629 Y92.621 
+; Wipe
+G1 X91.749 Y93.494 
+; Wipe
+G1 X91.692 Y94.368 
+; Wipe
+G1 X91.435 Y95.241 
+; Wipe
+G1 X90.91 Y96.115 
+; Wipe
+G1 X90.059 Y97.044 
+; Wipe
+G1 X82.956 
+; Wipe
+G1 Y96.929 E0.01557 
+; ExtrusionMove
+G1 X83.729 Y96.115 E0.15199 
+; ExtrusionMove
+G1 X84.318 Y95.241 E0.1427 
+; ExtrusionMove
+G1 X84.641 Y94.368 E0.12603 
+; ExtrusionMove
+G1 X84.76 Y93.494 E0.11943 
+; ExtrusionMove
+G1 X84.704 Y92.621 E0.11844 
+; ExtrusionMove
+G1 X84.447 Y91.747 E0.12335 
+; ExtrusionMove
+G1 X83.922 Y90.874 E0.13793 
+; ExtrusionMove
+G1 X82.956 Y89.824 E0.19318 
+; ExtrusionMove
+G1 Y87.324 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.824 
+; Wipe
+G1 X82.974 Y89.843 
+; Wipe
+G1 Z7.3 F720 
+; LiftZ
+G1 Z7.5 
+; LiftZ
+G1 Z7.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z7.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P42 R6
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z7.7 F720 
+; LiftZ
+G1 X97.044 Y93.929 F9000 
+; Wipe
+G1 Z7.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y96.429 
+; Wipe
+G1 X96.415 Y97.044 
+; Wipe
+G1 X90.468 
+; Wipe
+G1 X91.284 Y96.115 E0.16741 
+; ExtrusionMove
+G1 X91.696 Y95.241 E0.13082 
+; ExtrusionMove
+G1 X91.833 Y94.368 E0.11965 
+; ExtrusionMove
+G1 X91.777 Y93.494 E0.11858 
+; ExtrusionMove
+G1 X91.544 Y92.621 E0.12234 
+; ExtrusionMove
+G1 X91.098 Y91.747 E0.13285 
+; ExtrusionMove
+G1 X90.382 Y90.874 E0.15287 
+; ExtrusionMove
+G1 X89.474 Y90 
+; Wipe
+G1 X88.716 Y89.126 E0.15664 
+; ExtrusionMove
+M73 P43 R6
+G1 X88.304 Y88.253 E0.1307 
+; ExtrusionMove
+G1 X88.167 Y87.379 E0.11978 
+; ExtrusionMove
+G1 X88.223 Y86.506 E0.11844 
+; ExtrusionMove
+G1 X88.456 Y85.632 E0.12247 
+; ExtrusionMove
+G1 X88.902 Y84.759 E0.13273 
+; ExtrusionMove
+G1 X89.618 Y83.885 E0.15297 
+; ExtrusionMove
+G1 X90.574 Y82.956 E0.18049 
+; ExtrusionMove
+G1 X96.52 E0.80506 
+; ExtrusionMove
+G1 X95.704 Y83.885 
+; Wipe
+G1 X95.292 Y84.759 
+; Wipe
+G1 X95.155 Y85.632 
+; Wipe
+G1 X95.212 Y86.506 
+; Wipe
+G1 X95.444 Y87.379 
+; Wipe
+G1 X95.89 Y88.253 
+; Wipe
+G1 X96.606 Y89.126 
+; Wipe
+G1 X97.044 Y89.547 E0.08226 
+; ExtrusionMove
+G1 Y87.047 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.547 
+; Wipe
+G1 X97.025 Y89.529 
+; Wipe
+G1 Z7.7 F720 
+; LiftZ
+G1 X82.956 Y86.941 F9000 
+; Wipe
+G1 Z7.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.441 
+; Wipe
+G1 X83.537 Y90 E0.10916 
+; ExtrusionMove
+G1 X84.296 Y90.874 
+; Wipe
+G1 X84.708 Y91.747 
+; Wipe
+G1 X84.845 Y92.621 
+; Wipe
+G1 X84.788 Y93.494 
+; Wipe
+G1 X84.556 Y94.368 
+; Wipe
+G1 X84.11 Y95.241 
+; Wipe
+G1 X83.394 Y96.115 
+; Wipe
+G1 X82.956 Y96.536 
+; Wipe
+G1 Y97.044 
+; Wipe
+G1 X84.948 E0.26971 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y96.536 E-0.18097 
+; Wipe
+G1 X82.975 Y96.518 E-0.00938 
+; Wipe
+G1 Z7.7 F720 
+; LiftZ
+G1 Z7.9 
+; LiftZ
+G1 Z8.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z7.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P44 R6
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z8.1 F720 
+; LiftZ
+G1 X97.044 Y93.595 F9000 
+; Wipe
+G1 Z7.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y96.095 
+; Wipe
+G1 X95.935 Y97.044 
+; Wipe
+G1 X90.934 
+; Wipe
+G1 X91.422 Y96.552 E0.09382 
+; ExtrusionMove
+G1 X91.723 Y96.115 E0.07185 
+; ExtrusionMove
+G1 X92.008 Y95.241 E0.12447 
+; ExtrusionMove
+G1 X92.016 Y94.368 E0.11821 
+; ExtrusionMove
+M73 P45 R6
+G1 X91.843 Y93.494 E0.12063 
+; ExtrusionMove
+G1 X91.494 Y92.621 E0.1273 
+; ExtrusionMove
+G1 X90.914 Y91.747 E0.14202 
+; ExtrusionMove
+G1 X90.035 Y90.874 
+; Wipe
+G1 X89 Y90 
+; Wipe
+G1 X88.578 Y89.563 E0.08225 
+; ExtrusionMove
+G1 X88.277 Y89.126 E0.07185 
+; ExtrusionMove
+G1 X87.992 Y88.253 E0.12434 
+; ExtrusionMove
+G1 X87.984 Y87.379 E0.11834 
+; ExtrusionMove
+G1 X88.157 Y86.506 E0.1205 
+; ExtrusionMove
+G1 X88.506 Y85.632 E0.12742 
+; ExtrusionMove
+G1 X89.086 Y84.759 E0.14191 
+; ExtrusionMove
+G1 X89.965 Y83.885 E0.16783 
+; ExtrusionMove
+G1 X91.053 Y82.956 E0.1937 
+; ExtrusionMove
+G1 X96.054 E0.67711 
+; ExtrusionMove
+G1 X95.566 Y83.448 
+; Wipe
+G1 X95.265 Y83.885 
+; Wipe
+G1 X94.981 Y84.759 
+; Wipe
+G1 X94.972 Y85.632 
+; Wipe
+G1 X95.145 Y86.506 
+; Wipe
+G1 X95.494 Y87.379 
+; Wipe
+G1 X96.074 Y88.253 
+; Wipe
+G1 X97.044 Y89.203 E0.18383 
+; ExtrusionMove
+G1 Y86.703 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.203 
+; Wipe
+G1 X97.025 Y89.185 
+; Wipe
+G1 Z8.1 F720 
+; LiftZ
+G1 X82.956 Y86.606 F9000 
+; Wipe
+G1 Z7.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.106 
+; Wipe
+G1 X84.011 Y90 E0.18723 
+; ExtrusionMove
+G1 X84.434 Y90.437 
+; Wipe
+G1 X84.735 Y90.874 
+; Wipe
+G1 X85.019 Y91.747 
+; Wipe
+G1 X85.028 Y92.621 
+; Wipe
+G1 X84.855 Y93.494 
+; Wipe
+G1 X84.506 Y94.368 
+; Wipe
+G1 X83.926 Y95.241 
+; Wipe
+G1 X82.956 Y96.191 
+; Wipe
+G1 Y97.044 
+; Wipe
+G1 X84.604 E0.22313 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y96.191 E-0.30388 
+; Wipe
+G1 X82.974 Y96.173 E-0.00902 
+; Wipe
+G1 Z8.1 F720 
+; LiftZ
+G1 Z8.3 
+; LiftZ
+G1 Z8.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z8.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P46 R6
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z8.5 F720 
+; LiftZ
+G1 X97.044 Y93.312 F9000 
+; Wipe
+G1 Z8.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y95.812 
+; Wipe
+G1 X95.358 Y96.988 
+; Wipe
+G1 X95.304 Y97.044 
+; Wipe
+G1 X91.55 
+; Wipe
+M73 P47 R6
+G1 X91.63 Y96.988 E0.01322 
+; ExtrusionMove
+M73 P47 R5
+G1 X92.054 Y96.552 E0.08234 
+; ExtrusionMove
+G1 X92.286 Y96.115 E0.06699 
+; ExtrusionMove
+G1 X92.388 Y95.241 E0.11914 
+; ExtrusionMove
+G1 X92.247 Y94.368 E0.11973 
+; ExtrusionMove
+G1 X91.952 Y93.494 E0.12489 
+; ExtrusionMove
+G1 X91.482 Y92.621 E0.13424 
+; ExtrusionMove
+G1 X90.748 Y91.747 E0.15453 
+; ExtrusionMove
+G1 X90.241 Y91.31 
+; Wipe
+G1 X88.37 Y90 
+; Wipe
+G1 X87.946 Y89.563 E0.08244 
+; ExtrusionMove
+G1 X87.714 Y89.126 E0.06699 
+; ExtrusionMove
+G1 X87.612 Y88.253 E0.119 
+; ExtrusionMove
+G1 X87.753 Y87.379 E0.11987 
+; ExtrusionMove
+G1 X88.048 Y86.506 E0.12477 
+; ExtrusionMove
+G1 X88.518 Y85.632 E0.13436 
+; ExtrusionMove
+G1 X89.252 Y84.759 E0.15443 
+; ExtrusionMove
+G1 X89.759 Y84.322 E0.09063 
+; ExtrusionMove
+G1 X91.63 Y83.012 E0.30925 
+; ExtrusionMove
+G1 X91.684 Y82.956 E0.01053 
+; ExtrusionMove
+G1 X95.438 E0.50827 
+; ExtrusionMove
+G1 X95.358 Y83.012 
+; Wipe
+G1 X94.934 Y83.448 
+; Wipe
+G1 X94.703 Y83.885 
+; Wipe
+G1 X94.6 Y84.759 
+; Wipe
+G1 X94.741 Y85.632 
+; Wipe
+G1 X95.037 Y86.506 
+; Wipe
+G1 X95.507 Y87.379 
+; Wipe
+G1 X96.24 Y88.253 
+; Wipe
+G1 X96.747 Y88.69 E0.09063 
+; ExtrusionMove
+G1 X97.044 Y88.903 E0.04948 
+; ExtrusionMove
+G1 Y86.403 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.903 
+; Wipe
+G1 X97.023 Y88.888 
+; Wipe
+G1 Z8.5 F720 
+; LiftZ
+G1 X82.956 Y86.323 F9000 
+; Wipe
+G1 Z8.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y88.823 
+; Wipe
+G1 X84.642 Y90 E0.2784 
+; ExtrusionMove
+G1 X85.066 Y90.437 
+; Wipe
+G1 X85.297 Y90.874 
+; Wipe
+G1 X85.4 Y91.747 
+; Wipe
+G1 X85.259 Y92.621 
+; Wipe
+G1 X84.963 Y93.494 
+; Wipe
+G1 X84.493 Y94.368 
+; Wipe
+G1 X83.76 Y95.241 
+; Wipe
+G1 X83.253 Y95.678 
+; Wipe
+G1 X82.956 Y95.891 
+; Wipe
+G1 Y97.044 
+; Wipe
+G1 X84.304 E0.18251 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.891 E-0.41076 
+; Wipe
+G1 X82.977 Y95.876 E-0.00902 
+; Wipe
+G1 Z8.5 F720 
+; LiftZ
+G1 Z8.7 
+; LiftZ
+G1 Z8.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z8.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P48 R5
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z8.9 F720 
+; LiftZ
+G1 X97.044 Y93.095 F9000 
+; Wipe
+G1 Z8.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+M73 P49 R5
+G1 Y95.595 
+; Wipe
+G1 X96.917 Y95.678 
+; Wipe
+G1 X96.052 Y96.115 
+; Wipe
+G1 X94.998 Y96.552 
+; Wipe
+G1 X94.053 Y96.988 
+; Wipe
+G1 X94.024 Y97.044 
+; Wipe
+G1 X92.815 
+; Wipe
+G1 X92.935 Y96.988 E0.01793 
+; ExtrusionMove
+G1 X93.17 Y96.552 E0.06706 
+; ExtrusionMove
+G1 X93.114 Y96.115 E0.05965 
+; ExtrusionMove
+G1 X92.864 Y95.241 E0.12308 
+; ExtrusionMove
+G1 X92.535 Y94.368 E0.12632 
+; ExtrusionMove
+G1 X92.109 Y93.494 E0.13164 
+; ExtrusionMove
+G1 X91.514 Y92.621 E0.14304 
+; ExtrusionMove
+G1 X91.11 Y92.184 E0.08058 
+; ExtrusionMove
+G1 X90.595 Y91.747 
+; Wipe
+G1 X89.928 Y91.31 
+; Wipe
+G1 X89.064 Y90.874 
+; Wipe
+G1 X88.01 Y90.437 
+; Wipe
+G1 X87.065 Y90 
+; Wipe
+G1 X86.83 Y89.563 E0.06718 
+; ExtrusionMove
+G1 X86.886 Y89.126 E0.05965 
+; ExtrusionMove
+G1 X87.136 Y88.253 E0.12295 
+; ExtrusionMove
+G1 X87.465 Y87.379 E0.12644 
+; ExtrusionMove
+G1 X87.891 Y86.506 E0.13152 
+; ExtrusionMove
+G1 X88.486 Y85.632 E0.14315 
+; ExtrusionMove
+G1 X88.89 Y85.195 E0.08058 
+; ExtrusionMove
+G1 X89.405 Y84.759 E0.09136 
+; ExtrusionMove
+G1 X90.072 Y84.322 E0.10797 
+; ExtrusionMove
+G1 X90.936 Y83.885 E0.13109 
+; ExtrusionMove
+G1 X91.99 Y83.448 E0.15449 
+; ExtrusionMove
+G1 X92.935 Y83.012 E0.14091 
+; ExtrusionMove
+G1 X92.965 Y82.956 E0.0086 
+; ExtrusionMove
+G1 X94.173 E0.16356 
+; ExtrusionMove
+G1 X94.053 Y83.012 
+; Wipe
+G1 X93.818 Y83.448 
+; Wipe
+G1 X93.874 Y83.885 
+; Wipe
+G1 X94.125 Y84.759 
+; Wipe
+G1 X94.454 Y85.632 
+; Wipe
+G1 X94.88 Y86.506 
+; Wipe
+G1 X95.475 Y87.379 
+; Wipe
+G1 X95.879 Y87.816 
+; Wipe
+G1 X96.393 Y88.253 E0.09135 
+; ExtrusionMove
+G1 X97.044 Y88.679 E0.10534 
+; ExtrusionMove
+G1 Y86.179 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.679 
+; Wipe
+G1 X97.022 Y88.665 
+; Wipe
+G1 Z8.9 F720 
+; LiftZ
+G1 X82.956 Y86.106 F9000 
+; Wipe
+G1 Z8.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y88.606 
+; Wipe
+G1 X83.083 Y88.69 E0.02062 
+; ExtrusionMove
+G1 X83.948 Y89.126 E0.13115 
+; ExtrusionMove
+G1 X85.002 Y89.563 E0.15449 
+; ExtrusionMove
+G1 X85.947 Y90 E0.14097 
+; ExtrusionMove
+G1 X86.182 Y90.437 
+; Wipe
+G1 X86.126 Y90.874 
+; Wipe
+G1 X85.875 Y91.747 
+; Wipe
+G1 X85.546 Y92.621 
+; Wipe
+G1 X85.12 Y93.494 
+; Wipe
+G1 X84.525 Y94.368 
+; Wipe
+G1 X84.121 Y94.805 
+; Wipe
+G1 X83.607 Y95.241 
+; Wipe
+G1 X82.956 Y95.667 
+; Wipe
+G1 Y97.044 
+; Wipe
+G1 X84.08 E0.15218 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.667 E-0.49056 
+; Wipe
+G1 X82.977 Y95.653 E-0.00902 
+; Wipe
+G1 Z8.9 F720 
+; LiftZ
+G1 Z9.1 
+; LiftZ
+G1 Z9.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z9.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P50 R5
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z9.3 F720 
+; LiftZ
+M73 P51 R5
+G1 X83.903 Y97.044 F9000 
+; Wipe
+G1 Z9.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.49 E0.2104 
+; ExtrusionMove
+G1 X83.885 Y94.978 E0.14362 
+; ExtrusionMove
+G1 X84.759 Y94.214 E0.15717 
+; ExtrusionMove
+G1 X85.195 Y93.684 E0.09292 
+; ExtrusionMove
+G1 X86.506 Y91.718 E0.31994 
+; ExtrusionMove
+G1 X86.943 Y91.298 E0.08206 
+; ExtrusionMove
+G1 X87.379 Y91.088 E0.06552 
+; ExtrusionMove
+G1 X88.253 Y91.03 E0.1186 
+; ExtrusionMove
+G1 X89.126 Y91.2 E0.12042 
+; ExtrusionMove
+G1 X90 Y91.518 E0.12592 
+; ExtrusionMove
+G1 X90.874 Y92.01 E0.1358 
+; ExtrusionMove
+G1 X91.747 Y92.774 E0.15707 
+; ExtrusionMove
+G1 X92.184 Y93.304 
+; Wipe
+G1 X93.494 Y95.27 
+; Wipe
+G1 X93.931 Y95.691 E0.08216 
+; ExtrusionMove
+G1 X94.368 Y95.901 E0.06564 
+; ExtrusionMove
+G1 X95.241 Y95.959 E0.11846 
+; ExtrusionMove
+G1 X96.115 Y95.788 E0.12058 
+; ExtrusionMove
+G1 X97.044 Y95.439 E0.13437 
+; ExtrusionMove
+G1 Y88.502 E0.93924 
+; ExtrusionMove
+G1 X96.115 Y87.99 
+; Wipe
+G1 X95.241 Y87.226 
+; Wipe
+G1 X94.805 Y86.696 E0.09292 
+; ExtrusionMove
+G1 X93.494 Y84.73 E0.31994 
+; ExtrusionMove
+G1 X93.057 Y84.309 
+; Wipe
+G1 X92.621 Y84.099 
+; Wipe
+G1 X91.747 Y84.041 
+; Wipe
+G1 X90.874 Y84.212 
+; Wipe
+G1 X90 Y84.53 
+; Wipe
+G1 X89.126 Y85.022 
+; Wipe
+G1 X88.253 Y85.786 
+; Wipe
+G1 X87.816 Y86.316 
+; Wipe
+G1 X86.506 Y88.282 
+; Wipe
+G1 X86.069 Y88.702 
+; Wipe
+G1 X85.632 Y88.912 
+; Wipe
+G1 X84.759 Y88.97 
+; Wipe
+G1 X83.885 Y88.8 
+; Wipe
+G1 X82.956 Y88.45 
+; Wipe
+G1 Y85.95 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.45 
+; Wipe
+G1 X82.981 Y88.459 E-0.00937 
+; Wipe
+G1 Z9.3 F720 
+; LiftZ
+G1 Z9.5 
+; LiftZ
+G1 Z9.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z9.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P52 R5
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z9.7 F720 
+; LiftZ
+G1 X83.778 Y97.044 F9000 
+; Wipe
+G1 Z9.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.366 E0.22719 
+; ExtrusionMove
+G1 X83.885 Y94.983 E0.13605 
+; ExtrusionMove
+M73 P53 R5
+G1 X84.759 Y94.378 E0.14392 
+; ExtrusionMove
+G1 X85.632 Y93.464 E0.17113 
+; ExtrusionMove
+G1 X86.506 Y92.399 E0.18654 
+; ExtrusionMove
+G1 X86.943 Y91.975 E0.08244 
+; ExtrusionMove
+G1 X87.379 Y91.682 E0.07112 
+; ExtrusionMove
+G1 X88.253 Y91.425 E0.12335 
+; ExtrusionMove
+G1 X89.126 Y91.441 E0.11822 
+; ExtrusionMove
+G1 X90 Y91.635 E0.12122 
+; ExtrusionMove
+G1 X90.874 Y92.005 E0.1285 
+; ExtrusionMove
+G1 X91.747 Y92.611 E0.14389 
+; ExtrusionMove
+G1 X92.621 Y93.525 
+; Wipe
+G1 X93.494 Y94.59 
+; Wipe
+G1 X93.931 Y95.014 E0.08244 
+; ExtrusionMove
+G1 X94.368 Y95.306 E0.07116 
+; ExtrusionMove
+G1 X95.241 Y95.564 E0.12325 
+; ExtrusionMove
+G1 X96.115 Y95.548 E0.11836 
+; ExtrusionMove
+G1 X97.044 Y95.33 E0.1292 
+; ExtrusionMove
+G1 Y88.377 E0.9414 
+; ExtrusionMove
+G1 X96.115 Y87.995 
+; Wipe
+G1 X95.241 Y87.389 
+; Wipe
+G1 X94.368 Y86.476 E0.17103 
+; ExtrusionMove
+G1 X93.494 Y85.41 E0.18664 
+; ExtrusionMove
+G1 X93.057 Y84.986 
+; Wipe
+G1 X92.621 Y84.694 
+; Wipe
+G1 X91.747 Y84.436 
+; Wipe
+G1 X90.874 Y84.452 
+; Wipe
+G1 X90 Y84.647 
+; Wipe
+G1 X89.126 Y85.017 
+; Wipe
+G1 X88.253 Y85.622 
+; Wipe
+G1 X87.379 Y86.536 
+; Wipe
+G1 X86.506 Y87.602 
+; Wipe
+G1 X86.069 Y88.025 
+; Wipe
+G1 X85.632 Y88.318 
+; Wipe
+G1 X84.759 Y88.575 
+; Wipe
+G1 X83.885 Y88.559 
+; Wipe
+G1 X82.956 Y88.341 
+; Wipe
+G1 Y85.841 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.341 
+; Wipe
+G1 X82.982 Y88.347 E-0.00937 
+; Wipe
+G1 Z9.7 F720 
+; LiftZ
+G1 Z9.9 
+; LiftZ
+G1 Z10.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z9.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P54 R5
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z10.1 F720 
+; LiftZ
+G1 X83.697 Y97.044 F9000 
+; Wipe
+G1 Z9.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.285 E0.23816 
+; ExtrusionMove
+G1 X83.885 Y95.027 E0.13054 
+; ExtrusionMove
+G1 X84.759 Y94.558 E0.1343 
+; ExtrusionMove
+G1 X85.632 Y93.817 E0.15504 
+; ExtrusionMove
+G1 X86.506 Y92.891 E0.1724 
+; ExtrusionMove
+G1 X87.379 Y92.138 E0.15609 
+; ExtrusionMove
+G1 X88.253 Y91.747 E0.12964 
+; ExtrusionMove
+G1 X89.126 Y91.632 E0.11922 
+; ExtrusionMove
+G1 X90 Y91.709 E0.11879 
+; ExtrusionMove
+G1 X90.874 Y91.962 E0.12319 
+; ExtrusionMove
+G1 X91.747 Y92.43 E0.13411 
+; ExtrusionMove
+M73 P55 R5
+G1 X92.621 Y93.172 E0.15523 
+; ExtrusionMove
+G1 X93.494 Y94.098 
+; Wipe
+G1 X94.368 Y94.85 E0.15611 
+; ExtrusionMove
+G1 X95.241 Y95.241 E0.12951 
+; ExtrusionMove
+G1 X96.115 Y95.357 E0.11937 
+; ExtrusionMove
+G1 X97.044 Y95.264 E0.12641 
+; ExtrusionMove
+G1 Y88.296 E0.94343 
+; ExtrusionMove
+G1 X96.115 Y88.038 
+; Wipe
+G1 X95.241 Y87.57 
+; Wipe
+G1 X94.368 Y86.828 
+; Wipe
+G1 X93.494 Y85.902 E0.1724 
+; ExtrusionMove
+G1 X92.621 Y85.15 
+; Wipe
+G1 X91.747 Y84.759 
+; Wipe
+G1 X90.874 Y84.643 
+; Wipe
+G1 X90 Y84.72 
+; Wipe
+G1 X89.126 Y84.973 
+; Wipe
+G1 X88.253 Y85.442 
+; Wipe
+G1 X87.379 Y86.183 
+; Wipe
+G1 X86.506 Y87.109 
+; Wipe
+G1 X85.632 Y87.862 
+; Wipe
+G1 X84.759 Y88.253 
+; Wipe
+G1 X83.885 Y88.369 
+; Wipe
+G1 X82.956 Y88.275 
+; Wipe
+G1 Y85.775 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.275 
+; Wipe
+G1 X82.982 Y88.278 E-0.00937 
+; Wipe
+G1 Z10.1 F720 
+; LiftZ
+G1 Z10.3 
+; LiftZ
+G1 Z10.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z10.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+M73 P55 R4
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P56 R4
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z10.5 F720 
+; LiftZ
+G1 X83.655 Y97.044 F9000 
+; Wipe
+G1 Z10.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y95.243 E0.24385 
+; ExtrusionMove
+G1 X83.885 Y95.106 E0.12714 
+; ExtrusionMove
+G1 X84.759 Y94.761 E0.12722 
+; ExtrusionMove
+G1 X85.632 Y94.152 E0.14412 
+; ExtrusionMove
+G1 X86.506 Y93.311 E0.16422 
+; ExtrusionMove
+G1 X87.379 Y92.521 E0.15941 
+; ExtrusionMove
+G1 X88.253 Y92.016 E0.13667 
+; ExtrusionMove
+G1 X89.126 Y91.78 E0.12244 
+; ExtrusionMove
+G1 X90 Y91.743 E0.11844 
+; ExtrusionMove
+G1 X90.874 Y91.883 E0.11984 
+; ExtrusionMove
+G1 X91.747 Y92.227 E0.12705 
+; ExtrusionMove
+G1 X92.621 Y92.837 E0.14431 
+; ExtrusionMove
+G1 X93.494 Y93.677 E0.16403 
+; ExtrusionMove
+G1 X94.368 Y94.468 E0.1596 
+; ExtrusionMove
+G1 X95.241 Y94.972 E0.13648 
+; ExtrusionMove
+G1 X96.115 Y95.208 E0.12257 
+; ExtrusionMove
+G1 X97.044 Y95.236 E0.12584 
+; ExtrusionMove
+G1 Y88.254 E0.94533 
+; ExtrusionMove
+G1 X96.115 Y88.117 
+; Wipe
+M73 P57 R4
+G1 X95.241 Y87.773 
+; Wipe
+G1 X94.368 Y87.163 
+; Wipe
+G1 X93.494 Y86.323 
+; Wipe
+G1 X92.621 Y85.532 
+; Wipe
+G1 X91.747 Y85.028 
+; Wipe
+G1 X90.874 Y84.792 
+; Wipe
+G1 X90 Y84.755 
+; Wipe
+G1 X89.126 Y84.894 
+; Wipe
+G1 X88.253 Y85.239 
+; Wipe
+G1 X87.379 Y85.848 
+; Wipe
+G1 X86.506 Y86.689 
+; Wipe
+G1 X85.632 Y87.479 
+; Wipe
+G1 X84.759 Y87.984 
+; Wipe
+G1 X83.885 Y88.22 
+; Wipe
+G1 X82.956 Y88.248 
+; Wipe
+G1 Y85.748 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.248 
+; Wipe
+G1 X82.982 Y88.247 E-0.00937 
+; Wipe
+G1 Z10.5 F720 
+; LiftZ
+G1 Z10.7 
+; LiftZ
+G1 Z10.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z10.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+M73 P58 R4
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z10.9 F720 
+; LiftZ
+G1 X96.343 Y97.044 F9000 
+; Wipe
+G1 Z10.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.09491 
+; ExtrusionMove
+G1 Y95.245 E0.24358 
+; ExtrusionMove
+G1 X96.115 Y95.097 
+; Wipe
+G1 X95.241 Y94.743 
+; Wipe
+G1 X94.368 Y94.123 
+; Wipe
+G1 X93.494 Y93.276 
+; Wipe
+G1 X92.621 Y92.489 
+; Wipe
+G1 X91.747 Y91.994 
+; Wipe
+G1 X90.874 Y91.769 
+; Wipe
+G1 X90 Y91.742 
+; Wipe
+G1 X89.126 Y91.891 
+; Wipe
+G1 X88.253 Y92.246 
+; Wipe
+G1 X87.379 Y92.866 
+; Wipe
+G1 X86.506 Y93.713 
+; Wipe
+G1 X85.632 Y94.499 
+; Wipe
+G1 X84.759 Y94.994 
+; Wipe
+G1 X83.885 Y95.22 
+; Wipe
+G1 X82.956 Y95.237 
+; Wipe
+G1 Y88.257 E0.94506 
+; ExtrusionMove
+G1 X83.885 Y88.109 E0.12737 
+; ExtrusionMove
+G1 X84.759 Y87.754 E0.12772 
+; ExtrusionMove
+G1 X85.632 Y87.134 E0.14498 
+; ExtrusionMove
+G1 X86.506 Y86.287 E0.16479 
+; ExtrusionMove
+G1 X87.379 Y85.501 E0.15905 
+; ExtrusionMove
+G1 X88.253 Y85.006 E0.136 
+; ExtrusionMove
+G1 X89.126 Y84.78 E0.1221 
+; ExtrusionMove
+G1 X90 Y84.753 E0.11839 
+; ExtrusionMove
+G1 X90.874 Y84.903 E0.12007 
+; ExtrusionMove
+G1 X91.747 Y85.257 E0.12755 
+; ExtrusionMove
+G1 X92.621 Y85.878 E0.14516 
+; ExtrusionMove
+M73 P59 R4
+G1 X93.494 Y86.724 E0.1646 
+; ExtrusionMove
+G1 X94.368 Y87.511 E0.15924 
+; ExtrusionMove
+G1 X95.241 Y88.006 E0.13588 
+; ExtrusionMove
+G1 X96.115 Y88.231 E0.12219 
+; ExtrusionMove
+G1 X97.044 Y88.249 E0.12581 
+; ExtrusionMove
+G1 Y85.749 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.249 
+; Wipe
+G1 X97.018 Y88.248 
+; Wipe
+G1 Z10.9 F720 
+; LiftZ
+G1 Z11.1 
+; LiftZ
+G1 Z11.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z11.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P60 R4
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z11.3 F720 
+; LiftZ
+G1 X96.297 Y97.044 F9000 
+; Wipe
+G1 Z11.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.10114 
+; ExtrusionMove
+G1 Y95.29 E0.23748 
+; ExtrusionMove
+G1 X96.115 Y95.022 
+; Wipe
+G1 X95.241 Y94.542 
+; Wipe
+G1 X94.368 Y93.787 
+; Wipe
+G1 X93.494 Y92.852 E0.17329 
+; ExtrusionMove
+G1 X92.621 Y92.102 
+; Wipe
+G1 X91.747 Y91.721 
+; Wipe
+G1 X90.874 Y91.617 
+; Wipe
+G1 X90 Y91.704 
+; Wipe
+G1 X89.126 Y91.967 
+; Wipe
+G1 X88.253 Y92.447 
+; Wipe
+G1 X87.379 Y93.201 
+; Wipe
+G1 X86.506 Y94.137 
+; Wipe
+G1 X85.632 Y94.886 
+; Wipe
+G1 X84.759 Y95.267 
+; Wipe
+G1 X83.885 Y95.372 
+; Wipe
+G1 X82.956 Y95.268 
+; Wipe
+G1 Y88.302 E0.94316 
+; ExtrusionMove
+G1 X83.885 Y88.033 E0.13095 
+; ExtrusionMove
+G1 X84.759 Y87.553 E0.13501 
+; ExtrusionMove
+G1 X85.632 Y86.799 E0.15618 
+; ExtrusionMove
+G1 X86.506 Y85.863 E0.17339 
+; ExtrusionMove
+G1 X87.379 Y85.114 E0.15574 
+; ExtrusionMove
+G1 X88.253 Y84.733 E0.12909 
+; ExtrusionMove
+G1 X89.126 Y84.628 E0.11905 
+; ExtrusionMove
+G1 X90 Y84.715 E0.11892 
+; ExtrusionMove
+G1 X90.874 Y84.978 E0.12358 
+; ExtrusionMove
+G1 X91.747 Y85.458 E0.13489 
+; ExtrusionMove
+G1 X92.621 Y86.213 E0.15637 
+; ExtrusionMove
+G1 X93.494 Y87.148 
+; Wipe
+G1 X94.368 Y87.898 E0.15593 
+; ExtrusionMove
+G1 X95.241 Y88.279 E0.12897 
+; ExtrusionMove
+G1 X96.115 Y88.383 E0.11917 
+; ExtrusionMove
+G1 X97.044 Y88.28 E0.12655 
+; ExtrusionMove
+G1 Y85.78 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.28 
+; Wipe
+G1 X97.018 Y88.283 
+; Wipe
+G1 Z11.3 F720 
+; LiftZ
+G1 Z11.5 
+; LiftZ
+G1 Z11.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z11.5 F720 
+; LowerZ
+M73 P61 R4
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P62 R4
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z11.7 F720 
+; LiftZ
+G1 X96.213 Y97.044 F9000 
+; Wipe
+G1 Z11.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.11251 
+; ExtrusionMove
+G1 Y95.375 E0.22597 
+; ExtrusionMove
+G1 X96.115 Y94.981 
+; Wipe
+G1 X95.241 Y94.363 
+; Wipe
+G1 X94.368 Y93.431 E0.1729 
+; ExtrusionMove
+G1 X93.494 Y92.35 E0.18822 
+; ExtrusionMove
+G1 X93.057 Y91.925 
+; Wipe
+G1 X92.621 Y91.637 
+; Wipe
+G1 X91.747 Y91.394 
+; Wipe
+G1 X90.874 Y91.422 
+; Wipe
+G1 X90 Y91.627 
+; Wipe
+G1 X89.126 Y92.007 
+; Wipe
+G1 X88.253 Y92.625 
+; Wipe
+G1 X87.379 Y93.557 
+; Wipe
+G1 X86.506 Y94.639 
+; Wipe
+G1 X86.069 Y95.063 
+; Wipe
+G1 X85.632 Y95.351 
+; Wipe
+G1 X84.759 Y95.595 
+; Wipe
+G1 X83.885 Y95.567 
+; Wipe
+G1 X82.956 Y95.338 
+; Wipe
+G1 Y88.386 E0.94127 
+; ExtrusionMove
+G1 X83.885 Y87.993 E0.13657 
+; ExtrusionMove
+G1 X84.759 Y87.375 E0.14493 
+; ExtrusionMove
+G1 X85.632 Y86.443 E0.1729 
+; ExtrusionMove
+G1 X86.506 Y85.361 E0.18832 
+; ExtrusionMove
+G1 X86.943 Y84.937 E0.08244 
+; ExtrusionMove
+G1 X87.379 Y84.649 E0.07075 
+; ExtrusionMove
+G1 X88.253 Y84.405 E0.12286 
+; ExtrusionMove
+G1 X89.126 Y84.433 E0.11826 
+; ExtrusionMove
+G1 X90 Y84.638 E0.12155 
+; ExtrusionMove
+G1 X90.874 Y85.019 E0.12909 
+; ExtrusionMove
+G1 X91.747 Y85.637 E0.14482 
+; ExtrusionMove
+G1 X92.621 Y86.569 
+; Wipe
+G1 X93.494 Y87.65 
+; Wipe
+G1 X93.931 Y88.075 E0.08253 
+; ExtrusionMove
+G1 X94.368 Y88.363 E0.07086 
+; ExtrusionMove
+G1 X95.241 Y88.606 E0.12269 
+; ExtrusionMove
+G1 X96.115 Y88.578 E0.1184 
+; ExtrusionMove
+G1 X97.044 Y88.349 E0.12955 
+; ExtrusionMove
+G1 Y85.849 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.349 
+; Wipe
+G1 X97.018 Y88.355 
+; Wipe
+G1 Z11.7 F720 
+; LiftZ
+G1 Z11.9 
+; LiftZ
+G1 Z12.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z11.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P63 R4
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P64 R4
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z12.1 F720 
+; LiftZ
+G1 X96.084 Y97.044 F9000 
+; Wipe
+G1 Z11.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.12998 
+; ExtrusionMove
+G1 Y95.503 E0.20864 
+; ExtrusionMove
+G1 X96.115 Y94.98 
+; Wipe
+G1 X95.241 Y94.201 
+; Wipe
+G1 X94.805 Y93.659 E0.09418 
+; ExtrusionMove
+G1 X93.494 Y91.641 E0.32582 
+; ExtrusionMove
+G1 X93.057 Y91.223 
+; Wipe
+G1 X92.621 Y91.025 
+; Wipe
+G1 X91.747 Y90.991 
+; Wipe
+G1 X90.874 Y91.177 
+; Wipe
+G1 X90 Y91.506 
+; Wipe
+G1 X89.126 Y92.009 
+; Wipe
+G1 X88.253 Y92.788 
+; Wipe
+G1 X87.816 Y93.33 
+; Wipe
+G1 X86.506 Y95.348 
+; Wipe
+G1 X86.069 Y95.766 
+; Wipe
+G1 X85.632 Y95.963 
+; Wipe
+G1 X84.759 Y95.998 
+; Wipe
+G1 X83.885 Y95.812 
+; Wipe
+G1 X82.956 Y95.45 
+; Wipe
+G1 Y88.515 E0.93897 
+; ExtrusionMove
+G1 X83.885 Y87.991 E0.14441 
+; ExtrusionMove
+G1 X84.759 Y87.212 E0.15852 
+; ExtrusionMove
+G1 X85.195 Y86.67 E0.09418 
+; ExtrusionMove
+G1 X86.506 Y84.652 E0.32582 
+; ExtrusionMove
+G1 X86.943 Y84.234 E0.08188 
+; ExtrusionMove
+G1 X87.379 Y84.037 E0.06478 
+; ExtrusionMove
+G1 X88.253 Y84.002 E0.11843 
+; ExtrusionMove
+G1 X89.126 Y84.188 E0.12085 
+; ExtrusionMove
+G1 X90 Y84.518 E0.12649 
+; ExtrusionMove
+G1 X90.874 Y85.02 E0.13647 
+; ExtrusionMove
+G1 X91.747 Y85.799 E0.15842 
+; ExtrusionMove
+G1 X92.184 Y86.341 
+; Wipe
+G1 X93.494 Y88.36 
+; Wipe
+G1 X93.931 Y88.777 E0.08178 
+; ExtrusionMove
+G1 X94.368 Y88.975 E0.06496 
+; ExtrusionMove
+G1 X95.241 Y89.009 E0.11829 
+; ExtrusionMove
+M73 P64 R3
+G1 X96.115 Y88.823 E0.12099 
+; ExtrusionMove
+G1 X97.044 Y88.462 E0.13495 
+; ExtrusionMove
+G1 Y85.962 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.462 
+; Wipe
+G1 X97.019 Y88.472 
+; Wipe
+G1 Z12.1 F720 
+; LiftZ
+G1 Z12.3 
+; LiftZ
+G1 Z12.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z12.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+M73 P65 R3
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+M73 P66 R3
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z12.5 F720 
+; LiftZ
+G1 X95.902 Y97.044 F9000 
+; Wipe
+G1 Z12.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.15462 
+; ExtrusionMove
+G1 Y95.685 E0.184 
+; ExtrusionMove
+G1 X96.38 Y95.241 
+; Wipe
+G1 X95.876 Y94.805 
+; Wipe
+G1 X95.48 Y94.368 E0.07985 
+; ExtrusionMove
+G1 X94.896 Y93.494 E0.14232 
+; ExtrusionMove
+G1 X94.481 Y92.621 E0.13088 
+; ExtrusionMove
+G1 X94.171 Y91.747 E0.12556 
+; ExtrusionMove
+G1 X93.966 Y90.874 E0.12142 
+; ExtrusionMove
+G1 X93.969 Y90.437 E0.05917 
+; ExtrusionMove
+G1 X94.277 Y90 E0.07239 
+; ExtrusionMove
+G1 X95.132 Y89.563 E0.13001 
+; ExtrusionMove
+G1 X96.116 Y89.126 E0.14578 
+; ExtrusionMove
+G1 X97.044 Y88.625 E0.14279 
+; ExtrusionMove
+G1 Y86.125 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.625 
+; Wipe
+G1 X97.021 Y88.637 
+; Wipe
+G1 Z12.5 F720 
+; LiftZ
+G1 X82.956 Y86.197 F9000 
+; Wipe
+G1 Z12.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y88.697 
+; Wipe
+G1 X83.62 Y88.253 E0.10815 
+; ExtrusionMove
+G1 X84.124 Y87.816 E0.09032 
+; ExtrusionMove
+G1 X84.52 Y87.379 E0.07985 
+; ExtrusionMove
+G1 X85.104 Y86.506 E0.14221 
+; ExtrusionMove
+G1 X85.519 Y85.632 E0.131 
+; ExtrusionMove
+G1 X85.829 Y84.759 E0.12543 
+; ExtrusionMove
+G1 X86.035 Y83.885 E0.12158 
+; ExtrusionMove
+G1 X86.031 Y83.448 E0.05917 
+; ExtrusionMove
+G1 X85.723 Y83.012 E0.07228 
+; ExtrusionMove
+G1 X85.615 Y82.956 
+; Wipe
+G1 X87.249 E0.22124 
+; ExtrusionMove
+G1 X87.289 Y83.012 
+; Wipe
+G1 X88.144 Y83.448 E0.12995 
+; ExtrusionMove
+G1 X89.128 Y83.885 E0.14578 
+; ExtrusionMove
+G1 X89.959 Y84.322 E0.12712 
+; ExtrusionMove
+G1 X90.608 Y84.759 E0.10593 
+; ExtrusionMove
+G1 X91.112 Y85.195 E0.09023 
+; ExtrusionMove
+G1 X91.509 Y85.632 
+; Wipe
+G1 X92.093 Y86.506 
+; Wipe
+G1 X92.507 Y87.379 
+; Wipe
+G1 X92.818 Y88.253 
+; Wipe
+G1 X93.023 Y89.126 
+; Wipe
+G1 X93.02 Y89.563 
+; Wipe
+G1 X92.711 Y90 
+; Wipe
+G1 X91.856 Y90.437 
+; Wipe
+G1 X90.873 Y90.874 
+; Wipe
+G1 X90.041 Y91.31 
+; Wipe
+G1 X89.392 Y91.747 
+; Wipe
+G1 X88.888 Y92.184 
+; Wipe
+G1 X88.491 Y92.621 
+; Wipe
+G1 X87.907 Y93.494 
+; Wipe
+G1 X87.493 Y94.368 
+; Wipe
+G1 X87.182 Y95.241 
+; Wipe
+G1 X86.977 Y96.115 
+; Wipe
+G1 X86.98 Y96.552 
+; Wipe
+G1 X87.289 Y96.988 
+; Wipe
+G1 X87.397 Y97.044 E0.01647 
+; ExtrusionMove
+G1 X85.762 
+; Wipe
+G1 X85.723 Y96.988 E0.00924 
+; ExtrusionMove
+G1 X84.868 Y96.552 
+; Wipe
+G1 X83.884 Y96.115 
+; Wipe
+G1 X82.956 Y95.613 
+; Wipe
+G1 Y93.113 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y95.613 
+; Wipe
+G1 X82.979 Y95.626 E-0.00937 
+; Wipe
+G1 Z12.5 F720 
+; LiftZ
+G1 Z12.7 
+; LiftZ
+G1 Z12.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z12.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P67 R3
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+M73 P68 R3
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z12.9 F720 
+; LiftZ
+G1 X95.673 Y97.044 F9000 
+; Wipe
+G1 Z12.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.18563 
+; ExtrusionMove
+G1 Y95.915 E0.15286 
+; ExtrusionMove
+G1 X96.723 Y95.678 
+; Wipe
+G1 X96.226 Y95.241 
+; Wipe
+G1 X95.507 Y94.368 E0.15313 
+; ExtrusionMove
+G1 X95.048 Y93.494 E0.13366 
+; ExtrusionMove
+G1 X94.763 Y92.621 E0.12434 
+; ExtrusionMove
+G1 X94.637 Y91.747 E0.11956 
+; ExtrusionMove
+G1 X94.759 Y90.874 E0.11935 
+; ExtrusionMove
+G1 X94.999 Y90.437 E0.0675 
+; ExtrusionMove
+G1 X95.424 Y90 E0.08253 
+; ExtrusionMove
+G1 X97.044 Y88.845 E0.26938 
+; ExtrusionMove
+G1 Y86.345 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y88.845 
+; Wipe
+G1 X97.023 Y88.86 
+; Wipe
+G1 Z12.9 F720 
+; LiftZ
+G1 X82.956 Y86.426 F9000 
+; Wipe
+G1 Z12.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y88.926 
+; Wipe
+G1 X83.277 Y88.69 E0.05394 
+; ExtrusionMove
+G1 X83.774 Y88.253 E0.0896 
+; ExtrusionMove
+G1 X84.493 Y87.379 E0.15323 
+; ExtrusionMove
+G1 X84.952 Y86.506 E0.13354 
+; ExtrusionMove
+G1 X85.237 Y85.632 E0.12447 
+; ExtrusionMove
+G1 X85.363 Y84.759 E0.11942 
+; ExtrusionMove
+G1 X85.241 Y83.885 E0.11948 
+; ExtrusionMove
+G1 X85.001 Y83.448 E0.0675 
+; ExtrusionMove
+G1 X84.576 Y83.012 E0.08244 
+; ExtrusionMove
+G1 X84.497 Y82.956 
+; Wipe
+G1 X88.382 E0.52601 
+; ExtrusionMove
+G1 X88.436 Y83.012 
+; Wipe
+G1 X90.266 Y84.322 E0.30471 
+; ExtrusionMove
+G1 X90.762 Y84.759 E0.0895 
+; ExtrusionMove
+G1 X91.481 Y85.632 
+; Wipe
+G1 X91.94 Y86.506 
+; Wipe
+G1 X92.225 Y87.379 
+; Wipe
+G1 X92.352 Y88.253 
+; Wipe
+G1 X92.23 Y89.126 
+; Wipe
+G1 X91.989 Y89.563 
+; Wipe
+G1 X91.564 Y90 
+; Wipe
+G1 X89.734 Y91.31 
+; Wipe
+G1 X89.238 Y91.747 
+; Wipe
+G1 X88.519 Y92.621 
+; Wipe
+G1 X88.06 Y93.494 
+; Wipe
+G1 X87.775 Y94.368 
+; Wipe
+G1 X87.648 Y95.241 
+; Wipe
+G1 X87.77 Y96.115 
+; Wipe
+G1 X88.011 Y96.552 
+; Wipe
+G1 X88.436 Y96.988 
+; Wipe
+G1 X88.514 Y97.044 E0.013 
+; ExtrusionMove
+G1 X84.63 
+; Wipe
+G1 X84.576 Y96.988 E0.01053 
+; ExtrusionMove
+G1 X82.956 Y95.833 
+; Wipe
+G1 Y93.333 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y95.833 
+; Wipe
+G1 X82.977 Y95.848 E-0.00937 
+; Wipe
+G1 Z12.9 F720 
+; LiftZ
+G1 Z13.1 
+; LiftZ
+G1 Z13.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z13.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P69 R3
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P70 R3
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z13.3 F720 
+; LiftZ
+G1 X95.368 Y97.044 F9000 
+; Wipe
+G1 Z13.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.22692 
+; ExtrusionMove
+G1 Y96.219 E0.1117 
+; ExtrusionMove
+G1 X96.059 Y95.241 
+; Wipe
+G1 X95.491 Y94.368 E0.14102 
+; ExtrusionMove
+G1 X95.153 Y93.494 E0.12688 
+; ExtrusionMove
+G1 X94.99 Y92.621 E0.12024 
+; ExtrusionMove
+G1 X95.01 Y91.747 E0.11837 
+; ExtrusionMove
+G1 X95.307 Y90.874 E0.12485 
+; ExtrusionMove
+G1 X95.612 Y90.437 E0.07215 
+; ExtrusionMove
+G1 X96.034 Y90 E0.08225 
+; ExtrusionMove
+G1 X97.044 Y89.136 E0.17996 
+; ExtrusionMove
+G1 Y86.636 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.136 
+; Wipe
+G1 X97.024 Y89.153 
+; Wipe
+G1 Z13.3 F720 
+; LiftZ
+G1 X82.956 Y86.731 F9000 
+; Wipe
+G1 Z13.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.231 
+; Wipe
+G1 X83.941 Y88.253 E0.18794 
+; ExtrusionMove
+G1 X84.509 Y87.379 E0.14113 
+; ExtrusionMove
+G1 X84.847 Y86.506 E0.12675 
+; ExtrusionMove
+G1 X85.01 Y85.632 E0.12038 
+; ExtrusionMove
+G1 X84.99 Y84.759 E0.11823 
+; ExtrusionMove
+G1 X84.693 Y83.885 E0.12498 
+; ExtrusionMove
+G1 X84.388 Y83.448 E0.07215 
+; ExtrusionMove
+G1 X83.901 Y82.956 E0.09373 
+; ExtrusionMove
+G1 X88.992 E0.6893 
+; ExtrusionMove
+G1 X90.067 Y83.885 E0.19237 
+; ExtrusionMove
+G1 X90.93 Y84.759 
+; Wipe
+G1 X91.497 Y85.632 
+; Wipe
+G1 X91.836 Y86.506 
+; Wipe
+G1 X91.999 Y87.379 
+; Wipe
+G1 X91.978 Y88.253 
+; Wipe
+G1 X91.681 Y89.126 
+; Wipe
+G1 X91.377 Y89.563 
+; Wipe
+G1 X90.954 Y90 
+; Wipe
+G1 X89.933 Y90.874 
+; Wipe
+G1 X89.07 Y91.747 
+; Wipe
+G1 X88.503 Y92.621 
+; Wipe
+G1 X88.164 Y93.494 
+; Wipe
+G1 X88.001 Y94.368 
+; Wipe
+G1 X88.022 Y95.241 
+; Wipe
+G1 X88.319 Y96.115 
+; Wipe
+G1 X88.624 Y96.552 
+; Wipe
+G1 X89.111 Y97.044 
+; Wipe
+G1 X84.019 
+; Wipe
+G1 X82.956 Y96.125 
+; Wipe
+G1 Y93.625 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y96.125 
+; Wipe
+G1 X82.976 Y96.142 E-0.00937 
+; Wipe
+G1 Z13.3 F720 
+; LiftZ
+G1 Z13.5 
+; LiftZ
+G1 Z13.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z13.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P71 R3
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P72 R3
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z13.7 F720 
+; LiftZ
+G1 X95.019 Y97.044 F9000 
+; Wipe
+G1 Z13.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X97.044 E0.27418 
+; ExtrusionMove
+G1 Y96.568 E0.06445 
+; ExtrusionMove
+G1 X96.577 Y96.115 
+; Wipe
+G1 X95.873 Y95.241 E0.15195 
+; ExtrusionMove
+G1 X95.438 Y94.368 E0.13206 
+; ExtrusionMove
+G1 X95.216 Y93.494 E0.12209 
+; ExtrusionMove
+G1 X95.169 Y92.621 E0.11837 
+; ExtrusionMove
+G1 X95.317 Y91.747 E0.12002 
+; ExtrusionMove
+G1 X95.739 Y90.874 E0.13129 
+; ExtrusionMove
+G1 X96.5 Y90 E0.15691 
+; ExtrusionMove
+G1 X97.044 Y89.472 E0.10264 
+; ExtrusionMove
+G1 Y86.972 E0.33849 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.472 
+; Wipe
+G1 X97.025 Y89.49 
+; Wipe
+G1 Z13.7 F720 
+; LiftZ
+G1 X82.956 Y87.08 F9000 
+; Wipe
+G1 Z13.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.58 
+; Wipe
+G1 X83.423 Y89.126 E0.08818 
+; ExtrusionMove
+G1 X84.127 Y88.253 E0.15184 
+; ExtrusionMove
+G1 X84.562 Y87.379 E0.13218 
+; ExtrusionMove
+G1 X84.784 Y86.506 E0.12196 
+; ExtrusionMove
+G1 X84.831 Y85.632 E0.11851 
+; ExtrusionMove
+G1 X84.683 Y84.759 E0.11989 
+; ExtrusionMove
+G1 X84.261 Y83.885 E0.13141 
+; ExtrusionMove
+G1 X83.443 Y82.956 E0.16759 
+; ExtrusionMove
+G1 X89.464 E0.81521 
+; ExtrusionMove
+G1 X90.411 Y83.885 E0.17961 
+; ExtrusionMove
+G1 X91.115 Y84.759 
+; Wipe
+G1 X91.55 Y85.632 
+; Wipe
+G1 X91.773 Y86.506 
+; Wipe
+G1 X91.82 Y87.379 
+; Wipe
+G1 X91.672 Y88.253 
+; Wipe
+G1 X91.249 Y89.126 
+; Wipe
+G1 X90.488 Y90 
+; Wipe
+G1 X89.589 Y90.874 
+; Wipe
+G1 X88.885 Y91.747 
+; Wipe
+G1 X88.45 Y92.621 
+; Wipe
+G1 X88.227 Y93.494 
+; Wipe
+G1 X88.18 Y94.368 
+; Wipe
+G1 X88.328 Y95.241 
+; Wipe
+G1 X88.751 Y96.115 
+; Wipe
+G1 X89.569 Y97.044 
+; Wipe
+G1 X83.548 
+; Wipe
+G1 X82.956 Y96.461 
+; Wipe
+G1 Y93.961 E0.33849 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y96.461 
+; Wipe
+G1 X82.975 Y96.479 E-0.00937 
+; Wipe
+G1 Z13.7 F720 
+; LiftZ
+G1 Z13.9 
+; LiftZ
+G1 Z14.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z13.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+M73 P73 R3
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+M73 P73 R2
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P74 R2
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z14.1 F720 
+; LiftZ
+G1 X97.044 Y87.36 F9000 
+; Wipe
+G1 Z13.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y89.86 
+; Wipe
+G1 X96.109 Y90.874 
+; Wipe
+G1 X95.574 Y91.747 
+; Wipe
+G1 X95.307 Y92.621 
+; Wipe
+G1 X95.241 Y93.494 
+; Wipe
+G1 X95.35 Y94.368 
+; Wipe
+G1 X95.663 Y95.241 
+; Wipe
+G1 X96.241 Y96.115 
+; Wipe
+G1 X97.044 Y96.966 
+; Wipe
+G1 Y97.044 
+; Wipe
+G1 X89.975 
+; Wipe
+G1 X89.12 Y96.115 E0.17095 
+; ExtrusionMove
+G1 X88.586 Y95.241 E0.13867 
+; ExtrusionMove
+G1 X88.319 Y94.368 E0.1236 
+; ExtrusionMove
+G1 X88.252 Y93.494 E0.11868 
+; ExtrusionMove
+G1 X88.362 Y92.621 E0.11913 
+; ExtrusionMove
+G1 X88.675 Y91.747 E0.12569 
+; ExtrusionMove
+G1 X89.253 Y90.874 E0.14176 
+; ExtrusionMove
+G1 X90.88 Y89.126 E0.32333 
+; ExtrusionMove
+G1 X91.414 Y88.253 E0.13856 
+; ExtrusionMove
+G1 X91.681 Y87.379 E0.12373 
+; ExtrusionMove
+G1 X91.748 Y86.506 E0.11855 
+; ExtrusionMove
+G1 X91.638 Y85.632 E0.11927 
+; ExtrusionMove
+G1 X91.325 Y84.759 E0.12557 
+; ExtrusionMove
+G1 X90.747 Y83.885 E0.14187 
+; ExtrusionMove
+G1 X89.872 Y82.956 E0.17279 
+; ExtrusionMove
+G1 X83.036 
+; Wipe
+G1 X83.891 Y83.885 
+; Wipe
+G1 X84.426 Y84.759 
+; Wipe
+G1 X84.693 Y85.632 
+; Wipe
+G1 X84.759 Y86.506 
+; Wipe
+G1 X84.65 Y87.379 
+; Wipe
+G1 X84.337 Y88.253 
+; Wipe
+G1 X83.759 Y89.126 
+; Wipe
+G1 X82.956 Y89.977 
+; Wipe
+G1 Y92.477 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y89.977 E-0.89063 
+; Wipe
+G1 X82.974 Y89.958 E-0.00937 
+; Wipe
+G1 Z14.1 F720 
+; LiftZ
+G1 Z14.3 
+; LiftZ
+G1 Z14.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z14.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P75 R2
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P76 R2
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z14.5 F720 
+; LiftZ
+G1 X97.044 Y87.774 F9000 
+; Wipe
+G1 Z14.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y90.274 
+; Wipe
+G1 X96.449 Y90.874 
+; Wipe
+G1 X95.796 Y91.747 
+; Wipe
+G1 X95.409 Y92.621 
+; Wipe
+G1 X95.23 Y93.494 
+; Wipe
+G1 X95.226 Y94.368 
+; Wipe
+G1 X95.421 Y95.241 
+; Wipe
+G1 X95.886 Y96.115 
+; Wipe
+G1 X96.717 Y97.044 
+; Wipe
+G1 X90.376 
+; Wipe
+G1 X89.46 Y96.115 E0.17664 
+; ExtrusionMove
+G1 X88.807 Y95.241 E0.14772 
+; ExtrusionMove
+G1 X88.42 Y94.368 E0.12929 
+; ExtrusionMove
+G1 X88.241 Y93.494 E0.12079 
+; ExtrusionMove
+G1 X88.238 Y92.621 E0.1182 
+; ExtrusionMove
+G1 X88.432 Y91.747 E0.12122 
+; ExtrusionMove
+G1 X88.898 Y90.874 E0.13399 
+; ExtrusionMove
+G1 X89.673 Y90 E0.15816 
+; ExtrusionMove
+G1 X90.54 Y89.126 E0.16668 
+; ExtrusionMove
+G1 X91.193 Y88.253 E0.14761 
+; ExtrusionMove
+G1 X91.58 Y87.379 E0.12942 
+; ExtrusionMove
+G1 X91.759 Y86.506 E0.12066 
+; ExtrusionMove
+G1 X91.762 Y85.632 E0.11834 
+; ExtrusionMove
+G1 X91.568 Y84.759 E0.12108 
+; ExtrusionMove
+G1 X91.102 Y83.885 E0.13411 
+; ExtrusionMove
+G1 X90.272 Y82.956 E0.16867 
+; ExtrusionMove
+G1 X82.956 
+; Wipe
+G1 Y83.285 
+; Wipe
+G1 X83.551 Y83.885 
+; Wipe
+G1 X84.204 Y84.759 
+; Wipe
+G1 X84.591 Y85.632 
+; Wipe
+G1 X84.77 Y86.506 
+; Wipe
+G1 X84.774 Y87.379 
+; Wipe
+G1 X84.579 Y88.253 
+; Wipe
+G1 X84.114 Y89.126 
+; Wipe
+G1 X83.338 Y90 
+; Wipe
+G1 X82.956 Y90.385 
+; Wipe
+G1 Y92.885 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y90.385 E-0.89063 
+; Wipe
+G1 X82.975 Y90.366 E-0.00937 
+; Wipe
+G1 Z14.5 F720 
+; LiftZ
+G1 Z14.7 
+; LiftZ
+G1 Z14.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z14.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P77 R2
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P78 R2
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z14.9 F720 
+; LiftZ
+G1 X97.044 Y93.141 F9000 
+; Wipe
+G1 Z14.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y90.641 E0.33849 
+; ExtrusionMove
+G1 X96.786 Y90.874 
+; Wipe
+G1 X95.99 Y91.747 
+; Wipe
+G1 X95.475 Y92.621 
+; Wipe
+G1 X95.181 Y93.494 
+; Wipe
+G1 X95.064 Y94.368 
+; Wipe
+G1 X95.135 Y95.241 
+; Wipe
+G1 X95.483 Y96.115 
+; Wipe
+G1 X95.803 Y96.552 
+; Wipe
+G1 X96.285 Y97.044 
+; Wipe
+G1 X90.818 
+; Wipe
+G1 X89.798 Y96.115 
+; Wipe
+G1 X89.002 Y95.241 E0.16006 
+; ExtrusionMove
+G1 X88.487 Y94.368 E0.13723 
+; ExtrusionMove
+G1 X88.193 Y93.494 E0.12485 
+; ExtrusionMove
+G1 X88.075 Y92.621 E0.11927 
+; ExtrusionMove
+G1 X88.146 Y91.747 E0.11873 
+; ExtrusionMove
+G1 X88.495 Y90.874 E0.1273 
+; ExtrusionMove
+G1 X88.815 Y90.437 E0.07333 
+; ExtrusionMove
+G1 X89.235 Y90 E0.08206 
+; ExtrusionMove
+G1 X90.202 Y89.126 E0.17648 
+; ExtrusionMove
+G1 X90.998 Y88.253 E0.15996 
+; ExtrusionMove
+G1 X91.513 Y87.379 E0.13735 
+; ExtrusionMove
+G1 X91.807 Y86.506 E0.12472 
+; ExtrusionMove
+G1 X91.925 Y85.632 E0.11941 
+; ExtrusionMove
+G1 X91.854 Y84.759 E0.11859 
+; ExtrusionMove
+G1 X91.505 Y83.885 E0.12742 
+; ExtrusionMove
+G1 X91.185 Y83.448 E0.07333 
+; ExtrusionMove
+G1 X90.703 Y82.956 E0.09325 
+; ExtrusionMove
+G1 X96.17 E0.74021 
+; ExtrusionMove
+G1 X97.044 Y83.753 E0.16015 
+; ExtrusionMove
+G1 Y86.253 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y83.753 E-0.89063 
+; Wipe
+G1 X97.025 Y83.735 
+; Wipe
+G1 Z14.9 F720 
+; LiftZ
+G1 X84.76 Y82.956 F9000 
+; Wipe
+G1 Z14.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y83.652 
+; Wipe
+G1 X83.214 Y83.885 E0.04707 
+; ExtrusionMove
+G1 X84.01 Y84.759 
+; Wipe
+G1 X84.525 Y85.632 
+; Wipe
+G1 X84.819 Y86.506 
+; Wipe
+G1 X84.936 Y87.379 
+; Wipe
+G1 X84.865 Y88.253 
+; Wipe
+G1 X84.517 Y89.126 
+; Wipe
+G1 X84.197 Y89.563 
+; Wipe
+G1 X83.776 Y90 
+; Wipe
+G1 X82.956 Y90.741 
+; Wipe
+G1 Y93.241 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y90.741 E-0.89063 
+; Wipe
+G1 X82.976 Y90.723 E-0.00937 
+; Wipe
+G1 Z14.9 F720 
+; LiftZ
+G1 Z15.1 
+; LiftZ
+G1 Z15.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z15.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+M73 P79 R2
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P80 R2
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z15.3 F720 
+; LiftZ
+G1 X97.044 Y93.471 F9000 
+; Wipe
+G1 Z15.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y90.971 E0.33849 
+; ExtrusionMove
+G1 X96.164 Y91.747 
+; Wipe
+G1 X95.506 Y92.621 
+; Wipe
+G1 X95.093 Y93.494 
+; Wipe
+G1 X94.856 Y94.368 
+; Wipe
+G1 X94.79 Y95.241 
+; Wipe
+G1 X94.988 Y96.115 
+; Wipe
+G1 X95.26 Y96.552 
+; Wipe
+G1 X95.758 Y97.044 E0.09478 
+; ExtrusionMove
+G1 X91.357 
+; Wipe
+G1 X90.166 Y96.115 
+; Wipe
+G1 X89.175 Y95.241 
+; Wipe
+G1 X88.517 Y94.368 E0.14801 
+; ExtrusionMove
+G1 X88.105 Y93.494 E0.13082 
+; ExtrusionMove
+G1 X87.868 Y92.621 E0.12248 
+; ExtrusionMove
+G1 X87.801 Y91.747 E0.11868 
+; ExtrusionMove
+G1 X88 Y90.874 E0.12123 
+; ExtrusionMove
+G1 X88.272 Y90.437 E0.06969 
+; ExtrusionMove
+G1 X88.697 Y90 E0.08253 
+; ExtrusionMove
+G1 X89.834 Y89.126 E0.19417 
+; ExtrusionMove
+G1 X90.825 Y88.253 E0.17881 
+; ExtrusionMove
+G1 X91.483 Y87.379 E0.14812 
+; ExtrusionMove
+G1 X91.895 Y86.506 E0.1307 
+; ExtrusionMove
+G1 X92.132 Y85.632 E0.12261 
+; ExtrusionMove
+G1 X92.199 Y84.759 E0.11855 
+; ExtrusionMove
+G1 X92 Y83.885 E0.12136 
+; ExtrusionMove
+G1 X91.728 Y83.448 E0.06969 
+; ExtrusionMove
+G1 X91.231 Y82.956 
+; Wipe
+G1 X95.632 E0.59587 
+; ExtrusionMove
+G1 X96.822 Y83.885 E0.2044 
+; ExtrusionMove
+G1 X97.044 Y84.08 E0.04001 
+; ExtrusionMove
+G1 Y86.58 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y84.08 E-0.89063 
+; Wipe
+G1 X97.024 Y84.063 
+; Wipe
+G1 Z15.3 F720 
+; LiftZ
+G1 X84.43 Y82.956 F9000 
+; Wipe
+G1 Z15.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y83.983 
+; Wipe
+G1 X83.836 Y84.759 E0.15886 
+; ExtrusionMove
+G1 X84.494 Y85.632 
+; Wipe
+G1 X84.907 Y86.506 
+; Wipe
+G1 X85.144 Y87.379 
+; Wipe
+G1 X85.21 Y88.253 
+; Wipe
+G1 X85.012 Y89.126 
+; Wipe
+G1 X84.74 Y89.563 
+; Wipe
+G1 X84.314 Y90 
+; Wipe
+G1 X83.178 Y90.874 
+; Wipe
+G1 X82.956 Y91.069 
+; Wipe
+G1 Y93.569 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y91.069 E-0.89063 
+; Wipe
+G1 X82.976 Y91.052 E-0.00937 
+; Wipe
+G1 Z15.3 F720 
+; LiftZ
+G1 Z15.5 
+; LiftZ
+G1 Z15.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z15.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+M73 P81 R2
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P82 R2
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z15.7 F720 
+; LiftZ
+G1 X97.044 Y93.725 F9000 
+; Wipe
+G1 Z15.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.225 E0.33849 
+; ExtrusionMove
+G1 X96.904 Y91.31 
+; Wipe
+M73 P82 R1
+G1 X96.322 Y91.747 
+; Wipe
+G1 X95.862 Y92.184 
+; Wipe
+G1 X95.496 Y92.621 
+; Wipe
+G1 X94.96 Y93.494 
+; Wipe
+G1 X94.597 Y94.368 
+; Wipe
+G1 X94.363 Y95.241 
+; Wipe
+G1 X94.315 Y96.115 
+; Wipe
+G1 X94.461 Y96.552 
+; Wipe
+G1 X94.863 Y96.988 
+; Wipe
+G1 X94.951 Y97.044 E0.01412 
+; ExtrusionMove
+G1 X92.176 
+; Wipe
+G1 X92.125 Y96.988 E0.01026 
+; ExtrusionMove
+G1 X91.429 Y96.552 
+; Wipe
+G1 X90.632 Y96.115 
+; Wipe
+G1 X89.916 Y95.678 
+; Wipe
+G1 X89.334 Y95.241 
+; Wipe
+G1 X88.873 Y94.805 
+; Wipe
+G1 X88.508 Y94.368 E0.07709 
+; ExtrusionMove
+G1 X87.972 Y93.494 E0.13882 
+; ExtrusionMove
+G1 X87.608 Y92.621 E0.12806 
+; ExtrusionMove
+G1 X87.374 Y91.747 E0.1225 
+; ExtrusionMove
+G1 X87.327 Y90.874 E0.11837 
+; ExtrusionMove
+G1 X87.473 Y90.437 E0.06238 
+; ExtrusionMove
+G1 X87.875 Y90 E0.08039 
+; ExtrusionMove
+G1 X88.571 Y89.563 E0.11127 
+; ExtrusionMove
+G1 X89.368 Y89.126 E0.12307 
+; ExtrusionMove
+G1 X90.084 Y88.69 E0.1135 
+; ExtrusionMove
+G1 X90.666 Y88.253 E0.09854 
+; ExtrusionMove
+G1 X91.127 Y87.816 E0.086 
+; ExtrusionMove
+G1 X91.493 Y87.379 E0.07718 
+; ExtrusionMove
+G1 X92.028 Y86.506 E0.13863 
+; ExtrusionMove
+G1 X92.392 Y85.632 E0.12819 
+; ExtrusionMove
+G1 X92.626 Y84.759 E0.12237 
+; ExtrusionMove
+G1 X92.673 Y83.885 E0.11851 
+; ExtrusionMove
+G1 X92.527 Y83.448 E0.06238 
+; ExtrusionMove
+G1 X92.125 Y83.012 E0.0803 
+; ExtrusionMove
+G1 X92.037 Y82.956 
+; Wipe
+G1 X94.812 E0.37572 
+; ExtrusionMove
+G1 X94.863 Y83.012 
+; Wipe
+G1 X95.559 Y83.448 E0.1112 
+; ExtrusionMove
+G1 X96.357 Y83.885 E0.12319 
+; ExtrusionMove
+G1 X97.044 Y84.304 E0.10895 
+; ExtrusionMove
+G1 Y86.804 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y84.304 E-0.89063 
+; Wipe
+G1 X97.022 Y84.29 
+; Wipe
+G1 Z15.7 F720 
+; LiftZ
+G1 X84.176 Y82.956 F9000 
+; Wipe
+G1 Z15.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.237 
+; Wipe
+G1 X83.096 Y84.322 E0.02218 
+; ExtrusionMove
+G1 X83.678 Y84.759 E0.09854 
+; ExtrusionMove
+G1 X84.138 Y85.195 E0.08581 
+; ExtrusionMove
+G1 X84.504 Y85.632 
+; Wipe
+G1 X85.04 Y86.506 
+; Wipe
+G1 X85.403 Y87.379 
+; Wipe
+G1 X85.637 Y88.253 
+; Wipe
+G1 X85.685 Y89.126 
+; Wipe
+G1 X85.539 Y89.563 
+; Wipe
+G1 X85.137 Y90 
+; Wipe
+G1 X84.441 Y90.437 
+; Wipe
+G1 X83.643 Y90.874 
+; Wipe
+G1 X82.956 Y91.293 
+; Wipe
+G1 Y93.793 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y91.293 E-0.89063 
+; Wipe
+G1 X82.978 Y91.279 E-0.00937 
+; Wipe
+G1 Z15.7 F720 
+; LiftZ
+M73 P83 R1
+G1 Z15.9 
+; LiftZ
+G1 Z16.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z15.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P84 R1
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z16.1 F720 
+; LiftZ
+G1 X82.956 Y93.982 F9000 
+; Wipe
+G1 Z15.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.482 E0.33849 
+; ExtrusionMove
+G1 X83.885 Y91.067 E0.13776 
+; ExtrusionMove
+G1 X84.759 Y90.81 E0.12335 
+; ExtrusionMove
+G1 X85.632 Y90.72 E0.11883 
+; ExtrusionMove
+G1 X86.069 Y90.834 E0.06115 
+; ExtrusionMove
+G1 X86.506 Y91.221 E0.07903 
+; ExtrusionMove
+G1 X86.943 Y91.951 
+; Wipe
+G1 X87.379 Y92.793 
+; Wipe
+G1 X87.816 Y93.541 
+; Wipe
+G1 X88.253 Y94.142 
+; Wipe
+G1 X88.69 Y94.616 
+; Wipe
+G1 X89.126 Y94.991 E0.07786 
+; ExtrusionMove
+G1 X90 Y95.542 E0.13989 
+; ExtrusionMove
+G1 X90.874 Y95.921 E0.12898 
+; ExtrusionMove
+G1 X91.747 Y96.178 E0.12322 
+; ExtrusionMove
+G1 X92.621 Y96.268 E0.11896 
+; ExtrusionMove
+G1 X93.057 Y96.154 E0.06102 
+; ExtrusionMove
+G1 X93.494 Y95.767 E0.07903 
+; ExtrusionMove
+G1 X93.931 Y95.038 E0.11508 
+; ExtrusionMove
+G1 X94.368 Y94.195 E0.12856 
+; ExtrusionMove
+G1 X94.805 Y93.448 E0.11718 
+; ExtrusionMove
+G1 X95.241 Y92.846 E0.10064 
+; ExtrusionMove
+G1 X95.678 Y92.373 E0.08719 
+; ExtrusionMove
+G1 X96.115 Y91.997 E0.07805 
+; ExtrusionMove
+G1 X97.044 Y91.423 E0.14785 
+; ExtrusionMove
+G1 Y84.493 E0.93829 
+; ExtrusionMove
+G1 X96.115 Y84.079 
+; Wipe
+G1 X95.241 Y83.822 
+; Wipe
+G1 X94.368 Y83.732 
+; Wipe
+G1 X93.931 Y83.846 
+; Wipe
+G1 X93.494 Y84.233 
+; Wipe
+G1 X93.057 Y84.962 
+; Wipe
+G1 X92.621 Y85.805 
+; Wipe
+G1 X92.184 Y86.552 
+; Wipe
+G1 X91.747 Y87.154 
+; Wipe
+G1 X91.31 Y87.627 
+; Wipe
+G1 X90.874 Y88.003 
+; Wipe
+G1 X90 Y88.553 
+; Wipe
+G1 X89.126 Y88.933 
+; Wipe
+G1 X88.253 Y89.19 
+; Wipe
+G1 X87.379 Y89.28 
+; Wipe
+G1 X86.943 Y89.166 
+; Wipe
+G1 X86.506 Y88.779 
+; Wipe
+G1 X86.069 Y88.049 E0.11519 
+; ExtrusionMove
+G1 X85.632 Y87.207 E0.12844 
+; ExtrusionMove
+G1 X85.195 Y86.459 E0.11729 
+; ExtrusionMove
+G1 X84.759 Y85.858 E0.10053 
+; ExtrusionMove
+G1 X84.322 Y85.384 E0.08729 
+; ExtrusionMove
+G1 X83.885 Y85.009 
+; Wipe
+G1 X82.956 Y84.434 
+; Wipe
+G1 Y82.956 E0.20011 
+; ExtrusionMove
+G1 X83.978 E0.13837 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.956 
+; Wipe
+G1 Y84.434 
+; Wipe
+G1 X82.978 Y84.448 E-0.00937 
+; Wipe
+G1 Z16.1 F720 
+; LiftZ
+G1 Z16.3 
+; LiftZ
+G1 Z16.5 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z16.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F900 
+; Retraction
+M73 P85 R1
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F900 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P86 R1
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z16.5 F720 
+; LiftZ
+G1 X96.23 Y94.457 F9000 
+; Wipe
+G1 Z16.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y91.957 E0.33849 
+; ExtrusionMove
+G1 X96.115 Y92.013 
+; Wipe
+G1 X95.241 Y92.689 
+; Wipe
+G1 X94.368 Y93.709 
+; Wipe
+G1 X93.494 Y94.874 
+; Wipe
+G1 X93.057 Y95.299 
+; Wipe
+G1 X92.621 Y95.563 
+; Wipe
+G1 X91.747 Y95.739 
+; Wipe
+G1 X90.874 Y95.654 
+; Wipe
+G1 X90 Y95.403 
+; Wipe
+G1 X89.126 Y94.976 
+; Wipe
+G1 X88.253 Y94.299 
+; Wipe
+G1 X87.379 Y93.28 E0.18176 
+; ExtrusionMove
+G1 X86.506 Y92.115 E0.19711 
+; ExtrusionMove
+G1 X86.069 Y91.689 
+; Wipe
+G1 X85.632 Y91.426 
+; Wipe
+G1 X84.759 Y91.249 
+; Wipe
+G1 X83.885 Y91.334 
+; Wipe
+G1 X83.77 Y91.367 
+; Wipe
+G1 Y84.968 E0.86639 
+; ExtrusionMove
+G1 X83.885 Y85.024 E0.01732 
+; ExtrusionMove
+G1 X84.759 Y85.701 E0.14968 
+; ExtrusionMove
+G1 X85.632 Y86.72 
+; Wipe
+G1 X86.506 Y87.885 
+; Wipe
+G1 X86.943 Y88.311 E0.08263 
+; ExtrusionMove
+G1 X87.379 Y88.574 E0.06894 
+; ExtrusionMove
+G1 X88.253 Y88.751 E0.12074 
+; ExtrusionMove
+G1 X89.126 Y88.666 E0.11876 
+; ExtrusionMove
+G1 X90 Y88.414 E0.12316 
+; ExtrusionMove
+G1 X90.874 Y87.987 E0.1317 
+; ExtrusionMove
+G1 X91.747 Y87.311 E0.14949 
+; ExtrusionMove
+G1 X92.621 Y86.291 E0.18187 
+; ExtrusionMove
+G1 X93.494 Y85.126 E0.19711 
+; ExtrusionMove
+G1 X93.931 Y84.701 E0.08253 
+; ExtrusionMove
+G1 X94.368 Y84.437 E0.06913 
+; ExtrusionMove
+G1 X95.241 Y84.261 E0.12058 
+; ExtrusionMove
+G1 X96.115 Y84.346 E0.11889 
+; ExtrusionMove
+G1 X96.23 Y84.379 E0.0162 
+; ExtrusionMove
+G1 Y86.879 
+; Wipe
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 Y84.379 E-0.89063 
+; Wipe
+G1 X96.205 Y84.372 
+; Wipe
+G1 Z16.5 F720 
+; LiftZ
+G1 X82.956 Y96.637 F9000 
+; Wipe
+G1 Z16.3 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F900 
+; Retraction
+G1 Y83.363 E1.79726 
+; ExtrusionMove
+G1 X82.979 Y83.251 E0.01637 
+; ExtrusionMove
+G1 X83.003 Y83.138 E0.01743 
+; ExtrusionMove
+M73 P87 R1
+G1 X83.026 Y83.026 E0.01814 
+; ExtrusionMove
+G1 X83.138 Y83.003 E0.01814 
+; ExtrusionMove
+G1 X83.251 Y82.979 E0.01743 
+; ExtrusionMove
+G1 X83.363 Y82.956 E0.01637 
+; ExtrusionMove
+G1 X96.637 E1.79726 
+; ExtrusionMove
+G1 X96.749 Y82.979 E0.01637 
+; ExtrusionMove
+G1 X96.862 Y83.003 E0.01743 
+; ExtrusionMove
+G1 X96.974 Y83.026 E0.01814 
+; ExtrusionMove
+G1 X96.996 Y83.115 
+; Wipe
+G1 X97.018 Y83.204 
+; Wipe
+G1 X97.041 Y83.292 
+; Wipe
+G1 X97.044 Y83.363 
+; Wipe
+G1 Y96.637 
+; Wipe
+G1 X97.021 Y96.749 
+; Wipe
+G1 X96.997 Y96.862 
+; Wipe
+G1 X96.974 Y96.974 
+; Wipe
+G1 X96.862 Y96.997 
+; Wipe
+G1 X96.749 Y97.021 
+; Wipe
+G1 X96.637 Y97.044 
+; Wipe
+G1 X83.363 
+; Wipe
+G1 X83.271 Y97.025 
+; Wipe
+G1 X83.179 Y97.006 
+; Wipe
+G1 X83.087 Y96.987 
+; Wipe
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X83.179 Y97.006 E-0.03347 
+; Wipe
+G1 X83.271 Y97.025 E-0.03347 
+; Wipe
+G1 X83.363 Y97.044 E-0.03347 
+; Wipe
+G1 X85.607 E-0.79959 
+; Wipe
+G1 Z16.5 F720 
+; LiftZ
+G1 Z16.7 
+; LiftZ
+G1 Z16.9 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z16.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1179 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1179 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+M73 P88 R1
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z16.9 F720 
+; LiftZ
+G1 X97.41 Y95.096 F9000 
+; Wipe
+G1 Z16.7 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1320 
+; Retraction
+G1 X96.271 Y97.046 
+; Wipe
+G1 X95.326 
+; Wipe
+G1 X97.046 Y94.102 E0.65219 
+; ExtrusionMove
+G1 Y92.486 E0.30911 
+; ExtrusionMove
+G1 X94.382 Y97.046 
+; Wipe
+G1 X93.438 
+; Wipe
+G1 X97.046 Y90.87 E1.36816 
+; ExtrusionMove
+G1 Y89.254 E0.30911 
+; ExtrusionMove
+G1 X92.493 Y97.046 
+; Wipe
+G1 X91.549 
+; Wipe
+G1 X97.046 Y87.638 E2.08422 
+; ExtrusionMove
+G1 Y86.021 E0.3093 
+; ExtrusionMove
+G1 X90.604 Y97.046 
+; Wipe
+G1 X89.66 
+; Wipe
+G1 X97.046 Y84.405 E2.80045 
+; ExtrusionMove
+G1 Y82.954 E0.27755 
+; ExtrusionMove
+M73 P89 R1
+G1 X96.95 
+; Wipe
+G1 X88.716 Y97.046 
+; Wipe
+G1 X87.771 
+; Wipe
+G1 X96.006 Y82.954 E3.12201 
+; ExtrusionMove
+G1 X95.062 
+; Wipe
+G1 X86.827 Y97.046 
+; Wipe
+G1 X85.883 
+; Wipe
+G1 X94.117 Y82.954 E3.12192 
+; ExtrusionMove
+G1 X93.173 
+; Wipe
+G1 X84.938 Y97.046 
+; Wipe
+G1 X83.994 
+; Wipe
+G1 X92.228 Y82.954 E3.12192 
+; ExtrusionMove
+G1 X91.284 
+; Wipe
+G1 X83.05 Y97.046 
+; Wipe
+G1 X82.954 
+; Wipe
+G1 Y95.595 E0.27755 
+; ExtrusionMove
+G1 X90.34 Y82.954 E2.80045 
+; ExtrusionMove
+G1 X89.395 
+; Wipe
+M73 P90 R1
+G1 X82.954 Y93.978 
+; Wipe
+G1 Y92.362 E0.30911 
+; ExtrusionMove
+G1 X88.451 Y82.954 E2.08422 
+; ExtrusionMove
+G1 X87.507 
+; Wipe
+G1 X82.954 Y90.746 
+; Wipe
+G1 Y89.13 E0.30911 
+; ExtrusionMove
+G1 X86.562 Y82.954 E1.36816 
+; ExtrusionMove
+G1 X85.618 
+; Wipe
+G1 X82.954 Y87.514 
+; Wipe
+G1 Y85.897 E0.3093 
+; ExtrusionMove
+G1 X84.674 Y82.954 E0.65203 
+; ExtrusionMove
+G1 X83.729 
+; Wipe
+G1 X82.59 Y84.904 
+; Wipe
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X83.729 Y82.954 E-0.80451 
+; Wipe
+G1 X83.997 E-0.09549 
+; Wipe
+G1 Z16.9 F720 
+; LiftZ
+G1 Z17.1 
+; LiftZ
+G1 Z17.3 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z17.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1283 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1283 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+M73 P91 R1
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+M73 P91 R0
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z17.3 F720 
+; LiftZ
+G1 X83.022 Y96.823 F9000 
+; Wipe
+G1 Z17.1 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F1283 
+; Retraction
+G1 X82.933 Y96.912 
+; Wipe
+G1 X82.966 Y97.034 
+; Wipe
+G1 X83.088 Y97.067 E0.02126 
+; ExtrusionMove
+G1 X83.177 Y96.978 E0.02118 
+; ExtrusionMove
+G1 X83.144 Y96.856 E0.02126 
+; ExtrusionMove
+G1 X82.956 Y95.555 E0.17798 
+; ExtrusionMove
+G1 X84.445 Y97.044 E0.28511 
+; ExtrusionMove
+G1 X85.596 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y94.404 E0.5055 
+; ExtrusionMove
+G1 Y93.252 E0.15598 
+; ExtrusionMove
+G1 X86.748 Y97.044 E0.72608 
+; ExtrusionMove
+G1 X87.899 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y92.101 E0.94647 
+; ExtrusionMove
+G1 Y90.95 E0.15584 
+; ExtrusionMove
+G1 X89.05 Y97.044 E1.16687 
+; ExtrusionMove
+G1 X90.202 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y89.798 E1.38745 
+; ExtrusionMove
+G1 Y88.647 E0.15584 
+; ExtrusionMove
+G1 X91.353 Y97.044 E1.60784 
+; ExtrusionMove
+G1 X92.505 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y87.495 E1.82842 
+; ExtrusionMove
+G1 Y86.344 E0.15584 
+; ExtrusionMove
+M73 P92 R0
+G1 X93.656 Y97.044 E2.04881 
+; ExtrusionMove
+G1 X94.807 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y85.193 E2.2692 
+; ExtrusionMove
+G1 Y84.041 E0.15598 
+; ExtrusionMove
+G1 X95.959 Y97.044 E2.48978 
+; ExtrusionMove
+G1 X97.044 Y96.977 E0.14718 
+; ExtrusionMove
+G1 X83.023 Y82.956 E2.68471 
+; ExtrusionMove
+G1 X84.174 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y95.826 E2.46432 
+; ExtrusionMove
+G1 Y94.675 E0.15584 
+; ExtrusionMove
+G1 X85.325 Y82.956 E2.24393 
+; ExtrusionMove
+G1 X86.477 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y93.523 E2.02335 
+; ExtrusionMove
+G1 Y92.372 E0.15584 
+; ExtrusionMove
+G1 X87.628 Y82.956 E1.80295 
+; ExtrusionMove
+G1 X88.78 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y91.22 E1.58237 
+; ExtrusionMove
+M73 P93 R0
+G1 Y90.069 E0.15584 
+; ExtrusionMove
+G1 X89.931 Y82.956 E1.36198 
+; ExtrusionMove
+G1 X91.082 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y88.918 E1.14159 
+; ExtrusionMove
+G1 Y87.766 E0.15598 
+; ExtrusionMove
+G1 X92.234 Y82.956 E0.92101 
+; ExtrusionMove
+G1 X93.385 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y86.615 E0.70062 
+; ExtrusionMove
+G1 Y85.464 E0.15584 
+; ExtrusionMove
+G1 X94.536 Y82.956 E0.48023 
+; ExtrusionMove
+G1 X95.688 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y84.312 E0.25964 
+; ExtrusionMove
+G1 X97.066 Y82.934 E0.1866 
+; ExtrusionMove
+G1 X97.097 Y83.046 
+; Wipe
+G1 X97.014 Y83.129 
+; Wipe
+G1 X96.901 Y83.099 
+; Wipe
+G1 X96.871 Y82.986 E0.01816 
+; ExtrusionMove
+G1 X96.954 Y82.903 E0.01823 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.871 Y82.986 
+; Wipe
+G1 X96.901 Y83.099 
+; Wipe
+G1 X97.014 Y83.129 E-0.04165 
+; Wipe
+G1 X97.097 Y83.046 E-0.04182 
+; Wipe
+G1 X97.066 Y82.934 E-0.0414 
+; Wipe
+G1 X97.044 Y84.312 
+; Wipe
+G1 X96.646 Y83.914 E-0.20068 
+; Wipe
+G1 Z17.3 F720 
+; LiftZ
+G1 Z17.5 
+; LiftZ
+G1 Z17.7 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z17.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1282 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1282 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+M73 P94 R0
+G1 X98.55 E2.31526 
+; ExtrusionMove
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z17.7 F720 
+; LiftZ
+G1 X83.177 Y83.022 F9000 
+; Wipe
+G1 Z17.5 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P1500
+G1 F1282 
+; Retraction
+G1 X83.088 Y82.933 E0.02118 
+; ExtrusionMove
+G1 X82.966 Y82.966 
+; Wipe
+G1 X82.933 Y83.088 
+; Wipe
+G1 X83.022 Y83.177 E0.02118 
+; ExtrusionMove
+G1 X83.144 Y83.144 E0.02126 
+; ExtrusionMove
+G1 X82.956 Y84.445 
+; Wipe
+G1 X84.445 Y82.956 E0.28511 
+; ExtrusionMove
+G1 X85.596 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y85.596 
+; Wipe
+G1 Y86.748 
+; Wipe
+G1 X86.748 Y82.956 E0.72608 
+; ExtrusionMove
+G1 X87.899 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y87.899 
+; Wipe
+G1 Y89.05 
+; Wipe
+G1 X89.05 Y82.956 E1.16687 
+; ExtrusionMove
+G1 X90.202 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y90.202 
+; Wipe
+G1 Y91.353 
+; Wipe
+G1 X91.353 Y82.956 E1.60784 
+; ExtrusionMove
+G1 X92.505 E0.15598 
+; ExtrusionMove
+G1 X82.956 Y92.505 
+; Wipe
+G1 Y93.656 
+; Wipe
+M73 P95 R0
+G1 X93.656 Y82.956 E2.04881 
+; ExtrusionMove
+G1 X94.807 E0.15584 
+; ExtrusionMove
+G1 X82.956 Y94.807 
+; Wipe
+G1 Y95.959 
+; Wipe
+G1 X95.959 Y82.956 E2.48978 
+; ExtrusionMove
+G1 X97.044 Y83.023 E0.14718 
+; ExtrusionMove
+G1 X83.023 Y97.044 
+; Wipe
+G1 X84.174 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y84.174 E2.46432 
+; ExtrusionMove
+G1 Y85.325 
+; Wipe
+G1 X85.325 Y97.044 
+; Wipe
+G1 X86.477 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y86.477 E2.02335 
+; ExtrusionMove
+G1 Y87.628 
+; Wipe
+G1 X87.628 Y97.044 
+; Wipe
+G1 X88.78 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y88.78 E1.58237 
+; ExtrusionMove
+M73 P96 R0
+G1 Y89.931 
+; Wipe
+G1 X89.931 Y97.044 
+; Wipe
+G1 X91.082 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y91.082 E1.14159 
+; ExtrusionMove
+G1 Y92.234 
+; Wipe
+G1 X92.234 Y97.044 
+; Wipe
+G1 X93.385 E0.15584 
+; ExtrusionMove
+G1 X97.044 Y93.385 E0.70062 
+; ExtrusionMove
+G1 Y94.536 
+; Wipe
+G1 X94.536 Y97.044 
+; Wipe
+G1 X95.688 E0.15598 
+; ExtrusionMove
+G1 X97.044 Y95.688 E0.25964 
+; ExtrusionMove
+G1 X97.097 Y96.954 
+; Wipe
+G1 X97.014 Y96.871 E0.01823 
+; ExtrusionMove
+G1 X96.901 Y96.901 
+; Wipe
+G1 X96.871 Y97.014 
+; Wipe
+G1 X96.954 Y97.097 E0.01823 
+; ExtrusionMove
+G1 X97.066 Y97.066 E0.01805 
+; ExtrusionMove
+M204 P1000
+G92 E0
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.954 Y97.097 
+; Wipe
+G1 X96.871 Y97.014 E-0.04182 
+; Wipe
+G1 X96.901 Y96.901 E-0.04165 
+; Wipe
+G1 X97.014 Y96.871 E-0.04165 
+; Wipe
+G1 X97.097 Y96.954 E-0.04182 
+; Wipe
+G1 X97.044 Y95.688 E-0.45141 
+; Wipe
+G1 X96.567 Y96.165 
+; Wipe
+G1 Z17.7 F720 
+; LiftZ
+G1 Z17.9 
+; LiftZ
+G1 Z18.1 
+; LiftZ
+G1 X97.736 Y97.736 F9000 
+; Wipe
+G1 Z17.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+G1 F1492 
+; Retraction
+G1 X82.264 
+; Wipe
+G1 Y82.264 E2.09483 
+; ExtrusionMove
+G1 X97.736 E2.09483 
+; ExtrusionMove
+G1 Y97.616 
+; Wipe
+G1 X98.55 Y98.55 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X81.45 
+; Wipe
+G1 Y81.45 E2.31526 
+; ExtrusionMove
+G1 X98.55 E2.31526 
+; ExtrusionMove
+M73 P97 R0
+G1 Y98.43 
+; Wipe
+M204 P1000
+G1 X97.777 Y98.343 F9000 
+; Wipe
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X96.024 Y98.448 
+; Wipe
+G1 Z18.1 F720 
+; LiftZ
+G1 X95.945 Y82.585 F9000 
+; Wipe
+G1 Z17.9 F720 
+; LowerZ
+G1 E3 F1200 
+; DeRetraction
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y84.055 E0.25124 
+; ExtrusionMove
+M204 P1000
+G1 Y85.083 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X94.917 Y82.585 E0.42693 
+; ExtrusionMove
+M204 P1000
+G1 X93.89 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y86.11 E0.60245 
+; ExtrusionMove
+M204 P1000
+G1 Y87.138 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X92.862 Y82.585 E0.77815 
+; ExtrusionMove
+M204 P1000
+G1 X91.834 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y88.166 E0.95384 
+; ExtrusionMove
+M204 P1000
+G1 Y89.194 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X90.806 Y82.585 E1.12953 
+; ExtrusionMove
+M204 P1000
+G1 X89.779 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y90.221 E1.30506 
+; ExtrusionMove
+M204 P1000
+G1 Y91.249 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X88.751 Y82.585 E1.48075 
+; ExtrusionMove
+M204 P1000
+G1 X87.723 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y92.277 E1.65644 
+; ExtrusionMove
+M204 P1000
+G1 Y93.304 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X86.696 Y82.585 E1.83197 
+; ExtrusionMove
+M204 P1000
+G1 X85.668 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y94.332 E2.00766 
+; ExtrusionMove
+M204 P1000
+G1 Y95.36 F9000 
+; Wipe
+M204 P800
+M73 P98 R0
+G1 F1492 
+; Retraction
+G1 X84.64 Y82.585 E2.18336 
+; ExtrusionMove
+M204 P1000
+G1 X83.612 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X97.415 Y96.388 E2.35905 
+; ExtrusionMove
+M204 P1000
+G1 Y97.415 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y82.585 E2.53457 
+; ExtrusionMove
+M204 P1000
+G1 Y83.613 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X96.387 Y97.415 E2.35888 
+; ExtrusionMove
+M204 P1000
+G1 X95.36 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y84.64 E2.18336 
+; ExtrusionMove
+M204 P1000
+G1 Y85.668 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X94.332 Y97.415 E2.00766 
+; ExtrusionMove
+M204 P1000
+G1 X93.304 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y86.696 E1.83197 
+; ExtrusionMove
+M204 P1000
+G1 Y87.723 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X92.277 Y97.415 E1.65644 
+; ExtrusionMove
+M204 P1000
+G1 X91.249 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y88.751 E1.48075 
+; ExtrusionMove
+M204 P1000
+G1 Y89.779 F9000 
+; Wipe
+M204 P800
+M73 P99 R0
+G1 F1492 
+; Retraction
+G1 X90.221 Y97.415 E1.30506 
+; ExtrusionMove
+M204 P1000
+G1 X89.193 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y90.807 E1.12936 
+; ExtrusionMove
+M204 P1000
+G1 Y91.834 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X88.166 Y97.415 E0.95384 
+; ExtrusionMove
+M204 P1000
+G1 X87.138 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y92.862 E0.77815 
+; ExtrusionMove
+M204 P1000
+G1 Y93.89 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X86.11 Y97.415 E0.60245 
+; ExtrusionMove
+M204 P1000
+G1 X85.083 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X82.585 Y94.917 E0.42693 
+; ExtrusionMove
+M204 P1000
+G1 Y95.945 F9000 
+; Wipe
+M204 P800
+G1 F1492 
+; Retraction
+G1 X84.055 Y97.415 E0.25124 
+; ExtrusionMove
+M204 P1000
+G1 E-2.1 F2700 
+; Retraction
+G1 F7200 
+; Retraction
+G1 X82.585 Y95.945 E-0.74061 
+; Wipe
+G1 E-0.15939 F2700 
+; Retraction
+G1 Z18.1 F720 
+; LiftZ
+M107
+G1 E-1 F2100 
+; Retraction
+G1 Z19.9 F720 
+; LiftZ
+G1 X178 Y178 F4200 
+; Wipe
+G1 Z47.9 F720 
+; LiftZ
+G4
+M104 S0
+M140 S0
+M107
+M221 S100
+M900 K0
+M84
+M73 P100 R0
+
