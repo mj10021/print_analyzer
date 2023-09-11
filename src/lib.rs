@@ -2,9 +2,9 @@
 #![allow(dead_code)]
 
 mod parse;
-mod process;
+mod gui;
+use parse::{Emit, Vertex, Node, Label, Parsed, Pos};
 
-use parse::*;
 use std::collections::linked_list::CursorMut;
 
 fn normalize_move_len(gcode: &mut Parsed, len: f32) {
