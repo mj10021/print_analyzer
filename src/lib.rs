@@ -8,44 +8,54 @@ use parse::*;
 use std::collections::linked_list::CursorMut;
 
 fn normalize_move_len(gcode: &mut Parsed, len: f32) {
+    // stuck in loop
     subdivide_all(gcode, len);
     let mut dist = 0.0;
     let mut start = -1;
     let mut cur = gcode.nodes.cursor_front_mut();
 
     while cur.peek_next().is_some() {
-        if let Some(Node::Vertex(v)) = cur.current() {
-            dist += v.dist();
-            if dist > len {
-                let current = v.id;
-                dist = 0.0;
-                loop {
-                    if let Some(Node::Vertex(v)) = cur.peek_prev() {
-                        if v.id == start {
-                            break;
-                        }
-                    }
-                    cur.move_prev();
-                }
-                loop {
-                    if let Some(Node::Vertex(v)) = cur.current() {
-                        if v.id == current {
-                            break;
-                        } else {
-                            cur.remove_current();
-                        }
-                    } else {
-                        cur.move_next();
+        let (len, id) = match cur.current() {
+            Some(Node::Vertex(v)) => (v.dist(), v.id),
+            _ => (0.0, -1),
+        };
+        dist += len;
+        if dist > len {
+            let current = id;
+            dist = 0.0;
+            loop {
+                if let Some(Node::Vertex(v)) = cur.peek_prev() {
+                    if v.id == start {
+                        break;
                     }
                 }
-                start = v.id;
+                cur.move_prev();
             }
-            if start != v.id {
-
+            loop {
+                if let Some(Node::Vertex(v)) = cur.current() {
+                    if v.id == current {
+                        start = current;
+                        break;
+                    } else {
+                        cur.remove_current();
+                    }
+                } else {
+                    cur.move_next();
+                }
             }
         }
         cur.move_next();
     }
+}
+#[test]
+fn normalize_test() {
+    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    normalize_move_len(&mut gcode, 0.5);
+    let gcode = gcode.emit(false);
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("normalize_output.gcode").expect("failed to create file");
+    let _ = f.write_all(&gcode.as_bytes());
 }
 
 fn subdivide_all(gcode: &mut Parsed, len: f32) {
@@ -64,7 +74,7 @@ fn subdivide_all(gcode: &mut Parsed, len: f32) {
 fn sub_all_test() {
     let mut gcode = Parsed::build("test_line_wall.gcode").expect("failed to parse gcode");
     subdivide_all(&mut gcode, 2.0);
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("sub_all_output.gcode").expect("failed to create file");
@@ -119,7 +129,7 @@ fn blend_seam(gcode: &mut Parsed) {
 fn seam_blend_test() {
     let mut gcode = Parsed::build("test_onewall.gcode").expect("failed to parse gcode");
     blend_seam(&mut gcode);
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("seam_output.gcode").expect("failed to create file");
@@ -150,7 +160,7 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
 fn erode_test() {
     let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
     erode(&mut gcode, (82.0, 97.0, 10.0), 5.0);
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("erosion_output.gcode").expect("failed to create file");
@@ -175,7 +185,7 @@ fn filter_test() {
     let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
     gcode.update_nodes();
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("filter_output.gcode").expect("failed to create file");
@@ -215,7 +225,7 @@ fn filter_map_test() {
     }
     gcode.update_nodes();
     filter_map(&mut gcode, |v| v.id % 2 == 0, |v| v.to.z += 0.1);
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("mod_output.gcode").expect("failed to create file");
@@ -264,7 +274,7 @@ fn map_test() {
         }
     }
     gcode.update_nodes();
-    let gcode = gcode.emit();
+    let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("map_output.gcode").expect("failed to create file");
@@ -324,7 +334,7 @@ fn merge_test() {
         cur.move_prev();
     }
     loop {
-        if let Some(Node::Vertex(v)) = cur.current() {
+        if let Some(Node::Vertex(_)) = cur.current() {
             break;
         }
         cur.move_next();
@@ -394,7 +404,7 @@ fn one_sub_test() {
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("sub_output.gcode").expect("failed to create file");
-    let _ = f.write_all(&gcode.emit().as_bytes());
+    let _ = f.write_all(&gcode.emit(false).as_bytes());
 }
 #[test]
 fn sub_test() {
@@ -420,13 +430,13 @@ mod integration_tests {
     fn import_emit_reemit() {
         let f = "test.gcode";
         let p_init = Parsed::build(f).expect("failed to parse gcode");
-        let init = p_init.emit();
+        let init = p_init.emit(false);
         use std::fs::File;
         use std::io::prelude::*;
         let mut f = File::create("test_output.gcode").expect("failed to create file");
         let _ = f.write_all(&init.as_bytes());
         let snd = Parsed::build("test_output.gcode").expect("asdf");
-        let snd = snd.emit();
+        let snd = snd.emit(false);
         let snd = Parsed::build(&snd).expect("failed to parse reemitted file");
         assert_eq!(p_init, snd);
     }

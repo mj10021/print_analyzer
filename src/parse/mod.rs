@@ -617,13 +617,10 @@ fn parsed_test() {
     panic!("{:?}", parsed);
 }
 pub trait Emit {
-    fn emit(&self) -> String;
-    fn debug_emit(&self) -> String {
-        self.emit()
-    }
+    fn emit(&self, debug: bool) -> String;
 }
 impl Emit for Instruction {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
         let Instruction {
             first_word: Word(letter, num, string),
             params,
@@ -637,19 +634,25 @@ impl Emit for Instruction {
                 out += &format!(" {}{}", letter, val);
             }
         }
+        if debug {
+            out += &format!("; {:?}\n", self);
+        }
         out + "\n"
     }
 }
 impl Emit for Line {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
         match self {
-            Line::Instruction(ins) => ins.emit(),
+            Line::Instruction(ins) => ins.emit(debug),
             Line::Raw(string) => string.clone(),
         }
     }
 }
 impl Emit for Pos {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
+        if debug {
+            return format!("X{} Y{} Z{} E{} F{}; {:?}\n", self.x, self.y, self.z, self.e, self.f, self);
+        }
         assert!(self.x.is_finite() && !self.x.is_nan());
         assert!(self.y.is_finite() && !self.y.is_nan());
         assert!(self.z.is_finite() && !self.z.is_nan());
@@ -663,7 +666,7 @@ impl Emit for Pos {
     }
 }
 impl Emit for Vertex {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
         if self.to.x == 0.0
             && self.to.y == 0.0
             && self.to.z == 0.0
@@ -694,30 +697,27 @@ impl Emit for Vertex {
             out += &format!("F{} ", self.to.f);
         }
         out += "\n";
+        if debug {
+            out += &format!("; {:?}\n; {:?}\n; {:?} \n", self.label, self.from, self.to);
+        }
         out
     }
 }
 impl Emit for Node {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
         match self {
-            Node::Vertex(v) => v.emit(),
-            Node::NonMove(line) => line.emit(),
+            Node::Vertex(v) => v.emit(debug),
+            Node::NonMove(line) => line.emit(debug),
             Node::LayerStart => "; LAYER START\n".to_string(),
             Node::LayerEnd => "; LAYER END\n".to_string(),
         }
     }
 }
 impl Emit for Parsed {
-    fn emit(&self) -> String {
+    fn emit(&self, debug: bool) -> String {
         let mut out = String::new();
         for node in &self.nodes {
-            out += &node.emit();
-            if let Node::Vertex(v) = node {
-                out += &format!("; {:?}\n; {:?}\n; {:?} \n", v.label, v.from, v.to);
-                if v.prev.is_some() {
-                    out += &format!("; {:?}\n", unsafe { (*(v.prev.unwrap())).to });
-                }
-            }
+            out += &node.emit(debug);
         }
         out += "\n";
         out
