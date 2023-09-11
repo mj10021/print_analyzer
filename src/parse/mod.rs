@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, LinkedList, VecDeque};
-use std::f32::NEG_INFINITY;
+use std::f32::{EPSILON , NEG_INFINITY};
 
 use self::feature_finder::Layer;
 
@@ -156,46 +156,53 @@ fn pre_home(p: Pos) -> bool {
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
+    // this is (FIXME) a pointer to the previous extrusion move (abs(x + y) > 0 && e > 0)
     pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
 }
+
 impl Vertex {
-    fn label(&mut self, first_move: i32) {
+    fn label(&mut self, pre_print: bool) {
+        // FIXME: i think some of the from values are wrong so the labelling is not quite right
         let dx = self.to.x - self.from.x;
         let dy = self.to.y - self.from.y;
         let dz = self.to.z - self.from.z;
         let de = self.to.e;
         self.label = {
-            if self.id == 1 {
-                Label::FirstG1
-            } else if self.id < first_move {
+            if pre_print {
                 Label::PrePrintMove
-            } else if de > 0.0 {
-                if dx.abs() > 0.0 || dy.abs() > 0.0 {
-                    Label::ExtrusionMove
+            } else if de > EPSILON {
+                if dx.abs() + dy.abs() > EPSILON {
+                    if dz.abs() > EPSILON {
+                        Label::NonPlanarExtrusion
+                    } else {
+                        Label::PlanarExtrustion
+                    }
                 } else {
                     Label::DeRetraction
                 }
-            } else if dz > 0.0 {
-                Label::LiftZ
-            } else if dz < 0.0 {
-                Label::LowerZ
-            } else if de < 0.000001 {
-                if dx.abs() > 0.0 || dy.abs() > 0.0 {
+            } else if dz.abs() > EPSILON {
+                if dz < -1.0 * EPSILON {
+                    Label::LowerZ
+                } else {
+                    Label::LiftZ
+                }
+            } else if de.abs() > EPSILON {
+                if dx.abs() + dy.abs() > EPSILON {
                     Label::Wipe
                 } else {
                     Label::Retraction
                 }
-            } else if dx.abs() > 0.000001 || dy.abs() > 0.000001 {
+            } else if dx.abs() + dy.abs() > EPSILON {
                 Label::TravelMove
             } else if self.from.f != self.to.f {
                 Label::FeedrateChangeOnly
             } else {
-                Label::MysteryMove
+                //Label::MysteryMove
+                panic!("labelling imcomplete")
             }
         };
-
     }
     pub fn dist(&self) -> f32 {
         ((self.to.x - self.from.x).powf(2.0)
@@ -225,8 +232,11 @@ impl Vertex {
         // I think right now this is looking at deretractions and getting infinite flow
         // needs to link to the last extrusion move, not the last g1
         assert!(self.prev.is_some());
-        assert!(self.label == Label::ExtrusionMove);
-        assert!((*(self.prev.unwrap())).label == Label::ExtrusionMove);
+        assert!(self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion);
+        assert!(
+            (*(self.prev.unwrap())).label == Label::PlanarExtrustion
+                || (*(self.prev.unwrap())).label == Label::NonPlanarExtrusion
+        );
         let prev = self.prev.unwrap();
         let (xi, yi, zi) = (*prev).from.to_tup();
         let (xf, yf, zf) = (*prev).to.to_tup();
@@ -307,6 +317,7 @@ pub struct Parsed {
 impl Parsed {
     pub fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
         let mut g1_moves = 0;
+        let mut pre_print = true;
         let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
         let mut rel_e = true;
@@ -320,10 +331,14 @@ impl Parsed {
         // prev holds a raw mut pointer to the to position of the previous vertex
         let mut prev: Option<*mut Vertex> = None;
         for line in lines {
+            // remove all comments and whitespace
             let line = clean_line(&line);
+            // skip empty lines (probably from lines that are only comments)
             if line.len() < 1 {
                 continue;
             }
+            // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
+            // might want to change instruction number to int, but sometimes a decimal is used with the instruction in prusa gcode )
             let mut line = read_line(line);
             if line.len() < 1 {
                 continue;
@@ -332,7 +347,9 @@ impl Parsed {
             if let Some(&Word('N', _, _)) = line.front() {
                 let _ = line.pop_front();
             }
+            // check if the line is a g28 homing command
             if line.front() == Some(&Word('G', 28.0, None)) {
+                // if the homing node points to a previous extrusion move node, something is wrong
                 assert!(prev.is_none(), "homing from previously homed state");
                 let vrtx = Vertex {
                     id: 0,
@@ -344,12 +361,15 @@ impl Parsed {
                 let node = Node::Vertex(vrtx);
                 parsed.push_back(node);
                 if let Node::Vertex(v) = parsed.back_mut().unwrap() {
+                    // prev now points to the homing node, this shows that it is the first extrusion move
                     prev = Some(v as *mut Vertex);
                 } else {
                     panic!("failed to read last pushed node")
                 }
                 continue;
+            // now check for G1 moves
             } else if line.front() == Some(&Word('G', 1.0, None)) {
+                // if prev is None, it means no homing command has been read
                 assert!(&prev.is_some(), "g1 move from unhomed state");
                 g1_moves += 1;
                 let g1 = G1::build(line, g1_moves);
@@ -361,7 +381,12 @@ impl Parsed {
                         from: (*(prev.unwrap())).to.clone(),
                         prev,
                     };
-                    vrtx.label(0); // FIXME: need correct first move id
+                    if pre_print {
+                        if vrtx.to.x > 5.0 && vrtx.to.y > 5.0 {
+                            pre_print = false;
+                        }
+                    }
+                    vrtx.label(pre_print); // FIXME: need correct first move id
 
                     let node = Node::Vertex(vrtx);
                     parsed.push_back(node);
@@ -408,18 +433,17 @@ impl Parsed {
         let mut end = -1;
         while cur.peek_next().is_some() {
             if let Some(Node::Vertex(v)) = cur.current() {
-                if let Some(Layer{num: n, end_id, ..}) = p.layers.get(&v.id) {
-                    if *n > last {
-                        last = *n;
+                if let Some(Layer { i, end_id, .. }) = p.layers.get(&v.id) {
+                    if *i > last {
+                        last = *i;
                         end = *end_id;
                         cur.insert_before(Node::LayerStart);
-                    }
-                    else if v.id == end {
+                    } else if v.id == end {
                         cur.insert_after(Node::LayerEnd);
                     }
                 }
             }
-            cur.move_next();               
+            cur.move_next();
         }
         Ok(p)
     }
@@ -437,6 +461,7 @@ impl Parsed {
     }
     pub fn update_nodes(&mut self) {
         let mut id = 1;
+        let mut pre_print = true;
         for node in self.nodes.iter_mut() {
             if let Node::Vertex(v) = node {
                 v.id = id;
@@ -446,7 +471,12 @@ impl Parsed {
                         v.from = (*(v.prev.unwrap())).to.clone();
                     }
                 }
-                v.label(0);
+                if pre_print {
+                    if v.to.x > 5.0 && v.to.y > 5.0 {
+                        pre_print = false;
+                    }
+                }
+                v.label(pre_print);
             }
         }
     }
@@ -461,7 +491,8 @@ pub enum Label {
     FirstG1,
     PrePrintMove,
     TravelMove,
-    ExtrusionMove,
+    PlanarExtrustion,
+    NonPlanarExtrusion,
     LiftZ,
     LowerZ,
     MysteryMove,
@@ -526,6 +557,7 @@ impl Annotation {
                         dt: 0.0,
                         ex_width_mm: 0.0,
                     };
+                    // FIXME: read layer heights from gcode for each layer
                     a.ex_width_mm = a.get_ex_width(0.2);
                     a.dt = a.get_time(to.f);
                     a.label = {
@@ -533,25 +565,29 @@ impl Annotation {
                             Label::FirstG1
                         } else if *id < first_move {
                             Label::PrePrintMove
-                        } else if a.de > 0.0 {
-                            if a.dx.abs() > 0.0 || a.dy.abs() > 0.0 {
-                                Label::ExtrusionMove
+                        } else if a.de > EPSILON {
+                            if a.dx.abs() > EPSILON || a.dy.abs() > EPSILON {
+                                if a.dz.abs() > EPSILON {
+                                    Label::PlanarExtrustion
+                                } else {
+                                    Label::NonPlanarExtrusion
+                                }
                             } else {
                                 Label::DeRetraction
                             }
-                        } else if a.dz > 0.0 {
+                        } else if a.dz > EPSILON {
                             Label::LiftZ
-                        } else if a.dz < 0.0 {
+                        } else if a.dz < EPSILON {
                             Label::LowerZ
-                        } else if a.de < 0.0 {
-                            if a.dx.abs() > 0.0 || a.dy.abs() > 0.0 {
+                        } else if a.de < EPSILON {
+                            if a.dx.abs() > EPSILON || a.dy.abs() > EPSILON {
                                 Label::Wipe
                             } else {
                                 Label::Retraction
                             }
-                        } else if a.dx.abs() != 0.0 || a.dy.abs() != 0.0 {
+                        } else if a.dx.abs() + a.dy.abs() > EPSILON {
                             Label::TravelMove
-                        } else if from.f != to.f {
+                        } else if (from.f - to.f).abs() > EPSILON {
                             Label::FeedrateChangeOnly
                         } else {
                             Label::MysteryMove
@@ -629,7 +665,12 @@ impl Emit for Pos {
 }
 impl Emit for Vertex {
     fn emit(&self) -> String {
-        if self.to.x == 0.0 && self.to.y == 0.0 && self.to.z == 0.0 && self.to.e == 0.0 && self.id == 0 {
+        if self.to.x == 0.0
+            && self.to.y == 0.0
+            && self.to.z == 0.0
+            && self.to.e == 0.0
+            && self.id == 0
+        {
             return "G28\n".to_string();
         }
         let mut out = String::from("G1 ");
@@ -673,7 +714,10 @@ impl Emit for Parsed {
         for node in &self.nodes {
             out += &node.emit();
             if let Node::Vertex(v) = node {
-                out += &format!("; {:?}\n", v.label);
+                out += &format!("; {:?}\n; {:?}\n; {:?} \n", v.label, v.from, v.to);
+                if v.prev.is_some() {
+                    out += &format!("; {:?}\n", unsafe{ (*(v.prev.unwrap())).to });
+                }
             }
         }
         out += "\n";

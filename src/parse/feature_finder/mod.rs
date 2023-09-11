@@ -24,7 +24,9 @@ impl Shape {
             match node {
                 Node::Vertex(v) => {
                     if !in_shape {
-                        if let Some(Annotation { label: Label::ExtrusionMove, .. } ) = gcode.annotations.get(&v.id) {
+                        if v.label == Label::PlanarExtrustion
+                            || v.label == Label::NonPlanarExtrusion
+                        {
                             in_shape = true;
                             start_vtx = v.id;
                             dist += v.dist();
@@ -32,7 +34,9 @@ impl Shape {
                             continue;
                         }
                     } else {
-                        if let Some(Annotation { label: Label::ExtrusionMove, .. } ) = gcode.annotations.get(&v.id) {
+                        if v.label == Label::PlanarExtrustion
+                            || v.label == Label::NonPlanarExtrusion
+                        {
                             dist += v.dist();
                         } else {
                             in_shape = false;
@@ -60,11 +64,12 @@ impl Shape {
 }
 #[derive(PartialEq)]
 pub struct Layer {
-    pub num: i32,
+    pub i: i32,
     start_id: i32,
     pub end_id: i32,
     shapes: Vec<Shape>,
     z: f32,
+    layer_height: f32,
 }
 impl std::fmt::Debug for Layer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -87,17 +92,26 @@ impl Layer {
                 if temp_shapes.len() > 0 {
                     let start = temp_shapes[0].start_vtx;
                     let end = temp_shapes[temp_shapes.len() - 1].end_vtx;
-                    for Shape { z: _, start_vtx: s, end_vtx: f, len: _ } in temp_shapes.iter() {
+                    for Shape {
+                        z: _,
+                        start_vtx: s,
+                        end_vtx: f,
+                        len: _,
+                    } in temp_shapes.iter()
+                    {
                         for j in *s..=*f {
-                            out.insert(j, Layer {
-                                num: i,
-                                start_id: start,
-                                end_id: end,
-                                shapes: temp_shapes.clone(),
-                                z: curr_z,
-                            });
+                            out.insert(
+                                j,
+                                Layer {
+                                    i,
+                                    start_id: start,
+                                    end_id: end,
+                                    shapes: temp_shapes.clone(),
+                                    z: curr_z,
+                                    layer_height: shape.z - curr_z, // FIXME: check this
+                                },
+                            );
                         }
-
                     }
                 }
                 i += 1;
@@ -167,4 +181,3 @@ fn find_center_coord_test() {
     let center = find_centroid(&mut gcode);
     panic!("{:?}", center);
 }
-

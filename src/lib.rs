@@ -1,7 +1,6 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 
-
 mod parse;
 mod process;
 
@@ -10,19 +9,25 @@ use std::collections::linked_list::CursorMut;
 
 fn subdivide_all(gcode: &mut Parsed, count: i32) {
     let mut cur = gcode.nodes.cursor_front_mut();
-    while cur.peek_next().is_some() {
+    while cur.current().is_some() {
         if let Some(Node::Vertex(v)) = cur.current() {
-            if match gcode.annotations.get(&v.id) {
-                Some(a) => a.label == Label::ExtrusionMove,
-                None => false,
-            } {
+            if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
                 subdivide(&mut cur, count);
             }
         }
         cur.move_next();
     }
 }
-
+#[test]
+fn sub_all_test() {
+    let mut gcode = Parsed::build("test_line_wall.gcode").expect("failed to parse gcode");
+    subdivide_all(&mut gcode, 10);
+    let gcode = gcode.emit();
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("sub_all_output.gcode").expect("failed to create file");
+    let _ = f.write_all(&gcode.as_bytes());
+}
 fn blend_seam(gcode: &mut Parsed) {
     let mut cur = gcode.nodes.cursor_front_mut();
     let mut flow = -1.0;
@@ -30,12 +35,12 @@ fn blend_seam(gcode: &mut Parsed) {
     while cur.peek_next().is_some() {
         // keep track of the last extrusion move the cursor passed
         if let Some(Node::Vertex(v)) = cur.current() {
-            if let Some(a)  = gcode.annotations.get(&v.id) {
-                if a.label == Label::ExtrusionMove {
+            if let Some(a) = gcode.annotations.get(&v.id) {
+                if a.label == Label::PlanarExtrustion || a.label == Label::NonPlanarExtrusion {
                     prev = Some(v as *mut Vertex);
                     flow = a.de / v.dist();
                 }
-            }       
+            }
         }
         if let Some(Node::LayerEnd) = cur.current() {
             cur.move_next();
@@ -51,10 +56,17 @@ fn blend_seam(gcode: &mut Parsed) {
                 break;
                 //panic!("failed to find vertex");
             };
-            unsafe { (*(prev.unwrap())).to = v.from.clone(); };
-            unsafe { (*(prev.unwrap())).to.e = flow * (*(prev.unwrap())).dist(); };
+            unsafe {
+                (*(prev.unwrap())).to = v.from.clone();
+            };
+            unsafe {
+                (*(prev.unwrap())).to.e = flow * (*(prev.unwrap())).dist();
+            };
             v.prev = prev;
-            assert!(gcode.annotations.get(&v.id).unwrap().label == Label::ExtrusionMove);
+            assert!(
+                gcode.annotations.get(&v.id).unwrap().label == Label::PlanarExtrustion
+                    || gcode.annotations.get(&v.id).unwrap().label == Label::NonPlanarExtrusion
+            );
             subdivide(&mut cur, 10);
         }
         cur.move_next();
@@ -110,7 +122,9 @@ fn filter(gcode: &mut Parsed, filter: fn(&Vertex) -> bool) {
                     v.to.e = 0.0;
                 }
             }
-            _ => { continue; },
+            _ => {
+                continue;
+            }
         }
     }
 }
@@ -133,7 +147,9 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
                     map(v);
                 }
             }
-            _ => { continue; },
+            _ => {
+                continue;
+            }
         }
     }
     gcode.update_nodes();
@@ -145,7 +161,9 @@ fn filter_map_test() {
     while cur.peek_next().is_some() {
         if let Some(Node::Vertex(v)) = cur.current() {
             if match gcode.annotations.get(&v.id) {
-                Some(a) => a.label == Label::ExtrusionMove,
+                Some(a) => {
+                    a.label == Label::PlanarExtrustion || a.label == Label::NonPlanarExtrusion
+                }
                 None => false,
             } {
                 subdivide(&mut cur, 10);
@@ -167,24 +185,26 @@ fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
             Node::Vertex(v) => {
                 map(v);
             }
-            _ => { continue; },
+            _ => {
+                continue;
+            }
         }
     }
 }
 #[test]
 fn map_test() {
+    use nalgebra::{Rotation3, Vector3};
     use std::f32::consts::FRAC_PI_2;
-    use nalgebra::{Vector3, Rotation3};
-    let mut gcode = Parsed::build("test_onewall.gcode").expect("failed to parse gcode");
+    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
     let mut cur = gcode.nodes.cursor_front_mut();
-    // while cur.peek_next().is_some() {
-    //     if let Some(Node::Vertex(v)) = cur.current() {
-    //         if v.label == Label::ExtrusionMove && v.prev.is_some() && unsafe { (*(v.prev.unwrap())).label  == Label::ExtrusionMove } {
-    //             subdivide(&mut cur, 5);
-    //         }
-    //     }
-    //     cur.move_next();
-    // }
+    while cur.peek_next().is_some() {
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.label == Label::PlanarExtrustion && v.prev.is_some() && unsafe { (*(v.prev.unwrap())).label  == Label::PlanarExtrustion } {
+                subdivide(&mut cur, 5);
+            }
+        }
+        cur.move_next();
+    }
     gcode.update_nodes();
     for node in gcode.nodes.iter_mut() {
         if let Node::Vertex(v) = node {
@@ -192,9 +212,19 @@ fn map_test() {
             let vec = Vector3::new(x, y, z);
             let rot = Rotation3::from_euler_angles(0.0, 0.0, FRAC_PI_2);
             let vec = rot * vec;
-            if v.prev.is_some() && v.label == Label::ExtrusionMove && unsafe { (*(v.prev.unwrap())).label  == Label::ExtrusionMove } {
+            if v.prev.is_some()
+                && (v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion)
+                && unsafe {
+                    (*(v.prev.unwrap())).label == Label::PlanarExtrustion
+                        || (*(v.prev.unwrap())).label == Label::NonPlanarExtrusion
+                }
+            {
                 unsafe {
-                    v.translate((vec.x * v.id as f32).sin(), (vec.y * v.id as f32).sin(), 0.0);
+                    v.translate(
+                        (vec.x * v.id as f32).sin(),
+                        (vec.y * v.id as f32).sin(),
+                        0.0,
+                    );
                 }
             }
         }
@@ -205,8 +235,6 @@ fn map_test() {
     use std::io::prelude::*;
     let mut f = File::create("map_output.gcode").expect("failed to create file");
     let _ = f.write_all(&gcode.as_bytes());
-
-
 }
 // fn insert_before(feature)
 // fn modify(feature)
@@ -225,7 +253,9 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
         if let Some(Node::Vertex(next)) = cur.current() {
             i = next.id;
             cur.remove_current();
-        } else { cur.move_next(); }
+        } else {
+            cur.move_next();
+        }
     }
     while cur.peek_next().is_some() {
         if let Some(Node::Vertex(_)) = cur.current() {
@@ -238,7 +268,6 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
     };
     curr.prev = prev;
     curr.from = unsafe { (*prev.unwrap()).to }.clone();
-
 }
 #[test]
 fn merge_test() {
@@ -262,7 +291,7 @@ fn merge_test() {
     }
     loop {
         if let Some(Node::Vertex(v)) = cur.current() {
-                break;
+            break;
         }
         cur.move_next();
     }
@@ -271,6 +300,7 @@ fn merge_test() {
 }
 
 pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
+    // FIXME: this is not working on the first move of a shape
     // FIXME: I NEED TO CHECK THE MATH HERE!!!!!!!!
     assert!(count > 1);
     // take a copy of the value of the current node
@@ -318,7 +348,16 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     end.to.e *= 1.0 / count as f32;
     end.prev = prev;
     end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
-    // panic!("{:?}", debug);
+}
+#[test]
+fn one_sub_test() {
+    let gcode = "G28\ng1 f700\nG1x50y50z0.4\ng1x80e5\n";
+    let mut gcode = Parsed::build(gcode).expect("failed to parse");
+    subdivide_all(&mut gcode, 10);
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut f = File::create("sub_output.gcode").expect("failed to create file");
+    let _ = f.write_all(&gcode.emit().as_bytes());
 }
 #[test]
 fn sub_test() {

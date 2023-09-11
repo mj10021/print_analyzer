@@ -1,6 +1,5 @@
-use std::collections::linked_list::CursorMut;
 use crate::parse::*;
-
+use std::collections::linked_list::CursorMut;
 
 fn delete(cur: &mut CursorMut<Node>) {
     if let Some(Node::Vertex(v)) = cur.current() {
@@ -59,4 +58,3 @@ fn ins_test() {
     insert_g1(&mut cur, g);
     panic!("{:?}", gcode);
 }
-
