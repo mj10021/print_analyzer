@@ -7,6 +7,47 @@ mod process;
 use parse::*;
 use std::collections::linked_list::CursorMut;
 
+fn normalize_move_len(gcode: &mut Parsed, len: f32) {
+    subdivide_all(gcode, len);
+    let mut dist = 0.0;
+    let mut start = -1;
+    let mut cur = gcode.nodes.cursor_front_mut();
+
+    while cur.peek_next().is_some() {
+        if let Some(Node::Vertex(v)) = cur.current() {
+            dist += v.dist();
+            if dist > len {
+                let current = v.id;
+                dist = 0.0;
+                loop {
+                    if let Some(Node::Vertex(v)) = cur.peek_prev() {
+                        if v.id == start {
+                            break;
+                        }
+                    }
+                    cur.move_prev();
+                }
+                loop {
+                    if let Some(Node::Vertex(v)) = cur.current() {
+                        if v.id == current {
+                            break;
+                        } else {
+                            cur.remove_current();
+                        }
+                    } else {
+                        cur.move_next();
+                    }
+                }
+                start = v.id;
+            }
+            if start != v.id {
+
+            }
+        }
+        cur.move_next();
+    }
+}
+
 fn subdivide_all(gcode: &mut Parsed, len: f32) {
     let mut cur = gcode.nodes.cursor_front_mut();
     while cur.current().is_some() {
@@ -197,7 +238,7 @@ fn map_test() {
     use nalgebra::{Rotation3, Vector3};
     use std::f32::consts::FRAC_PI_2;
     let mut gcode = Parsed::build("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
-    subdivide_all(&mut gcode, 2.0);
+    subdivide_all(&mut gcode, 0.5);
     gcode.update_nodes();
     for node in gcode.nodes.iter_mut() {
         if let Node::Vertex(v) = node {

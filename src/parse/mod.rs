@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, LinkedList, VecDeque};
-use std::f32::{EPSILON , NEG_INFINITY};
+use std::f32::{EPSILON, NEG_INFINITY};
 
 use self::feature_finder::Layer;
 
@@ -715,7 +715,7 @@ impl Emit for Parsed {
             if let Node::Vertex(v) = node {
                 out += &format!("; {:?}\n; {:?}\n; {:?} \n", v.label, v.from, v.to);
                 if v.prev.is_some() {
-                    out += &format!("; {:?}\n", unsafe{ (*(v.prev.unwrap())).to });
+                    out += &format!("; {:?}\n", unsafe { (*(v.prev.unwrap())).to });
                 }
             }
         }
