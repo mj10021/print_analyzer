@@ -199,8 +199,7 @@ impl Vertex {
             } else if self.from.f != self.to.f {
                 Label::FeedrateChangeOnly
             } else {
-                //Label::MysteryMove
-                panic!("labelling imcomplete")
+                Label::MysteryMove
             }
         };
     }

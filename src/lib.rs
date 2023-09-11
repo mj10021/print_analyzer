@@ -7,10 +7,11 @@ mod process;
 use parse::*;
 use std::collections::linked_list::CursorMut;
 
-fn subdivide_all(gcode: &mut Parsed, count: i32) {
+fn subdivide_all(gcode: &mut Parsed, len: f32) {
     let mut cur = gcode.nodes.cursor_front_mut();
     while cur.current().is_some() {
         if let Some(Node::Vertex(v)) = cur.current() {
+            let count = (v.dist() / len).trunc() as i32;
             if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
                 subdivide(&mut cur, count);
             }
@@ -21,7 +22,7 @@ fn subdivide_all(gcode: &mut Parsed, count: i32) {
 #[test]
 fn sub_all_test() {
     let mut gcode = Parsed::build("test_line_wall.gcode").expect("failed to parse gcode");
-    subdivide_all(&mut gcode, 10);
+    subdivide_all(&mut gcode, 2.0);
     let gcode = gcode.emit();
     use std::fs::File;
     use std::io::prelude::*;
@@ -195,16 +196,8 @@ fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
 fn map_test() {
     use nalgebra::{Rotation3, Vector3};
     use std::f32::consts::FRAC_PI_2;
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
-    let mut cur = gcode.nodes.cursor_front_mut();
-    while cur.peek_next().is_some() {
-        if let Some(Node::Vertex(v)) = cur.current() {
-            if v.label == Label::PlanarExtrustion && v.prev.is_some() && unsafe { (*(v.prev.unwrap())).label  == Label::PlanarExtrustion } {
-                subdivide(&mut cur, 5);
-            }
-        }
-        cur.move_next();
-    }
+    let mut gcode = Parsed::build("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
+    subdivide_all(&mut gcode, 2.0);
     gcode.update_nodes();
     for node in gcode.nodes.iter_mut() {
         if let Node::Vertex(v) = node {
@@ -221,8 +214,8 @@ fn map_test() {
             {
                 unsafe {
                     v.translate(
-                        (vec.x * v.id as f32).sin(),
-                        (vec.y * v.id as f32).sin(),
+                        (vec.x * v.id as f32).sin() * 0.33,
+                        (vec.y * v.id as f32).sin() * 0.33,
                         0.0,
                     );
                 }
@@ -302,6 +295,9 @@ fn merge_test() {
 pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     // FIXME: this is not working on the first move of a shape
     // FIXME: I NEED TO CHECK THE MATH HERE!!!!!!!!
+    if count < 2 {
+        return;
+    }
     assert!(count > 1);
     // take a copy of the value of the current node
     let end = match cur.current() {
@@ -351,9 +347,9 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
 }
 #[test]
 fn one_sub_test() {
-    let gcode = "G28\ng1 f700\nG1x50y50z0.4\ng1x80e5\n";
+    let gcode = "G28\nf700\nG1x50y50z0.4\ng1x80e5\n";
     let mut gcode = Parsed::build(gcode).expect("failed to parse");
-    subdivide_all(&mut gcode, 10);
+    subdivide_all(&mut gcode, 2.0);
     use std::fs::File;
     use std::io::prelude::*;
     let mut f = File::create("sub_output.gcode").expect("failed to create file");
