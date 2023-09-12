@@ -339,224 +339,118 @@ impl Node {
             _ => panic!("not a vertex"),
         }
     }
+    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
+        let mut cur = nodes.pop_front();
+        let Some(Node::Vertex(v)) = cur else {panic!("invalid front node")};
+        assert!(v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion, "invalid front node");
+
+        let mut out = LinkedList::new();
+        let mut len = 0.0;
+        while cur.is_some() {
+            if let Some(Node::Vertex(v)) = cur {
+                if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                    len += v.dist();
+                } else { break; }
+            }
+            out.push_back(cur.unwrap());
+            cur = nodes.pop_front();
+        }
+        Node::Shape( Shape {
+            nodes: out,
+            closed: false,
+            len,
+        } )
+    }
+    fn pop_change(nodes: &mut VecDeque<Node>) -> Node {
+        // the change should end before the first extrusion move
+        // note: that does not count deretractions (e move with no x/y/z travel)
+        // keep track of the first and last position of the sequence to decide 
+        // if it should be labelled as a shape or a layer change
+        let mut out = Vec::new();
+        let mut cur = nodes.pop_front();
+        let mut start = None;
+        let mut end = None;
+        if let Some(Node::Vertex(v)) = cur {
+            if start.is_none() {
+                start = Some(v.from);
+            }
+            if v.label == Label::PlanarExtrustion || v.label == Label::PlanarExtrustion {
+                panic!("invalid front node");
+            }
+        }
+        while cur.is_some() {
+            if let Some(Node::Vertex(v)) = cur {
+                if start.is_none() {
+                    start = Some(v.from);
+                }
+                if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                    end = Some(v.to); 
+                    nodes.push_front(cur.unwrap());
+                    break;
+                }
+        }
+        if start.unwrap().z != end.unwrap().z {
+            return Node::LayerChange(out);
+        }
+        Node::ShapeChange(out)
+    }
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
 #[derive(Debug, PartialEq)]
 pub struct Parsed {
     pub nodes: LinkedList<Node>,
-    pub annotations: BTreeMap<i32, Annotation>,
-    pub layers: BTreeMap<i32, Layer>,
     rel_xyz: bool,
     rel_e: bool,
 }
 impl Parsed {
-    pub fn build_nodes(path: &str) -> VecDeque<Node> {
-        // tries reading the input as raw g-code if file parse error,
-        // this is really just for running the tests
-        let lines = match parse_file(path) {
-            Ok(str) => str,
-            Err(_) => parse_str(path),
-        };
-        assert!(lines.len() > 0);
+    pub fn build(nodes: VecDeque<Node>) -> Parsed {
         let mut pre_print = true;
-        let mut g1_moves = 0;
-        let mut temp_lines = VecDeque::new();
-        // prev holds a raw mut pointer to the to position of the previous vertex
-        let mut prev: Option<*mut Vertex> = None;
-        for line in lines {
-            // remove all comments and whitespace
-            let line = clean_line(&line);
-            // skip empty lines (probably from lines that are only comments)
-            if line.len() < 1 {
-                continue;
-            }
-            // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
-            // might want to change instruction number to int, but sometimes a decimal is used in the instruction in prusa gcode )
-            let mut line = read_line(line);
-
-            if let Some(Word(letter, val, params)) = line.pop_front() {
-                if letter == 'N' {
-                    let _ = line.pop_front();
-                }
-                let val = val as i32;
-                match (letter, val) {
-                    ('G', 28) => {
-                        // if the homing node points to a previous extrusion move node, something is wrong
-                        assert!(prev.is_none(), "homing from previously homed state");
-                        let vrtx = Vertex {
-                            id: 0,
-                            label: Label::Home,
-                            to: Pos::home(),
-                            from: Pos::unhomed(),
-                            prev,
-                        };
-                        let node = Node::Vertex(vrtx);
-                        temp_lines.push_back(node);
-                        if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
-                            // prev now points to the homing node, this shows that it is the first extrusion move
-                            prev = Some(v as *mut Vertex);
-                        } else {
-                            panic!("failed to read last pushed node")
-                        }
-                    },
-                    ('G', 1) => {
-                        // if prev is None, it means no homing command has been read
-                        assert!(&prev.is_some(), "g1 move from unhomed state");
-                        g1_moves += 1;
-                        let g1 = G1::build(line, g1_moves);
-                        let vrtx = unsafe {Vertex::build(g1_moves, prev, g1, pre_print)};
-                        let node = Node::Vertex(vrtx);
-                        temp_lines.push_back(node);
-                        if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
-                            prev = Some(v as *mut Vertex);
-                        } else {
-                            panic!("failed to read pointer to last vertex");
-                        }
-                    },
-                    _ => {
-                        let node = Node::NonMove(Line::build(line));
-                        temp_lines.push_back(node);
-                    }
-                }
-
-            }
-             
-        }
-    temp_lines
-    }
-
-    pub fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
-        let mut g1_moves = 0;
-        let mut pre_print = true;
-        let mut parsed = LinkedList::new();
         let mut rel_xyz = false;
         let mut rel_e = true;
-        // tries reading the input as raw g-code if file parse error,
-        // this is really just for running the tests
-        let lines = match parse_file(path) {
-            Ok(str) => str,
-            Err(_) => parse_str(path),
-        };
-        assert!(lines.len() > 0);
-        // prev holds a raw mut pointer to the to position of the previous vertex
-        let mut prev: Option<*mut Vertex> = None;
-        for line in lines {
-            // remove all comments and whitespace
-            let line = clean_line(&line);
-            // skip empty lines (probably from lines that are only comments)
-            if line.len() < 1 {
-                continue;
-            }
-            // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
-            // might want to change instruction number to int, but sometimes a decimal is used with the instruction in prusa gcode )
-            let mut line = read_line(line);
-            if line.len() < 1 {
-                continue;
-            }
-            // just throw away any logical line count bc i dont't care
-            if let Some(&Word('N', _, _)) = line.front() {
-                let _ = line.pop_front();
-            }
-            // check if the line is a g28 homing command
-            if line.front() == Some(&Word('G', 28.0, None)) {
-                // if the homing node points to a previous extrusion move node, something is wrong
-                assert!(prev.is_none(), "homing from previously homed state");
-                let vrtx = Vertex {
-                    id: 0,
-                    label: Label::Home,
-                    to: Pos::home(),
-                    from: Pos::unhomed(),
-                    prev,
-                };
-                let node = Node::Vertex(vrtx);
-                parsed.push_back(node);
-                if let Node::Vertex(v) = parsed.back_mut().unwrap() {
-                    // prev now points to the homing node, this shows that it is the first extrusion move
-                    prev = Some(v as *mut Vertex);
-                } else {
-                    panic!("failed to read last pushed node")
-                }
-                continue;
-            // now check for G1 moves
-            } else if line.front() == Some(&Word('G', 1.0, None)) {
-                // if prev is None, it means no homing command has been read
-                assert!(&prev.is_some(), "g1 move from unhomed state");
-                g1_moves += 1;
-                let g1 = G1::build(line, g1_moves);
-                unsafe {
-                    let mut vrtx = Vertex {
-                        id: g1_moves,
-                        label: Label::Uninitialized,
-                        to: Pos::build(&(*(prev.unwrap())).to, &g1),
-                        from: (*(prev.unwrap())).to.clone(),
-                        prev,
-                    };
-                    if pre_print {
-                        if vrtx.to.x > 5.0 && vrtx.to.y > 5.0 {
-                            pre_print = false;
-                        }
-                    }
-                    vrtx.label(pre_print);
 
-                    let node = Node::Vertex(vrtx);
+        let mut parsed = LinkedList::new();
+
+        while nodes.len() > 0 {
+            match nodes.front() {
+                Some(Node::NonMove(Line(l))) => {
+                    match l {
+                        Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}) => {
+                            let number = number as i32;
+                            match (letter, number) {
+                                ('G', 90) => {
+                                    rel_xyz = false;
+                                }
+                                ('G', 91) => {
+                                    rel_xyz = true;
+                                }
+                                ('M', 82) => {
+                                    rel_e = false;
+                                }
+                                ('M', 83) => {
+                                    rel_e = true;
+                                }
+                            }
+                        },
+                        _ => {},
+                    }
                     parsed.push_back(node);
-                    if let Some(Node::Vertex(v)) = parsed.back_mut() {
-                        prev = Some(v as *mut Vertex);
+                },
+                Some(Node::Vertex(v)) => {
+                    if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                        parsed.push_back(nodes.pop_shape());
                     } else {
-                        panic!("failed to read pointer to last vertex");
+                        parsed.push_back(nodes.pop_change());
                     }
-                }
-            } else {
-                let Word(letter, num, _) = line[0];
-                let num = num as i32;
-                // here we check against all the non-move commands that we care abt
-                match (letter, num) {
-                    ('G', 90) => {
-                        rel_xyz = false;
-                    }
-                    ('G', 91) => {
-                        rel_xyz = true;
-                    }
-                    ('M', 82) => {
-                        rel_e = false;
-                    }
-                    ('M', 83) => {
-                        rel_e = true;
-                    }
-                    _ => {}
-                }
-                let node = Node::NonMove(Line::build(line));
-                parsed.push_back(node);
+                },
+                _ => {parsed.push_back(nodes.pop_front())},
             }
         }
-        let mut p = Parsed {
+        Parsed {
             nodes: parsed,
-            layers: BTreeMap::new(),
             rel_xyz,
             rel_e,
-            annotations: BTreeMap::new(),
-        };
-        p.annotations = Annotation::build(&p);
-        p.layers = Layer::build_planar(&p);
-        let mut cur = p.nodes.cursor_front_mut();
-        let mut last = 1;
-        let mut end = -1;
-        while cur.peek_next().is_some() {
-            if let Some(Node::Vertex(v)) = cur.current() {
-                if let Some(Layer { i, end_id, .. }) = p.layers.get(&v.id) {
-                    if *i > last {
-                        last = *i;
-                        end = *end_id;
-                        cur.insert_before(Node::LayerStart);
-                    } else if v.id == end {
-                        cur.insert_after(Node::LayerEnd);
-                    }
-                }
-            }
-            cur.move_next();
         }
-        Ok(p)
     }
     pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
@@ -834,111 +728,6 @@ impl Emit for Parsed {
         out += "\n";
         out
     }
-}
-
-fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let out = String::from_utf8(std::fs::read(path)?)
-        .unwrap()
-        .split("\n")
-        .map(|s| s.split(';').nth(0).unwrap()) // ignore any ';' comments
-        .map(str::to_string)
-        .filter(|s| s.len() > 0)
-        .collect();
-    Ok(out)
-}
-
-fn parse_str(str: &str) -> Vec<String> {
-    String::from(str)
-        .split("\n")
-        .map(|s| s.split(';').nth(0).unwrap())
-        .map(str::to_string)
-        .collect()
-}
-
-fn clean_line(line: &str) -> VecDeque<char> {
-    let mut temp_line = VecDeque::new();
-    // this broken
-    // if line.chars().filter(|c| !c.is_ascii()).next().is_none() {
-    //     return VecDeque::from(line.chars().collect::<Vec<char>>());
-    // }
-
-    for c in line.chars() {
-        // end reading line at start of comments
-        if c == ';' {
-            break;
-        }
-        // skip all whitespace
-        if c == ' ' || c == '\n' || c == '\r' {
-            continue;
-        } else {
-            temp_line.push_back(c.to_ascii_uppercase());
-        }
-    }
-    temp_line
-}
-
-fn check_line(line: &VecDeque<char>) -> bool {
-    if line.len() < 2 {
-        return false;
-    }
-    if !line[0].is_ascii_alphabetic() || line[line.len() - 1].is_ascii_alphabetic() {
-        return false;
-    }
-    let mut letter = false;
-    let mut number = true;
-    for char in line {
-        if !char.is_ascii_alphanumeric() && *char != '.' && *char != '-' {
-            return false;
-        }
-        if char.is_ascii_alphabetic() {
-            if letter || !number {
-                return false;
-            } else {
-                letter = true;
-                number = false;
-            }
-        } else {
-            letter = false;
-            number = true;
-        }
-    }
-    true
-}
-fn split_line(mut line: VecDeque<char>) -> VecDeque<Word> {
-    let mut temp: Vec<char> = Vec::new();
-    let mut out = VecDeque::new();
-    temp.push(line.pop_front().unwrap());
-    while line.len() > 0 {
-        while line.len() > 0 && !line[0].is_ascii_alphabetic() {
-            temp.push(line.pop_front().unwrap());
-        }
-        if temp.len() > 1 {
-            out.push_back(Word(
-                temp[0],
-                temp[1..].iter().collect::<String>().parse::<f32>().unwrap(),
-                None,
-            ));
-        }
-        if line.len() > 0 {
-            temp = vec![line.pop_front().unwrap()];
-        }
-    }
-    out
-}
-
-fn read_line(line: VecDeque<char>) -> VecDeque<Word> {
-    // here i rly want to check if there is a character that doesn't make sense
-    // and just pass the raw string through if that's the case
-    if !check_line(&line) {
-        if line.len() > 1 {
-            let word = Word('X', NEG_INFINITY, Some(line.iter().collect()));
-            return VecDeque::from([word]);
-        } else {
-            let word = Word('X', NEG_INFINITY, None);
-            return VecDeque::from([word]);
-        }
-    }
-    split_line(line)
 }
 
 #[cfg(test)]
