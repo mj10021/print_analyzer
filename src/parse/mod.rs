@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
 
 use self::feature_finder::{Shape, Layer};
-
+use self::file::build_nodes;
 pub mod feature_finder;
 
 #[derive(Clone, Debug, PartialEq)]

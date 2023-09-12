@@ -7,6 +7,11 @@ use parse::{Emit, Vertex, Node, Label, Parsed, Pos};
 
 use std::collections::linked_list::CursorMut;
 
+fn read_from_file(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
+    let nodes = file::build_nodes(path)?;
+    Ok(Parsed::build(gcode))
+}
+
 fn normalize_move_len(gcode: &mut Parsed, len: f32) {
     // stuck in loop
     subdivide_all(gcode, len);
