@@ -9,17 +9,16 @@ pub enum Feature {
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
-    start_vtx: i32,
-    end_vtx: i32,
-    z: f32,
+    nodes: LinkedList<Node>,
+    closed: bool,
     len: f32,
 }
 impl Shape {
     pub fn build_planar(gcode: &Parsed) -> Vec<Shape> {
         let mut out = Vec::new();
-        let mut start_vtx = -1;
         let mut in_shape = false;
         let mut dist = 0.0;
+        let mut curr_shape = LinkedList::new();
         for node in gcode.nodes.iter() {
             match node {
                 Node::Vertex(v) => {
@@ -27,8 +26,8 @@ impl Shape {
                         if v.label == Label::PlanarExtrustion
                             || v.label == Label::NonPlanarExtrusion
                         {
+                            curr_shape.push_back(node.clone());
                             in_shape = true;
-                            start_vtx = v.id;
                             dist += v.dist();
                         } else {
                             continue;
@@ -38,18 +37,27 @@ impl Shape {
                             || v.label == Label::NonPlanarExtrusion
                         {
                             dist += v.dist();
+                            curr_shape.push_back(node.clone());
                         } else {
                             in_shape = false;
-                            assert!(start_vtx != -1);
-                            let s = Shape {
-                                start_vtx,
-                                end_vtx: v.id - 1,
-                                len: dist,
-                                z: v.to.z,
+                            let closed = { 
+                                if let Some(Node::Vertex(v)) = curr_shape.back() {
+                                    if let Some(Node::Vertex(v2)) = curr_shape.front() {
+                                        if v.to.dist(&v2.to) < std::f32::EPSILON {
+                                            true;
+                                        }
+                                    }
+                                }
+                                false
                             };
+                            let s = Shape {
+                                nodes: curr_shape.clone(),
+                                closed,
+                                len: dist,
+                            };
+                            curr_shape = LinkedList::new();
                             out.push(s);
                             dist = 0.0;
-                            start_vtx = -1;
                         }
                     }
                 }
@@ -65,10 +73,8 @@ impl Shape {
 #[derive(PartialEq)]
 pub struct Layer {
     pub i: i32,
-    start_id: i32,
-    pub end_id: i32,
-    shapes: Vec<Shape>,
-    z: f32,
+    start_z: f32,
+    nodes: LinkedList<Node>,
     layer_height: f32,
 }
 impl std::fmt::Debug for Layer {
@@ -93,10 +99,9 @@ impl Layer {
                     let start = temp_shapes[0].start_vtx;
                     let end = temp_shapes[temp_shapes.len() - 1].end_vtx;
                     for Shape {
-                        z: _,
-                        start_vtx: s,
-                        end_vtx: f,
+                        nodes: _,
                         len: _,
+                        closed: _,
                     } in temp_shapes.iter()
                     {
                         for j in *s..=*f {
@@ -108,7 +113,7 @@ impl Layer {
                                     end_id: end,
                                     shapes: temp_shapes.clone(),
                                     z: curr_z,
-                                    layer_height: shape.z - curr_z, // FIXME: check this
+                                    layer_height: shape.nodes.front().unwrap().vertex().to.z - curr_z, // FIXME: check this
                                 },
                             );
                         }

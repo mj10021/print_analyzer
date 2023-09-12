@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
 
-use self::feature_finder::Layer;
+use self::feature_finder::{Shape, Layer};
 
 pub mod feature_finder;
 
@@ -156,13 +156,30 @@ fn pre_home(p: Pos) -> bool {
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
-    // this is (FIXME) a pointer to the previous extrusion move (abs(x + y) > 0 && e > 0)
+    // this is a pointer to the previous g1 move node
     pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
 }
 
 impl Vertex {
+    unsafe fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1, pre_print: bool) -> Vertex {
+        unsafe {
+            let mut vrtx = Vertex {
+                id: g1_moves,
+                label: Label::Uninitialized,
+                to: Pos::build(&(*(prev.unwrap())).to, &g1),
+                from: (*(prev.unwrap())).to.clone(),
+                prev,
+            };
+            if pre_print {
+                if vrtx.to.x > 5.0 && vrtx.to.y > 5.0 {
+                    pre_print = false;
+                }
+            }
+            vrtx.label(pre_print);
+        }
+    }
     fn label(&mut self, pre_print: bool) {
         // FIXME: i think some of the from values are wrong so the labelling is not quite right
         let dx = self.to.x - self.from.x;
@@ -226,16 +243,23 @@ impl Vertex {
         (dx, dy, dz)
     }
     pub unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+
+        // FIXME: i really want this to work from inside of a shape
+        // rather than directly from the vertex, so i can deal with the end 
+        // nodes specifically and not have to take into account feedrate change
+        // and retraction/deretraction commands, which should probably be edited
+        // separately as a block in between shapes
+        // the data structure should look like this:
+        // G28 -> Travel -> Shape -> Retraction Moves (retract, wipe, lift z, travel, lower z, deretract) -> Shape -> Shape....
+        // maybe layer can be a node of nodes, shape can be a node of nodes, and retract/deretract can be node of nodes
+
+
+
+
         // FIXME: CHECK THIS!!!!!
-        // NEEDS TO ONLY USE EXTRUSION MOVES!!!
         // I think right now this is looking at deretractions and getting infinite flow
-        // needs to link to the last extrusion move, not the last g1
-        assert!(self.prev.is_some());
-        assert!(self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion);
-        assert!(
-            (*(self.prev.unwrap())).label == Label::PlanarExtrustion
-                || (*(self.prev.unwrap())).label == Label::NonPlanarExtrusion
-        );
+        assert!(self.prev.is_some(), "translate from unhomed state");
+        assert!((*(self.prev.unwrap())).to == self.from, "node not updated");
         let prev = self.prev.unwrap();
         let (xi, yi, zi) = (*prev).from.to_tup();
         let (xf, yf, zf) = (*prev).to.to_tup();
@@ -296,12 +320,25 @@ impl std::fmt::Debug for Vertex {
 }
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
+    Shape(Shape),
+    LayerChange(Vec<Node>),
+    ShapeChange(Vec<Node>),
+    // FIXME: delete this
     LayerStart,
+    // FIXME: delete this
     LayerEnd,
+}
+impl Node {
+    fn vertex(&self) -> &Vertex {
+        match self {
+            Node::Vertex(v) => v,
+            _ => panic!("not a vertex"),
+        }
+    }
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
@@ -314,6 +351,81 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
+    pub fn build_nodes(path: &str) -> VecDeque<Node> {
+        // tries reading the input as raw g-code if file parse error,
+        // this is really just for running the tests
+        let lines = match parse_file(path) {
+            Ok(str) => str,
+            Err(_) => parse_str(path),
+        };
+        assert!(lines.len() > 0);
+        let mut pre_print = true;
+        let mut g1_moves = 0;
+        let mut temp_lines = VecDeque::new();
+        // prev holds a raw mut pointer to the to position of the previous vertex
+        let mut prev: Option<*mut Vertex> = None;
+        for line in lines {
+            // remove all comments and whitespace
+            let line = clean_line(&line);
+            // skip empty lines (probably from lines that are only comments)
+            if line.len() < 1 {
+                continue;
+            }
+            // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
+            // might want to change instruction number to int, but sometimes a decimal is used in the instruction in prusa gcode )
+            let mut line = read_line(line);
+
+            if let Some(Word(letter, val, params)) = line.pop_front() {
+                if letter == 'N' {
+                    let _ = line.pop_front();
+                }
+                let val = val as i32;
+                match (letter, val) {
+                    ('G', 28) => {
+                        // if the homing node points to a previous extrusion move node, something is wrong
+                        assert!(prev.is_none(), "homing from previously homed state");
+                        let vrtx = Vertex {
+                            id: 0,
+                            label: Label::Home,
+                            to: Pos::home(),
+                            from: Pos::unhomed(),
+                            prev,
+                        };
+                        let node = Node::Vertex(vrtx);
+                        temp_lines.push_back(node);
+                        if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
+                            // prev now points to the homing node, this shows that it is the first extrusion move
+                            prev = Some(v as *mut Vertex);
+                        } else {
+                            panic!("failed to read last pushed node")
+                        }
+                    },
+                    ('G', 1) => {
+                        // if prev is None, it means no homing command has been read
+                        assert!(&prev.is_some(), "g1 move from unhomed state");
+                        g1_moves += 1;
+                        let g1 = G1::build(line, g1_moves);
+                        let vrtx = unsafe {Vertex::build(g1_moves, prev, g1, pre_print)};
+                        let node = Node::Vertex(vrtx);
+                        temp_lines.push_back(node);
+                        if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
+                            prev = Some(v as *mut Vertex);
+                        } else {
+                            panic!("failed to read pointer to last vertex");
+                        }
+                    },
+                    _ => {
+                        let node = Node::NonMove(Line::build(line));
+                        temp_lines.push_back(node);
+                    }
+                }
+
+            }
+             
+        }
+    temp_lines
+    }
+
     pub fn build(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
         let mut g1_moves = 0;
         let mut pre_print = true;
@@ -385,14 +497,14 @@ impl Parsed {
                             pre_print = false;
                         }
                     }
-                    vrtx.label(pre_print); // FIXME: need correct first move id
+                    vrtx.label(pre_print);
 
                     let node = Node::Vertex(vrtx);
                     parsed.push_back(node);
                     if let Some(Node::Vertex(v)) = parsed.back_mut() {
                         prev = Some(v as *mut Vertex);
                     } else {
-                        panic!("failed to read last pushed node")
+                        panic!("failed to read pointer to last vertex");
                     }
                 }
             } else {
