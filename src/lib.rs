@@ -3,8 +3,7 @@
 
 mod parse;
 //mod gui;
-use parse::{Emit, Vertex, Node, Label, Parsed, Pos};
-use parse::file_reader::build_nodes;
+use parse::{Emit, Vertex, Node, Label, Parsed, Pos, file_reader::build_nodes};
 
 use std::collections::linked_list::CursorMut;
 
@@ -351,7 +350,6 @@ fn sub_test() {
 mod integration_tests {
 
     #[cfg(test)]
-    use crate::parse::{Emit, Parsed};
     #[test]
     fn import_emit_reemit() {
         use crate::*;

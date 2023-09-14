@@ -1,7 +1,6 @@
 use std::collections::{LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
 
-pub mod feature_finder;
 pub mod file_reader;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -58,6 +57,8 @@ impl Instruction {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+// intermediary struct for parsing line into vertex
+// exists because all of the params are optional
 pub struct G1 {
     // the g1 move id is 1-indexed
     pub move_id: i32,
@@ -155,7 +156,7 @@ fn pre_home(p: Pos) -> bool {
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
-    // this is a pointer to the previous g1 move node
+    // this is a pointer to the previous extrusion move node
     pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
@@ -220,6 +221,12 @@ impl Vertex {
             + (self.to.y - self.from.y).powf(2.0)
             + (self.to.z - self.from.z).powf(2.0))
         .sqrt()
+    }
+    pub fn extrusion_move(&self) -> bool {
+        if self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion {
+            return true;
+        }
+        false
     }
     pub fn get_vector(&self) -> (f32, f32, f32) {
         let scale = self.dist();
@@ -340,7 +347,7 @@ impl Node {
         let mut len = 0.0;
         while cur.is_some() {
             if let Some(Node::Vertex(v)) = &cur {
-                if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                if v.extrusion_move() {
                     len += v.dist();
                 } else { break; }
 
@@ -368,16 +375,15 @@ impl Node {
             if start.is_none() {
                 start = Some(v.from);
             }
-            if v.label == Label::PlanarExtrustion || v.label == Label::PlanarExtrustion {
-                panic!("invalid front node");
-            }
+            assert!(!v.extrusion_move(), "invalid front node");
         }
         while cur.is_some() {
             if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
                     start = Some(v.from);
                 }
-                if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                if v.extrusion_move() {
+
                     end = Some(v.to); 
                     nodes.push_front(cur.unwrap());
                     break;
@@ -491,7 +497,7 @@ impl Parsed {
                     parsed.push_back(nodes.pop_front().unwrap());
                 },
                 Some(Node::Vertex(v)) => {
-                    if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
+                    if v.extrusion_move() {
                         parsed.push_back(Node::pop_shape(&mut nodes));
                     } else {
                         parsed.push_back(Node::pop_change(&mut nodes));
