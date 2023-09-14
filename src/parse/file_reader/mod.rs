@@ -1,4 +1,4 @@
-
+use super::*;
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
@@ -126,12 +126,12 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
         // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
         // might want to change instruction number to int, but sometimes a decimal is used in the instruction in prusa gcode )
         let mut line = read_line(line);
+        if let Some(Word('N', _, _)) = line.front() {
+            let _ = line.pop_front();
+        }
 
-        if let Some(Word(letter, val, params)) = line.pop_front() {
-            if letter == 'N' {
-                let _ = line.pop_front();
-            }
-            let val = val as i32;
+        if let Some(Word(letter, val, params)) = line.front() {
+            let val = *val as i32;
             match (letter, val) {
                 ('G', 28) => {
                     // if the homing node points to a previous extrusion move node, something is wrong
@@ -157,7 +157,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                     assert!(&prev.is_some(), "g1 move from unhomed state");
                     g1_moves += 1;
                     let g1 = G1::build(line, g1_moves);
-                    let vrtx = unsafe {Vertex::build(g1_moves, prev, g1, pre_print)};
+                    let vrtx = unsafe {Vertex::build(g1_moves, prev, g1)};
                     let node = Node::Vertex(vrtx);
                     temp_lines.push_back(node);
                     if let Some(Node::Vertex(v)) = temp_lines.back_mut() {

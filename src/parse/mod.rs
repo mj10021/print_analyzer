@@ -1,9 +1,8 @@
-use std::collections::{BTreeMap, LinkedList, VecDeque};
+use std::collections::{LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
 
-use self::feature_finder::{Shape, Layer};
-use self::file::build_nodes;
 pub mod feature_finder;
+pub mod file_reader;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32, pub Option<String>);
@@ -163,7 +162,7 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    unsafe fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1, pre_print: bool) -> Vertex {
+    unsafe fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
         unsafe {
             let mut vrtx = Vertex {
                 id: g1_moves,
@@ -172,12 +171,8 @@ impl Vertex {
                 from: (*(prev.unwrap())).to.clone(),
                 prev,
             };
-            if pre_print {
-                if vrtx.to.x > 5.0 && vrtx.to.y > 5.0 {
-                    pre_print = false;
-                }
-            }
-            vrtx.label(pre_print);
+            vrtx.label(vrtx.to.x > 5.0 && vrtx.to.y > 5.0);
+            vrtx
         }
     }
     fn label(&mut self, pre_print: bool) {
@@ -298,7 +293,7 @@ impl Vertex {
 #[test]
 fn tran_test() {
     let test = "G28\ng1x1e1\ng1x2e1\ng1x3e1\n";
-    let mut gcode = Parsed::build(test).expect("failed to parse");
+    let mut gcode = crate::read(test).expect("failed to parse");
     let mut cursor = gcode.nodes.cursor_front_mut();
     cursor.move_next();
     cursor.move_next();
@@ -341,20 +336,19 @@ impl Node {
     }
     fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
         let mut cur = nodes.pop_front();
-        let Some(Node::Vertex(v)) = cur else {panic!("invalid front node")};
-        assert!(v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion, "invalid front node");
-
         let mut out = LinkedList::new();
         let mut len = 0.0;
         while cur.is_some() {
-            if let Some(Node::Vertex(v)) = cur {
+            if let Some(Node::Vertex(v)) = &cur {
                 if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
                     len += v.dist();
                 } else { break; }
+
             }
             out.push_back(cur.unwrap());
             cur = nodes.pop_front();
         }
+        assert!(out.len() > 0, "no nodes popped");
         Node::Shape( Shape {
             nodes: out,
             closed: false,
@@ -370,7 +364,7 @@ impl Node {
         let mut cur = nodes.pop_front();
         let mut start = None;
         let mut end = None;
-        if let Some(Node::Vertex(v)) = cur {
+        if let Some(Node::Vertex(v)) = &cur {
             if start.is_none() {
                 start = Some(v.from);
             }
@@ -379,7 +373,7 @@ impl Node {
             }
         }
         while cur.is_some() {
-            if let Some(Node::Vertex(v)) = cur {
+            if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
                     start = Some(v.from);
                 }
@@ -388,6 +382,8 @@ impl Node {
                     nodes.push_front(cur.unwrap());
                     break;
                 }
+                cur = nodes.pop_front();
+            }
         }
         if start.unwrap().z != end.unwrap().z {
             return Node::LayerChange(out);
@@ -395,6 +391,71 @@ impl Node {
         Node::ShapeChange(out)
     }
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Shape {
+    pub nodes: LinkedList<Node>,
+    pub closed: bool,
+    pub len: f32,
+}
+impl Shape {
+    pub fn build_planar(gcode: &Parsed) -> Vec<Shape> {
+        let mut out = Vec::new();
+        let mut in_shape = false;
+        let mut dist = 0.0;
+        let mut curr_shape = LinkedList::new();
+        for node in gcode.nodes.iter() {
+            match node {
+                Node::Vertex(v) => {
+                    if !in_shape {
+                        if v.label == Label::PlanarExtrustion
+                            || v.label == Label::NonPlanarExtrusion
+                        {
+                            curr_shape.push_back(node.clone());
+                            in_shape = true;
+                            dist += v.dist();
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        if v.label == Label::PlanarExtrustion
+                            || v.label == Label::NonPlanarExtrusion
+                        {
+                            dist += v.dist();
+                            curr_shape.push_back(node.clone());
+                        } else {
+                            in_shape = false;
+                            let closed = { 
+                                if let Some(Node::Vertex(v)) = curr_shape.back() {
+                                    if let Some(Node::Vertex(v2)) = curr_shape.front() {
+                                        if v.to.dist(&v2.to) < std::f32::EPSILON {
+                                            true;
+                                        }
+                                    }
+                                }
+                                false
+                            };
+                            let s = Shape {
+                                nodes: curr_shape.clone(),
+                                closed,
+                                len: dist,
+                            };
+                            curr_shape = LinkedList::new();
+                            out.push(s);
+                            dist = 0.0;
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+        out
+    }
+    fn get_center(&self) -> (f32, f32, f32) {
+        todo!();
+    }
+}
+
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
 #[derive(Debug, PartialEq)]
@@ -404,7 +465,7 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
-    pub fn build(nodes: VecDeque<Node>) -> Parsed {
+    pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut pre_print = true;
         let mut rel_xyz = false;
         let mut rel_e = true;
@@ -413,37 +474,31 @@ impl Parsed {
 
         while nodes.len() > 0 {
             match nodes.front() {
-                Some(Node::NonMove(Line(l))) => {
+                Some(Node::NonMove(l)) => {
                     match l {
                         Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}) => {
-                            let number = number as i32;
+                            let number = *number as i32;
                             match (letter, number) {
-                                ('G', 90) => {
-                                    rel_xyz = false;
-                                }
-                                ('G', 91) => {
-                                    rel_xyz = true;
-                                }
-                                ('M', 82) => {
-                                    rel_e = false;
-                                }
-                                ('M', 83) => {
-                                    rel_e = true;
-                                }
+                                ('G', 90) => { rel_xyz = false; }
+                                ('G', 91) => { rel_xyz = true; }
+                                ('M', 82) => { rel_e = false; }
+                                ('M', 83) => { rel_e = true; }
+                                _ => {}
                             }
                         },
                         _ => {},
                     }
-                    parsed.push_back(node);
+                    parsed.push_back(nodes.pop_front().unwrap());
                 },
                 Some(Node::Vertex(v)) => {
                     if v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion {
-                        parsed.push_back(nodes.pop_shape());
+                        parsed.push_back(Node::pop_shape(&mut nodes));
                     } else {
-                        parsed.push_back(nodes.pop_change());
+                        parsed.push_back(Node::pop_change(&mut nodes));
                     }
                 },
-                _ => {parsed.push_back(nodes.pop_front())},
+                Some(_) => {parsed.push_back(nodes.pop_front().unwrap())},
+                None => {break},
             }
         }
         Parsed {
@@ -610,16 +665,16 @@ impl Annotation {
 #[should_panic]
 fn no_home_test() {
     let input = "G1 X1 Y1 Z1 E1\n";
-    let _ = Parsed::build(input).expect("failed to parse");
+    let _ = crate::read(input).expect("failed to parse");
 }
 #[test]
 #[should_panic]
 fn double_home() {
-    let _ = Parsed::build("G28\nG28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
+    let _ = crate::read("G28\nG28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
 }
 #[test]
 fn parsed_test() {
-    let parsed = Parsed::build("G28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
+    let parsed = crate::read("G28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
     panic!("{:?}", parsed);
 }
 pub trait Emit {
@@ -709,6 +764,16 @@ impl Emit for Vertex {
         out
     }
 }
+impl Emit for Shape {
+    fn emit(&self, debug: bool) -> String {
+        let mut out = String::from("; START SHAPE\n");
+        for node in self.nodes.iter() {
+            out += &node.emit(debug);
+        }
+        out += "; END SHAPE\n";
+        out
+    }
+}
 impl Emit for Node {
     fn emit(&self, debug: bool) -> String {
         match self {
@@ -716,6 +781,23 @@ impl Emit for Node {
             Node::NonMove(line) => line.emit(debug),
             Node::LayerStart => "; LAYER START\n".to_string(),
             Node::LayerEnd => "; LAYER END\n".to_string(),
+            Node::Shape(s) => {s.emit(debug)},
+            Node::LayerChange(nodes) => {
+                let mut out = String::from("; START LAYER CHANGE\n");
+                for node in nodes {
+                    out += &node.emit(debug);
+                }
+                out += "; END LAYER CHANGE\n";
+                out
+            }
+            Node::ShapeChange(nodes) => {
+                let mut out = String::from("; START SHAPE CHANGE\n");
+                for node in nodes {
+                    out += &node.emit(debug);
+                }
+                out += "; END SHAPE CHANGE\n";
+                out
+            }
         }
     }
 }

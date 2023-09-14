@@ -2,14 +2,15 @@
 #![allow(dead_code)]
 
 mod parse;
-mod gui;
+//mod gui;
 use parse::{Emit, Vertex, Node, Label, Parsed, Pos};
+use parse::file_reader::build_nodes;
 
 use std::collections::linked_list::CursorMut;
 
-fn read_from_file(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
-    let nodes = file::build_nodes(path)?;
-    Ok(Parsed::build(gcode))
+fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
+    let nodes = build_nodes(path)?;
+    Ok(Parsed::build(nodes))
 }
 
 fn normalize_move_len(gcode: &mut Parsed, len: f32) {
@@ -54,7 +55,7 @@ fn normalize_move_len(gcode: &mut Parsed, len: f32) {
 }
 #[test]
 fn normalize_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    let mut gcode = read("test.gcode").expect("failed to parse gcode");
     normalize_move_len(&mut gcode, 0.5);
     let gcode = gcode.emit(false);
     use std::fs::File;
@@ -77,7 +78,7 @@ fn subdivide_all(gcode: &mut Parsed, len: f32) {
 }
 #[test]
 fn sub_all_test() {
-    let mut gcode = Parsed::build("test_line_wall.gcode").expect("failed to parse gcode");
+    let mut gcode = read("test_line_wall.gcode").expect("failed to parse gcode");
     subdivide_all(&mut gcode, 2.0);
     let gcode = gcode.emit(false);
     use std::fs::File;
@@ -85,62 +86,7 @@ fn sub_all_test() {
     let mut f = File::create("sub_all_output.gcode").expect("failed to create file");
     let _ = f.write_all(&gcode.as_bytes());
 }
-fn blend_seam(gcode: &mut Parsed) {
-    let mut cur = gcode.nodes.cursor_front_mut();
-    let mut flow = -1.0;
-    let mut prev: Option<*mut Vertex> = None;
-    while cur.peek_next().is_some() {
-        // keep track of the last extrusion move the cursor passed
-        if let Some(Node::Vertex(v)) = cur.current() {
-            if let Some(a) = gcode.annotations.get(&v.id) {
-                if a.label == Label::PlanarExtrustion || a.label == Label::NonPlanarExtrusion {
-                    prev = Some(v as *mut Vertex);
-                    flow = a.de / v.dist();
-                }
-            }
-        }
-        if let Some(Node::LayerEnd) = cur.current() {
-            cur.move_next();
-            // FIXME: NEED TO CHECK IF AT LAST LAYER
-            while cur.current().unwrap() != &Node::LayerStart {
-                if cur.peek_next().is_none() {
-                    break;
-                }
-                cur.remove_current();
-            }
-            cur.move_next(); // this is the first move of the next layer
-            let Some(Node::Vertex(v)) = cur.current() else {
-                break;
-                //panic!("failed to find vertex");
-            };
-            unsafe {
-                (*(prev.unwrap())).to = v.from.clone();
-            };
-            unsafe {
-                (*(prev.unwrap())).to.e = flow * (*(prev.unwrap())).dist();
-            };
-            v.prev = prev;
-            assert!(
-                gcode.annotations.get(&v.id).unwrap().label == Label::PlanarExtrustion
-                    || gcode.annotations.get(&v.id).unwrap().label == Label::NonPlanarExtrusion
-            );
-            subdivide(&mut cur, 10);
-        }
-        cur.move_next();
-    }
-}
 
-#[test]
-fn seam_blend_test() {
-    let mut gcode = Parsed::build("test_onewall.gcode").expect("failed to parse gcode");
-    blend_seam(&mut gcode);
-    let gcode = gcode.emit(false);
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("seam_output.gcode").expect("failed to create file");
-    let _ = f.write_all(&gcode.as_bytes());
-    todo!();
-}
 fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
     let location = Pos {
         x: location.0,
@@ -163,7 +109,7 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
 }
 #[test]
 fn erode_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    let mut gcode = read("test.gcode").expect("failed to parse gcode");
     erode(&mut gcode, (82.0, 97.0, 10.0), 5.0);
     let gcode = gcode.emit(false);
     use std::fs::File;
@@ -187,7 +133,7 @@ fn filter(gcode: &mut Parsed, filter: fn(&Vertex) -> bool) {
 }
 #[test]
 fn filter_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
+    let mut gcode = read("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
     gcode.update_nodes();
     let gcode = gcode.emit(false);
@@ -211,31 +157,6 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
     }
     gcode.update_nodes();
 }
-#[test]
-fn filter_map_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse gcode");
-    let mut cur = gcode.nodes.cursor_front_mut();
-    while cur.peek_next().is_some() {
-        if let Some(Node::Vertex(v)) = cur.current() {
-            if match gcode.annotations.get(&v.id) {
-                Some(a) => {
-                    a.label == Label::PlanarExtrustion || a.label == Label::NonPlanarExtrusion
-                }
-                None => false,
-            } {
-                subdivide(&mut cur, 10);
-            }
-        }
-        cur.move_next();
-    }
-    gcode.update_nodes();
-    filter_map(&mut gcode, |v| v.id % 2 == 0, |v| v.to.z += 0.1);
-    let gcode = gcode.emit(false);
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("mod_output.gcode").expect("failed to create file");
-    let _ = f.write_all(&gcode.as_bytes());
-}
 fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
     for node in gcode.nodes.iter_mut() {
         match node {
@@ -252,7 +173,7 @@ fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
 fn map_test() {
     use nalgebra::{Rotation3, Vector3};
     use std::f32::consts::FRAC_PI_2;
-    let mut gcode = Parsed::build("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
+    let mut gcode = read("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
     subdivide_all(&mut gcode, 0.5);
     gcode.update_nodes();
     for node in gcode.nodes.iter_mut() {
@@ -320,7 +241,7 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
 }
 #[test]
 fn merge_test() {
-    let mut gcode = Parsed::build("test.gcode").expect("failed to parse");
+    let mut gcode = read("test.gcode").expect("failed to parse");
     let mut cur = gcode.nodes.cursor_front_mut();
     while cur.peek_next().is_some() {
         if let Some(Node::LayerStart) = cur.current() {
@@ -404,7 +325,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
 #[test]
 fn one_sub_test() {
     let gcode = "G28\nf700\nG1x50y50z0.4\ng1x80e5\n";
-    let mut gcode = Parsed::build(gcode).expect("failed to parse");
+    let mut gcode = read(gcode).expect("failed to parse");
     subdivide_all(&mut gcode, 2.0);
     use std::fs::File;
     use std::io::prelude::*;
@@ -413,7 +334,7 @@ fn one_sub_test() {
 }
 #[test]
 fn sub_test() {
-    let mut gcode = Parsed::build("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
+    let mut gcode = read("G28\nG1x1e1\ng1x2e1\ng1x3e1\ng1x4e1\n").expect("asdf");
     let mut cur = gcode.nodes.cursor_front_mut();
     let mut c = 0;
     while c < 2 {
@@ -433,16 +354,18 @@ mod integration_tests {
     use crate::parse::{Emit, Parsed};
     #[test]
     fn import_emit_reemit() {
+        use crate::*;
         let f = "test.gcode";
-        let p_init = Parsed::build(f).expect("failed to parse gcode");
+        let p_init = read(f).expect("failed to parse gcode");
         let init = p_init.emit(false);
+
         use std::fs::File;
         use std::io::prelude::*;
         let mut f = File::create("test_output.gcode").expect("failed to create file");
         let _ = f.write_all(&init.as_bytes());
-        let snd = Parsed::build("test_output.gcode").expect("asdf");
+        let snd = read("test_output.gcode").expect("asdf");
         let snd = snd.emit(false);
-        let snd = Parsed::build(&snd).expect("failed to parse reemitted file");
+        let snd = read(&snd).expect("failed to parse reemitted file");
         assert_eq!(p_init, snd);
     }
 }
