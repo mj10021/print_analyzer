@@ -2,8 +2,11 @@
 #![allow(dead_code)]
 
 mod parse;
+mod emit;
+mod transform;
 //mod gui;
-use parse::{Emit, Vertex, Node, Label, Parsed, Pos, file_reader::build_nodes};
+use parse::{Vertex, Node, Label, Parsed, Pos, file_reader::build_nodes};
+use emit::Emit;
 
 use std::collections::linked_list::CursorMut;
 

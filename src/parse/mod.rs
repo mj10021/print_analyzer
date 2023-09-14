@@ -56,9 +56,9 @@ impl Instruction {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
 // intermediary struct for parsing line into vertex
 // exists because all of the params are optional
+#[derive(Clone, Debug, PartialEq)]
 pub struct G1 {
     // the g1 move id is 1-indexed
     pub move_id: i32,
@@ -99,6 +99,7 @@ impl G1 {
         self.move_id as usize - 1
     }
 }
+// state tracking struct for vertices
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pos {
     // abs x, y, z and rel e
@@ -127,7 +128,7 @@ impl Pos {
             y: 0.0,
             z: 0.0,
             e: 0.0,
-            f: NEG_INFINITY,
+            f: NEG_INFINITY, // this will not emit if a feedrate is never set
         }
     }
     pub fn build(prev: &Pos, g1: &G1) -> Pos {
@@ -177,7 +178,6 @@ impl Vertex {
         }
     }
     fn label(&mut self, pre_print: bool) {
-        // FIXME: i think some of the from values are wrong so the labelling is not quite right
         let dx = self.to.x - self.from.x;
         let dy = self.to.y - self.from.y;
         let dz = self.to.z - self.from.z;
@@ -327,6 +327,7 @@ pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
     Shape(Shape),
+    Layer(Layer),
     LayerChange(Vec<Node>),
     ShapeChange(Vec<Node>),
     // FIXME: delete this
@@ -349,7 +350,7 @@ impl Node {
             if let Some(Node::Vertex(v)) = &cur {
                 if v.extrusion_move() {
                     len += v.dist();
-                } else { break; }
+                } else if v.label != Label::FeedrateChangeOnly { break; }
 
             }
             out.push_back(cur.unwrap());
@@ -388,6 +389,7 @@ impl Node {
                     nodes.push_front(cur.unwrap());
                     break;
                 }
+                out.push(cur.unwrap());
                 cur = nodes.pop_front();
             }
         }
@@ -414,8 +416,7 @@ impl Shape {
             match node {
                 Node::Vertex(v) => {
                     if !in_shape {
-                        if v.label == Label::PlanarExtrustion
-                            || v.label == Label::NonPlanarExtrusion
+                        if v.extrusion_move()
                         {
                             curr_shape.push_back(node.clone());
                             in_shape = true;
@@ -424,8 +425,7 @@ impl Shape {
                             continue;
                         }
                     } else {
-                        if v.label == Label::PlanarExtrustion
-                            || v.label == Label::NonPlanarExtrusion
+                        if v.extrusion_move()
                         {
                             dist += v.dist();
                             curr_shape.push_back(node.clone());
@@ -461,7 +461,14 @@ impl Shape {
         todo!();
     }
 }
-
+#[derive(Clone, Debug, PartialEq)]
+pub struct Layer {
+    pub id: i32,
+    pub nodes: LinkedList<Node>,
+}
+impl Layer {
+    
+}
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
 #[derive(Debug, PartialEq)]
@@ -472,7 +479,6 @@ pub struct Parsed {
 }
 impl Parsed {
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
-        let mut pre_print = true;
         let mut rel_xyz = false;
         let mut rel_e = true;
 
@@ -512,6 +518,23 @@ impl Parsed {
             rel_xyz,
             rel_e,
         }
+    }
+    fn generate_layers(&mut self) {
+        let mut new_nodes = LinkedList::new();
+        let mut id = 1;
+        let mut temp = LinkedList::new();
+
+        for node in self.nodes.iter() {
+            if let Node::LayerChange(_) = node {
+                new_nodes.push_back(Node::Layer ( Layer {
+                    id,
+                    nodes: temp,
+                }));
+                temp = LinkedList::new();
+                id += 1
+            } else { temp.push_back(node.clone())}
+        }
+        self.nodes = new_nodes;
     }
     pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
@@ -683,141 +706,6 @@ fn parsed_test() {
     let parsed = crate::read("G28\nG1 x1\ng1y1\ng1e2.222\ng1z1\n").expect("failed to parse");
     panic!("{:?}", parsed);
 }
-pub trait Emit {
-    fn emit(&self, debug: bool) -> String;
-}
-impl Emit for Instruction {
-    fn emit(&self, debug: bool) -> String {
-        let Instruction {
-            first_word: Word(letter, num, string),
-            params,
-        } = self;
-        if let Some(string) = string {
-            return string.clone() + "\n";
-        }
-        let mut out = format!("{}{}", letter, *num as i32);
-        if let Some(params) = params {
-            for Word(letter, val, _) in params {
-                out += &format!(" {}{}", letter, val);
-            }
-        }
-        if debug {
-            out += &format!("; {:?}\n", self);
-        }
-        out + "\n"
-    }
-}
-impl Emit for Line {
-    fn emit(&self, debug: bool) -> String {
-        match self {
-            Line::Instruction(ins) => ins.emit(debug),
-            Line::Raw(string) => string.clone(),
-        }
-    }
-}
-impl Emit for Pos {
-    fn emit(&self, debug: bool) -> String {
-        if debug {
-            return format!("X{} Y{} Z{} E{} F{}; {:?}\n", self.x, self.y, self.z, self.e, self.f, self);
-        }
-        assert!(self.x.is_finite() && !self.x.is_nan());
-        assert!(self.y.is_finite() && !self.y.is_nan());
-        assert!(self.z.is_finite() && !self.z.is_nan());
-        assert!(self.e.is_finite() && !self.e.is_nan());
-        assert!(self.f.is_finite() && !self.f.is_nan());
-
-        format!(
-            "X{} Y{} Z{} E{} F{}\n",
-            self.x, self.y, self.z, self.e, self.f
-        )
-    }
-}
-impl Emit for Vertex {
-    fn emit(&self, debug: bool) -> String {
-        if self.to.x == 0.0
-            && self.to.y == 0.0
-            && self.to.z == 0.0
-            && self.to.e == 0.0
-            && self.id == 0
-        {
-            return "G28\n".to_string();
-        }
-        let mut out = String::from("G1 ");
-        if self.from.x != self.to.x {
-            assert!(self.to.x.is_finite() && !self.to.x.is_nan());
-            out += &format!("X{} ", self.to.x);
-        }
-        if self.from.y != self.to.y {
-            assert!(self.to.y.is_finite() && !self.to.y.is_nan());
-            out += &format!("Y{} ", self.to.y);
-        }
-        if self.from.z != self.to.z {
-            assert!(self.to.z.is_finite() && !self.to.z.is_nan());
-            out += &format!("Z{} ", self.to.z);
-        }
-        if self.to.e != 0.0 {
-            assert!(self.to.e.is_finite() && !self.to.e.is_nan());
-            out += &format!("E{} ", self.to.e);
-        }
-        if self.from.f != self.to.f {
-            assert!(self.to.f.is_finite() && !self.to.f.is_nan());
-            out += &format!("F{} ", self.to.f);
-        }
-        out += "\n";
-        if debug {
-            out += &format!("; {:?}\n; {:?}\n; {:?} \n", self.label, self.from, self.to);
-        }
-        out
-    }
-}
-impl Emit for Shape {
-    fn emit(&self, debug: bool) -> String {
-        let mut out = String::from("; START SHAPE\n");
-        for node in self.nodes.iter() {
-            out += &node.emit(debug);
-        }
-        out += "; END SHAPE\n";
-        out
-    }
-}
-impl Emit for Node {
-    fn emit(&self, debug: bool) -> String {
-        match self {
-            Node::Vertex(v) => v.emit(debug),
-            Node::NonMove(line) => line.emit(debug),
-            Node::LayerStart => "; LAYER START\n".to_string(),
-            Node::LayerEnd => "; LAYER END\n".to_string(),
-            Node::Shape(s) => {s.emit(debug)},
-            Node::LayerChange(nodes) => {
-                let mut out = String::from("; START LAYER CHANGE\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END LAYER CHANGE\n";
-                out
-            }
-            Node::ShapeChange(nodes) => {
-                let mut out = String::from("; START SHAPE CHANGE\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END SHAPE CHANGE\n";
-                out
-            }
-        }
-    }
-}
-impl Emit for Parsed {
-    fn emit(&self, debug: bool) -> String {
-        let mut out = String::new();
-        for node in &self.nodes {
-            out += &node.emit(debug);
-        }
-        out += "\n";
-        out
-    }
-}
-
 #[cfg(test)]
 
 const TEST_INPUT: &str = "G28\nnG1 X0 Y0 Z0 E0 F0\n

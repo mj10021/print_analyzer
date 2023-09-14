@@ -20,10 +20,6 @@ fn parse_str(str: &str) -> Vec<String> {
 
 fn clean_line(line: &str) -> VecDeque<char> {
     let mut temp_line = VecDeque::new();
-    // this broken
-    // if line.chars().filter(|c| !c.is_ascii()).next().is_none() {
-    //     return VecDeque::from(line.chars().collect::<Vec<char>>());
-    // }
 
     for c in line.chars() {
         // end reading line at start of comments
