@@ -111,8 +111,6 @@ impl Emit for Node {
         match self {
             Node::Vertex(v) => v.emit(debug),
             Node::NonMove(line) => line.emit(debug),
-            Node::LayerStart => "; LAYER START\n".to_string(),
-            Node::LayerEnd => "; LAYER END\n".to_string(),
             Node::Shape(s) => { s.emit(debug) },
             Node::Layer(l) => { l.emit(debug) }
             Node::LayerChange(nodes) => {

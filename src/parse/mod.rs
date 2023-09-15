@@ -360,6 +360,12 @@ impl Node {
             _ => panic!("not a layer"),
         }
     }
+    pub fn layer_mut(&mut self) -> &mut Layer {
+        match self {
+            Node::Layer(l) => l,
+            _ => panic!("not a layer"),
+        }
+    }
     fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
         let mut cur = nodes.pop_front();
         let mut out = LinkedList::new();
@@ -484,8 +490,7 @@ pub struct Layer {
     pub id: i32,
     pub nodes: LinkedList<Node>,
 }
-impl Layer {
-    
+impl Layer {    
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
