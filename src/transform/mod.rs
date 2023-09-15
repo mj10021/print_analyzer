@@ -1,5 +1,5 @@
 use crate::parse::*;
-
+use nalgebra::{Rotation3, Unit, Vector3, Point3};
 trait Translate {
     fn translate(&self, dx: f32, dy: f32, dz: f32);
 }
@@ -16,22 +16,71 @@ impl Translate for Shape {
 
 impl Translate for Layer {
     fn translate(&self, dx: f32, dy: f32, dz: f32) {
+        for node in self.nodes {
+            if let 
+        }
+    }
+}
+impl Translate for Node {
+    fn translate(&self, dx: f32, dy: f32, dz: f32) {
+        match self {
+            Node::Layer(l) => { l.translate(dx, dy, dz); },
+            Node::Shape(s) => { s.translate(dx, dy, dz); },
+            Node::Vertex(v) => { v.translate(dx, dy, dz); },
+            // FIXME: layer changes and shape changes probably also need to get translated
+            Node::LayerChange(_) | Node::ShapeChange(_) | Node::NonMove(_) => {},
+        }
     }
 }
 
 trait Rotate {
-    fn rotate(&self, angle: f32, axis: (f32, f32, f32));
+    fn rotate(&self, angle: f32, axis: Axis);
+}
+enum Axis {
+    X,
+    Y,
+    Z,
+}
+impl Rotate for Vertex {
+    fn rotate(&self, angle: f32, axis: Axis) {
+        let axis = match axis {
+            Axis::X => Vector3::x_axis(),
+            Axis::Y => Vector3::y_axis(),
+            Axis::Z => Vector3::z_axis(),
+        };
+        let xi = self.to.x;
+        let yi = self.to.y;
+        let zi = self.to.z;
+        let pt = Point3::new(xi, yi, zi);
+        let rot = Rotation3::from_axis_angle(&axis, angle);
+    }
 }
 
 impl Rotate for Shape {
-    fn rotate(&self, angle: f32, axis: (f32, f32, f32)) {
+    fn rotate(&self, angle: f32, axis: Axis) {
+        for node in self.nodes {
+            node.rotate(angle, axis);
+        }
+    }
+}
+impl Rotate for Layer {
+    fn rotate(&self, angle: f32, axis: Axis) {
+        for node in self.nodes {
+            node.rotate(angle, axis);
+        }
+    }
+}
+impl Rotate for Node {
+    fn rotate(&self, angle: f32, axis: Axis) {
+        match self {
+            Node::Layer(l) => { l.rotate(angle, axis); },
+            Node::Shape(s) => { s.rotate(angle, axis); },
+            Node::Vertex(v) => { v.rotate(angle, axis); },
+            Node::LayerChange(_) | Node::ShapeChange(_) | Node::NonMove(_) => {},
+        }
     }
 }
 
-impl Rotate for Layer {
-    fn rotate(&self, angle: f32, axis: (f32, f32, f32)) {
-    }
-}
 
 trait SubDivide {
     fn subdivide(&self, max_length: f32);
@@ -42,17 +91,38 @@ impl SubDivide for Vertex {
     }
 }
 
-trait Join<T> {
-    fn join(&self, other: T);
+trait Join {
+    fn join(&mut self, next: Node);
 }
-
-impl<T> Join<T> for Shape {
-    fn join(&self, other: T) {
+impl Join for Vertex {
+    fn join(&mut self, mut next: Node) {
+        let mut next = next.vertex_mut();
+        // copy the flow from prev move
+        let flow = next.flow();
+        next.from = self.to;
+        next.prev = Some(self as *mut Vertex);
+        next.to.e = next.dist() * flow;
     }
 }
 
-impl<T> Join<T> for Layer {
-    fn join(&self, other: T) {
-    }    
+impl Join for Shape {
+    fn join(&mut self, next: Node) {
+        let last = self.nodes.pop_back().unwrap().vertex_mut();
+        let mut next = next.layer();
+        let first = next.nodes.pop_front().unwrap();
+        last.join(first);
+        self.nodes.push_back(first);
+        self.nodes.append(&mut next.nodes);        
+    }
 }
 
+impl Join for Layer {
+    fn join(&mut self, mut next: Node) {
+        let last = self.nodes.pop_back().unwrap().vertex_mut();
+        let mut next = next.layer();
+        let first = next.nodes.pop_front().unwrap();
+        last.join(first);
+        self.nodes.push_back(first);
+        self.nodes.append(&mut next.nodes);
+    }    
+}

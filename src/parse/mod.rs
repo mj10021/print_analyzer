@@ -222,6 +222,10 @@ impl Vertex {
             + (self.to.z - self.from.z).powf(2.0))
         .sqrt()
     }
+    pub fn flow(&self) -> f32 {
+        assert!(self.extrusion_move());
+        self.to.e / self.dist()
+    }
     pub fn extrusion_move(&self) -> bool {
         if self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion {
             return true;
@@ -330,16 +334,30 @@ pub enum Node {
     Layer(Layer),
     LayerChange(Vec<Node>),
     ShapeChange(Vec<Node>),
-    // FIXME: delete this
-    LayerStart,
-    // FIXME: delete this
-    LayerEnd,
 }
 impl Node {
-    fn vertex(&self) -> &Vertex {
+    pub fn vertex(&self) -> &Vertex {
         match self {
             Node::Vertex(v) => v,
             _ => panic!("not a vertex"),
+        }
+    }
+    pub fn vertex_mut(&mut self) -> &mut Vertex {
+        match self {
+            Node::Vertex(v) => v,
+            _ => panic!("not a vertex"),
+        }
+    }
+    pub fn shape(&self) -> &Shape {
+        match self {
+            Node::Shape(s) => s,
+            _ => panic!("not a shape"),
+        }
+    }
+    pub fn layer(&self) -> &Layer {
+        match self {
+            Node::Layer(l) => l,
+            _ => panic!("not a layer"),
         }
     }
     fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
