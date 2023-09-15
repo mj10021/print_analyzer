@@ -396,12 +396,6 @@ impl Node {
         let mut cur = nodes.pop_front();
         let mut start = None;
         let mut end = None;
-        if let Some(Node::Vertex(v)) = &cur {
-            if start.is_none() {
-                start = Some(v.from);
-            }
-            assert!(!v.extrusion_move(), "invalid front node");
-        }
         while cur.is_some() {
             if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
@@ -413,11 +407,12 @@ impl Node {
                     nodes.push_front(cur.unwrap());
                     break;
                 }
-                out.push(cur.unwrap());
-                cur = nodes.pop_front();
             }
+            out.push(cur.unwrap());
+            cur = nodes.pop_front();
         }
-        if start.unwrap().z != end.unwrap().z {
+        assert!(out.len() > 0);
+        if start.is_some() && end.is_some() && start.unwrap().z != end.unwrap().z {
             return Node::LayerChange(out);
         }
         Node::ShapeChange(out)
@@ -508,6 +503,8 @@ impl Parsed {
         let mut parsed = LinkedList::new();
 
         while nodes.len() > 0 {
+            let x = nodes.len();
+            // stuck in loop gets to here 
             match nodes.front() {
                 Some(Node::NonMove(l)) => {
                     match l {
