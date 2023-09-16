@@ -129,6 +129,14 @@ impl Emit for Node {
                 out += "; END SHAPE CHANGE\n";
                 out
             }
+            Node::PrePrint(nodes) => {
+                let mut out = String::from("; START PREPRINT\n");
+                for node in nodes {
+                    out += &node.emit(debug);
+                }
+                out += "; END PREPRINT\n";
+                out
+            }
         }
     }
 }

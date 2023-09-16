@@ -227,10 +227,10 @@ impl Vertex {
         self.to.e / self.dist()
     }
     pub fn extrusion_move(&self) -> bool {
-        if self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion {
-            return true;
-        }
-        false
+        self.label == Label::PlanarExtrustion || self.label == Label::NonPlanarExtrusion
+    }
+    pub fn change_move(&self) -> bool {
+        self.label == Label::LiftZ || self.label == Label::Wipe || self.label == Label::Retraction
     }
     pub fn get_vector(&self) -> (f32, f32, f32) {
         let scale = self.dist();
@@ -334,6 +334,7 @@ pub enum Node {
     Layer(Layer),
     LayerChange(Vec<Node>),
     ShapeChange(Vec<Node>),
+    PrePrint(Vec<Node>),
 }
 impl Node {
     pub fn vertex(&self) -> &Vertex {
@@ -367,18 +368,24 @@ impl Node {
         }
     }
     fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
-        let mut cur = nodes.pop_front();
         let mut out = LinkedList::new();
         let mut len = 0.0;
-        while cur.is_some() {
+        loop {
+            let cur = nodes.pop_front();
+            if cur.is_none() { break; }
             if let Some(Node::Vertex(v)) = &cur {
                 if v.extrusion_move() {
                     len += v.dist();
-                } else if v.label != Label::FeedrateChangeOnly { break; }
+                // if the vertex is no extrusion or feedrate change,
+                // break and add back the errant node
+                } else if v.label != Label::FeedrateChangeOnly { 
+                    nodes.push_back(cur.unwrap());
+                    break;
+                 }
 
             }
             out.push_back(cur.unwrap());
-            cur = nodes.pop_front();
+
         }
         assert!(out.len() > 0, "no nodes popped");
         Node::Shape( Shape {
@@ -393,10 +400,11 @@ impl Node {
         // keep track of the first and last position of the sequence to decide 
         // if it should be labelled as a shape or a layer change
         let mut out = Vec::new();
-        let mut cur = nodes.pop_front();
         let mut start = None;
         let mut end = None;
-        while cur.is_some() {
+        loop {
+            let cur = nodes.pop_front();
+            if cur.is_none() { break; }
             if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
                     start = Some(v.from);
@@ -409,13 +417,27 @@ impl Node {
                 }
             }
             out.push(cur.unwrap());
-            cur = nodes.pop_front();
+
         }
         assert!(out.len() > 0);
         if start.is_some() && end.is_some() && start.unwrap().z != end.unwrap().z {
             return Node::LayerChange(out);
         }
         Node::ShapeChange(out)
+    }
+    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node {
+        let mut out = Vec::new();
+        loop {
+            let cur = nodes.pop_front();
+            if cur.is_none() { break; }
+            if let Some(Node::Vertex(v)) = &cur {
+                if v.extrusion_move() && v.label != Label::PrePrintMove {
+                    break;
+                }
+            }
+            out.push(cur.unwrap());
+        }
+        Node::PrePrint(out)
     }
 }
 
@@ -496,15 +518,15 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
+    // FIXME: i should split off the pre-print and post-print blocks
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;
 
         let mut parsed = LinkedList::new();
+        parsed.push_back(Node::pop_preprint(&mut nodes));
 
         while nodes.len() > 0 {
-            let x = nodes.len();
-            // stuck in loop gets to here 
             match nodes.front() {
                 Some(Node::NonMove(l)) => {
                     match l {
@@ -523,10 +545,12 @@ impl Parsed {
                     parsed.push_back(nodes.pop_front().unwrap());
                 },
                 Some(Node::Vertex(v)) => {
-                    if v.extrusion_move() {
+                    if v.extrusion_move() || v.label == Label::FeedrateChangeOnly {
                         parsed.push_back(Node::pop_shape(&mut nodes));
-                    } else {
+                    } else if v.change_move() {
                         parsed.push_back(Node::pop_change(&mut nodes));
+                    } else {
+                        parsed.push_back(nodes.pop_front().unwrap());
                     }
                 },
                 Some(_) => {parsed.push_back(nodes.pop_front().unwrap())},

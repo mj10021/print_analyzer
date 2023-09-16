@@ -341,7 +341,7 @@ mod integration_tests {
         let snd = read(&snd).expect("failed to parse reemitted file");
         let mut f = File::create("test_output2.gcode").expect("failed to create file");
         let _ = f.write_all(&snd.emit(false).as_bytes());
-        //assert_eq!(p_init, snd);
+        assert_eq!(p_init, snd);
     }
     #[test]
     fn specific_random_gcode_issue() {
