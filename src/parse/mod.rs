@@ -588,7 +588,6 @@ impl Parsed {
     }
     pub fn update_nodes(&mut self) {
         let mut id = 1;
-        let mut pre_print = true;
         for node in self.nodes.iter_mut() {
             if let Node::Vertex(v) = node {
                 v.id = id;
@@ -598,12 +597,7 @@ impl Parsed {
                         v.from = (*(v.prev.unwrap())).to.clone();
                     }
                 }
-                if pre_print {
-                    if v.to.x > 5.0 && v.to.y > 5.0 {
-                        pre_print = false;
-                    }
-                }
-                v.label(pre_print);
+                v.label();
             }
         }
     }
