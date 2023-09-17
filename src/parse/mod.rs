@@ -518,7 +518,6 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
-    // FIXME: i should split off the pre-print and post-print blocks
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;
@@ -542,7 +541,6 @@ impl Parsed {
                         },
                         _ => {},
                     }
-                    parsed.push_back(nodes.pop_front().unwrap());
                 },
                 Some(Node::Vertex(v)) => {
                     if v.extrusion_move() || v.label == Label::FeedrateChangeOnly {
