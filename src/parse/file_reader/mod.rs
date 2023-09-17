@@ -107,7 +107,6 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
         Err(_) => parse_str(path),
     };
     assert!(lines.len() > 0);
-    let mut pre_print = true;
     let mut g1_moves = 0;
     let mut temp_lines = VecDeque::new();
     // prev holds a raw mut pointer to the to position of the previous vertex
@@ -122,54 +121,99 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
         // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
         // might want to change instruction number to int, but sometimes a decimal is used in the instruction in prusa gcode )
         let mut line = read_line(line);
-        if let Some(Word('N', _, _)) = line.front() {
+        // throw away logical line numbers
+        while let Some(Word('N', _, _)) = line.front() {
             let _ = line.pop_front();
         }
-
-        if let Some(Word(letter, val, _params)) = line.front() {
-            let val = val.round() as i32;
-            match (letter, val) {
-                ('G', 28) => {
-                    // if the homing node points to a previous extrusion move node, something is wrong
-                    assert!(prev.is_none(), "homing from previously homed state");
-                    let vrtx = Vertex {
-                        id: 0,
-                        label: Label::Home,
-                        to: Pos::home(),
-                        from: Pos::unhomed(),
-                        prev,
-                    };
-                    let node = Node::Vertex(vrtx);
-                    temp_lines.push_back(node);
-                    if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
-                        // prev now points to the homing node, this shows that it is the first extrusion move
-                        prev = Some(v as *mut Vertex);
-                    } else {
-                        panic!("failed to read last pushed node")
+        match line.front() {
+            Some(Word(letter, number, _params)) => {
+                let num = number.round() as i32;
+                match (letter, num) {
+                    ('G', 28) => {
+                        // if the homing node points to a previous extrusion move node, something is wrong
+                        assert!(prev.is_none(), "homing from previously homed state");
+                        let vrtx = Vertex {
+                            id: 0,
+                            label: Label::Home,
+                            to: Pos::home(),
+                            from: Pos::unhomed(),
+                            prev,
+                        };
+                        let node = Node::Vertex(vrtx);
+                        temp_lines.push_back(node);
+                        if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
+                            // prev now points to the homing node, this shows that it is the first extrusion move
+                            prev = Some(v as *mut Vertex);
+                        } else {
+                            panic!("failed to read last pushed node")
+                        }
                     }
-                },
-                ('G', 1) => {
-                    // if prev is None, it means no homing command has been read
-                    assert!(&prev.is_some(), "g1 move from unhomed state");
-                    g1_moves += 1;
-                    let g1 = G1::build(line, g1_moves);
-                    let vrtx = unsafe {Vertex::build(g1_moves, prev, g1)};
-                    let node = Node::Vertex(vrtx);
-                    temp_lines.push_back(node);
-                    if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
-                        prev = Some(v as *mut Vertex);
-                    } else {
-                        panic!("failed to read pointer to last vertex");
+                    ('G', 1) => {
+                        // if prev is None, it means no homing command has been read
+                        assert!(&prev.is_some(), "g1 move from unhomed state");
+                        g1_moves += 1;
+                        let g1 = G1::build(line, g1_moves);
+                        let vrtx = unsafe {Vertex::build(g1_moves, prev, g1)};
+                        let node = Node::Vertex(vrtx);
+                        temp_lines.push_back(node);
+                        if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
+                            prev = Some(v as *mut Vertex);
+                        } else {
+                            panic!("failed to read pointer to last vertex");
+                        }
+                    },
+                    _ => {
+                        let node = Node::NonMove(Line::build(line));
+                        temp_lines.push_back(node);
                     }
-                },
-                _ => {
-                    let node = Node::NonMove(Line::build(line));
-                    temp_lines.push_back(node);
                 }
-            }
-
+            },
+            _ => {},
         }
-            
-    }
+        // if let Some(Word(letter, val, _params)) = line.front() {
+        //     let val = val.round() as i32;
+        //     match (letter, val) {
+        //         ('G', 28) => {
+        //             // if the homing node points to a previous extrusion move node, something is wrong
+        //             assert!(prev.is_none(), "homing from previously homed state");
+        //             let vrtx = Vertex {
+        //                 id: 0,
+        //                 label: Label::Home,
+        //                 to: Pos::home(),
+        //                 from: Pos::unhomed(),
+        //                 prev,
+        //             };
+        //             let node = Node::Vertex(vrtx);
+        //             temp_lines.push_back(node);
+        //             if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
+        //                 // prev now points to the homing node, this shows that it is the first extrusion move
+        //                 prev = Some(v as *mut Vertex);
+        //             } else {
+        //                 panic!("failed to read last pushed node")
+        //             }
+        //         },
+        //         ('G', 1) => {
+        //             // if prev is None, it means no homing command has been read
+        //             assert!(&prev.is_some(), "g1 move from unhomed state");
+        //             g1_moves += 1;
+        //             let g1 = G1::build(line, g1_moves);
+        //             let vrtx = unsafe {Vertex::build(g1_moves, prev, g1)};
+        //             let node = Node::Vertex(vrtx);
+        //             temp_lines.push_back(node);
+        //             if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
+        //                 prev = Some(v as *mut Vertex);
+        //             } else {
+        //                 panic!("failed to read pointer to last vertex");
+        //             }
+        //         },
+        //         _ => {
+        //             let node = Node::NonMove(Line::build(line));
+        //             temp_lines.push_back(node);
+        //         }
+        //     }
+
+        // }
+        //     
+    }// 
 Ok(temp_lines)
 }

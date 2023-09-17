@@ -173,17 +173,17 @@ impl Vertex {
                 from: (*(prev.unwrap())).to.clone(),
                 prev,
             };
-            vrtx.label(vrtx.to.x > 5.0 && vrtx.to.y > 5.0);
+            vrtx.label();
             vrtx
         }
     }
-    fn label(&mut self, pre_print: bool) {
+    fn label(&mut self) {
         let dx = self.to.x - self.from.x;
         let dy = self.to.y - self.from.y;
         let dz = self.to.z - self.from.z;
         let de = self.to.e;
         self.label = {
-            if pre_print {
+            if self.to.x < 5.0 || self.to.y < 5.0 {
                 Label::PrePrintMove
             } else if de > EPSILON {
                 if dx.abs() + dy.abs() > EPSILON {
@@ -377,9 +377,9 @@ impl Node {
                 if v.extrusion_move() {
                     len += v.dist();
                 // if the vertex is no extrusion or feedrate change,
-                // break and add back the errant node
+                // break and return the errant node to the front of the list
                 } else if v.label != Label::FeedrateChangeOnly { 
-                    nodes.push_back(cur.unwrap());
+                    nodes.push_front(cur.unwrap());
                     break;
                  }
 
@@ -419,7 +419,7 @@ impl Node {
             out.push(cur.unwrap());
 
         }
-        assert!(out.len() > 0);
+        assert!(out.len() > 0, "no nodes popped");
         if start.is_some() && end.is_some() && start.unwrap().z != end.unwrap().z {
             return Node::LayerChange(out);
         }
@@ -432,11 +432,13 @@ impl Node {
             if cur.is_none() { break; }
             if let Some(Node::Vertex(v)) = &cur {
                 if v.extrusion_move() && v.label != Label::PrePrintMove {
+                    nodes.push_front(cur.unwrap());
                     break;
                 }
             }
             out.push(cur.unwrap());
         }
+        assert!(out.len() > 0, "no nodes popped");
         Node::PrePrint(out)
     }
 }
@@ -521,27 +523,10 @@ impl Parsed {
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;
-
         let mut parsed = LinkedList::new();
         parsed.push_back(Node::pop_preprint(&mut nodes));
-
-        while nodes.len() > 0 {
+        while nodes.front().is_some() {
             match nodes.front() {
-                Some(Node::NonMove(l)) => {
-                    match l {
-                        Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}) => {
-                            let number = number.round() as i32;
-                            match (letter, number) {
-                                ('G', 90) => { rel_xyz = false; }
-                                ('G', 91) => { rel_xyz = true; }
-                                ('M', 82) => { rel_e = false; }
-                                ('M', 83) => { rel_e = true; }
-                                _ => {}
-                            }
-                        },
-                        _ => {},
-                    }
-                },
                 Some(Node::Vertex(v)) => {
                     if v.extrusion_move() || v.label == Label::FeedrateChangeOnly {
                         parsed.push_back(Node::pop_shape(&mut nodes));
@@ -551,8 +536,19 @@ impl Parsed {
                         parsed.push_back(nodes.pop_front().unwrap());
                     }
                 },
-                Some(_) => {parsed.push_back(nodes.pop_front().unwrap())},
-                None => {break},
+                Some(_) => {
+                    if let Some(Node::NonMove(Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}))) = nodes.front() {
+                        let number = number.round() as i32;
+                        match (letter, number) {
+                            ('G', 90) => { rel_xyz = false; }
+                            ('G', 91) => { rel_xyz = true; }
+                            ('M', 82) => { rel_e = false; }
+                            ('M', 83) => { rel_e = true; }
+                            _ => {}
+                        }
+                    }
+                    parsed.push_back(nodes.pop_front().unwrap())},
+                _ => {},
             }
         }
         Parsed {

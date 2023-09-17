@@ -372,9 +372,8 @@ mod integration_tests {
         G1 X78.662 Y77.959 F9000 
         G1 Z0.3 F720 
         G1 E3 F1200";
-        let test = build_nodes(gcode);
         let gcode = read(gcode).expect("asf");
         let mut f = File::create("asdf_test.gcode").expect("failed to create file");
-        let _ = f.write_all(&gcode.emit(false).as_bytes());
+        let _ = f.write_all(&gcode.emit(true).as_bytes());
     }
 }
