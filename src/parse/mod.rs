@@ -14,7 +14,7 @@ pub enum Line {
 impl Line {
     fn build(mut line: VecDeque<Word>) -> Line {
         let Word(letter, num, _) = line[0];
-        let num = num as i32;
+        let num = num.round() as i32;
         match (letter, num, letter.is_ascii_alphabetic()) {
             ('N', _, _) => {
                 let _ = line.pop_front();
@@ -530,7 +530,7 @@ impl Parsed {
                 Some(Node::NonMove(l)) => {
                     match l {
                         Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}) => {
-                            let number = *number as i32;
+                            let number = number.round() as i32;
                             match (letter, number) {
                                 ('G', 90) => { rel_xyz = false; }
                                 ('G', 91) => { rel_xyz = true; }

@@ -11,7 +11,7 @@ impl Emit for Instruction {
         if let Some(string) = string {
             return string.clone() + "\n";
         }
-        let mut out = format!("{}{}", letter, *num as i32);
+        let mut out = format!("{}{}", letter, num.round() as i32);
         if let Some(params) = params {
             for Word(letter, val, _) in params {
                 out += &format!(" {}{}", letter, val);

@@ -126,8 +126,8 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
             let _ = line.pop_front();
         }
 
-        if let Some(Word(letter, val, params)) = line.front() {
-            let val = *val as i32;
+        if let Some(Word(letter, val, _params)) = line.front() {
+            let val = val.round() as i32;
             match (letter, val) {
                 ('G', 28) => {
                     // if the homing node points to a previous extrusion move node, something is wrong
