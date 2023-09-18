@@ -6,7 +6,6 @@ mod emit;
 mod transform;
 //mod gui;
 use parse::{Vertex, Node, Label, Parsed, Pos, file_reader::build_nodes};
-use emit::Emit;
 
 use std::collections::linked_list::CursorMut;
 
@@ -57,6 +56,7 @@ fn normalize_move_len(gcode: &mut Parsed, len: f32) {
 }
 #[test]
 fn normalize_test() {
+    use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     normalize_move_len(&mut gcode, 0.5);
     let gcode = gcode.emit(false);
@@ -80,6 +80,7 @@ fn subdivide_all(gcode: &mut Parsed, len: f32) {
 }
 #[test]
 fn sub_all_test() {
+    use crate::emit::Emit;
     let mut gcode = read("test_line_wall.gcode").expect("failed to parse gcode");
     subdivide_all(&mut gcode, 2.0);
     let gcode = gcode.emit(false);
@@ -111,6 +112,7 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
 }
 #[test]
 fn erode_test() {
+    use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     erode(&mut gcode, (82.0, 97.0, 10.0), 5.0);
     let gcode = gcode.emit(false);
@@ -135,6 +137,7 @@ fn filter(gcode: &mut Parsed, filter: fn(&Vertex) -> bool) {
 }
 #[test]
 fn filter_test() {
+    use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
     gcode.update_nodes();
@@ -173,6 +176,8 @@ fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
 }
 #[test]
 fn map_test() {
+    use transform::Translate;
+    use crate::emit::Emit;
     use nalgebra::{Rotation3, Vector3};
     use std::f32::consts::FRAC_PI_2;
     let mut gcode = read("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
@@ -298,6 +303,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
 }
 #[test]
 fn one_sub_test() {
+    use crate::emit::Emit;
     let gcode = "G28\nf700\nG1x50y50z0.4\ng1x80e5\n";
     let mut gcode = read(gcode).expect("failed to parse");
     subdivide_all(&mut gcode, 2.0);
@@ -326,10 +332,11 @@ mod integration_tests {
 
     #[cfg(test)]
     use std::fs::File;
-    use std::io::prelude::*; 
-    use crate::*;
     #[test]
     fn import_emit_reemit() {
+        use std::io::prelude::*;
+        use crate::emit::Emit;
+        use crate::read;
         let f = "test.gcode";
         let p_init = read(f).expect("failed to parse gcode");
         let init = p_init.emit(false);
@@ -345,6 +352,8 @@ mod integration_tests {
     }
     #[test]
     fn specific_random_gcode_issue() {
+        use crate::{read, emit::Emit};
+        use std::io::prelude::*;
         let gcode = "G28
         G1 X179 Y-2 F2400 
         G1 Z3 F720 
@@ -371,9 +380,11 @@ mod integration_tests {
         G1 Z0.5 
         G1 X78.662 Y77.959 F9000 
         G1 Z0.3 F720 
-        G1 E3 F1200";
+        G1 E3 F1200
+        G1 X78.663 Y78 E3.000 F1200
+        G1 X87 Y83 E13";
         let gcode = read(gcode).expect("asf");
         let mut f = File::create("asdf_test.gcode").expect("failed to create file");
-        let _ = f.write_all(&gcode.emit(true).as_bytes());
+        let _ = f.write_all(&gcode.emit(false).as_bytes());
     }
 }
