@@ -268,6 +268,8 @@ impl std::fmt::Debug for Vertex {
             .field("id", &self.id)
             .field("from", &self.from)
             .field("to", &self.to)
+            .field("label", &self.label)
+            .field("prev", &self.prev)
             .finish()
     }
 }
@@ -389,6 +391,24 @@ impl Node {
         Node::PrePrint(out)
     }
 }
+fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
+    let mut out = Vec::new();
+    for node in nodes {
+        match node {
+            Node::NonMove(_) => {out.push(node)},
+            Node::Vertex(_) => {out.push(node);},
+            Node::Shape(s) => {
+                out.append(&mut get_nodes(s.nodes)); 
+            },
+            Node::Layer(l) => {
+                out.append(&mut get_nodes(l.nodes)); 
+            },
+            Node::PrePrint(mut v) | Node::LayerChange(mut v) | Node::ShapeChange(mut v) => {out.append(&mut v);},
+        }
+    }
+    out
+}
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shape {
@@ -551,6 +571,20 @@ impl Parsed {
 
     fn delete() {}
     fn insert() {}
+}
+#[test]
+fn node_test() {
+    let parsed = crate::read("test.gcode").expect("failed to read file");
+    let nodes = get_nodes(parsed.nodes);
+    let nodes = nodes[0..60].to_vec();
+    for node in nodes {
+        if let Node::Vertex(v) = node {
+            if v.prev.is_some() {
+                let prev = unsafe{ &(*(v.prev.unwrap())) };
+                assert!(prev.to == v.from, "{:#?}\r\n\r\n{:#?}", prev.to, v.from);
+            }
+        }
+    }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Label {
