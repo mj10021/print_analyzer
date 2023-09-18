@@ -153,7 +153,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                         assert!(&prev.is_some(), "g1 move from unhomed state");
                         g1_moves += 1;
                         let g1 = G1::build(line, g1_moves);
-                        let vrtx = unsafe {Vertex::build(g1_moves, prev, g1)};
+                        let vrtx = Vertex::build(g1_moves, prev, g1);
                         let node = Node::Vertex(vrtx);
                         temp_lines.push_back(node);
                         if let Some(Node::Vertex(v)) = temp_lines.back_mut() {

@@ -110,7 +110,7 @@ pub struct Pos {
     pub f: f32,
 }
 impl Pos {
-    fn to_tup(&self) -> (f32, f32, f32) {
+    pub fn to_tup(&self) -> (f32, f32, f32) {
         (self.x, self.y, self.z)
     }
     pub fn unhomed() -> Pos {
@@ -164,18 +164,18 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    unsafe fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
-        unsafe {
-            let mut vrtx = Vertex {
-                id: g1_moves,
-                label: Label::Uninitialized,
-                to: Pos::build(&(*(prev.unwrap())).to, &g1),
-                from: (*(prev.unwrap())).to.clone(),
-                prev,
-            };
-            vrtx.label();
-            vrtx
-        }
+    fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
+        let from = unsafe { (*(prev.unwrap())).to.clone() };
+            
+        let mut vrtx = Vertex {
+            id: g1_moves,
+            label: Label::Uninitialized,
+            to: Pos::build(&from, &g1),
+            from,
+            prev,
+        };
+        vrtx.label();
+        vrtx
     }
     fn label(&mut self) {
         let dx = self.to.x - self.from.x;
@@ -248,70 +248,17 @@ impl Vertex {
         }
         (dx, dy, dz)
     }
-    pub unsafe fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-
-        // FIXME: i really want this to work from inside of a shape
-        // rather than directly from the vertex, so i can deal with the end 
-        // nodes specifically and not have to take into account feedrate change
-        // and retraction/deretraction commands, which should probably be edited
-        // separately as a block in between shapes
-        // the data structure should look like this:
-        // G28 -> Travel -> Shape -> Retraction Moves (retract, wipe, lift z, travel, lower z, deretract) -> Shape -> Shape....
-        // maybe layer can be a node of nodes, shape can be a node of nodes, and retract/deretract can be node of nodes
-
-
-
-
-        // FIXME: CHECK THIS!!!!!
-        // I think right now this is looking at deretractions and getting infinite flow
-        assert!(self.prev.is_some(), "translate from unhomed state");
-        assert!((*(self.prev.unwrap())).to == self.from, "node not updated");
-        let prev = self.prev.unwrap();
-        let (xi, yi, zi) = (*prev).from.to_tup();
-        let (xf, yf, zf) = (*prev).to.to_tup();
-        let dxi = xf - xi;
-        let dyi = yf - yi;
-        let dzi = zf - zi;
-        let di = (dxi.powf(2.0) + dyi.powf(2.0) + dzi.powf(2.0)).sqrt();
-        (*prev).to.x += dx;
-        (*prev).to.y += dy;
-        (*prev).to.z += dz;
-        self.from.x += dx;
-        self.from.y += dy;
-        self.from.z += dz;
-        let (xf, yf, zf) = (*prev).to.to_tup();
-        let dxf = xf - xi;
-        let dyf = yf - yi;
-        let dzf = zf - zi;
-        let df = (dxf.powf(2.0) + dyf.powf(2.0) + dzf.powf(2.0)).sqrt();
-        let mut scale = df / di;
-        if scale.is_infinite() || scale.is_nan() {
-            scale = 0.0;
-        }
-        (*prev).to.e *= scale;
-        // let di = self.dist();
-        let df = self.dist();
-        let mut scale = df / di;
-        if scale.is_infinite() || scale.is_nan() {
-            scale = 0.0;
-        }
-        self.to.e *= scale;
-    }
-    fn mod_flow(&mut self, coeff: f32) {
-        self.to.e *= coeff;
-    }
 }
 #[test]
 fn tran_test() {
+    use crate::transform::Translate;
     let test = "G28\ng1x1e1\ng1x2e1\ng1x3e1\n";
     let mut gcode = crate::read(test).expect("failed to parse");
     let mut cursor = gcode.nodes.cursor_front_mut();
     cursor.move_next();
     cursor.move_next();
     if let Node::Vertex(v) = cursor.current().unwrap() {
-        unsafe {
-            v.translate(0.0, 1.0, 0.0);
-        }
+        v.translate(0.0, 1.0, 0.0);
     }
     panic!("{:?}", gcode);
 }
