@@ -158,7 +158,7 @@ pub struct Vertex {
     pub id: i32,
     pub label: Label,
     // this is a pointer to the previous extrusion move node
-    pub prev: Option<*mut Vertex>,
+    pub prev: Option<&mut Vertex>,
     pub from: Pos,
     pub to: Pos,
 }
