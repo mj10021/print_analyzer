@@ -100,7 +100,7 @@ impl G1 {
     }
 }
 // state tracking struct for vertices
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Pos {
     // abs x, y, z and rel e
     pub x: f32,
@@ -132,7 +132,7 @@ impl Pos {
         }
     }
     pub fn build(prev: &Pos, g1: &G1) -> Pos {
-        if pre_home(*prev) {
+        if pre_home(prev) {
             panic!("g1 move from unhomed state")
         }
         Pos {
@@ -147,7 +147,7 @@ impl Pos {
         ((self.x - p.x).powf(2.0) + (self.y - p.y).powf(2.0) + (self.z - p.z).powf(2.0)).sqrt()
     }
 }
-fn pre_home(p: Pos) -> bool {
+fn pre_home(p: &Pos) -> bool {
     if p.x == NEG_INFINITY || p.y == NEG_INFINITY || p.z == NEG_INFINITY || p.e == NEG_INFINITY {
         return true;
     }
@@ -356,11 +356,11 @@ impl Node {
             if cur.is_none() { break; }
             if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
-                    start = Some(v.from);
+                    start = Some(v.from.clone());
                 }
                 if v.extrusion_move() {
 
-                    end = Some(v.to); 
+                    end = Some(v.to.clone()); 
                     nodes.push_front(cur.unwrap());
                     break;
                 }
@@ -586,7 +586,7 @@ fn node_test() {
         }
     }
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Label {
     Uninitialized,
     Home,
@@ -603,7 +603,7 @@ pub enum Label {
     Wipe,
     FeedrateChangeOnly,
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Annotation {
     pub label: Label,
     dx: f32,

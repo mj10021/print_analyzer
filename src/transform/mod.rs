@@ -15,9 +15,8 @@ impl Translate for Vertex {
                 self.flow()
             } else { 0.0 }
         };
-
-        let prev = self.prev.unwrap();
-        let prev = unsafe{ &mut*prev };
+        let prev = self.prev.clone();
+        let prev = unsafe{ &mut*(prev.unwrap()) };
         
         assert!(prev.to == self.from, "{:#?}\r\n{:#?}", prev, self);
 
@@ -26,7 +25,7 @@ impl Translate for Vertex {
         self.to.z += dz;
 
 
-        let prev_dist = (*prev).dist();
+        let prev_dist = prev.dist();
         prev.to.x += dx;
         prev.to.y += dy;
         prev.to.z += dz;
@@ -171,7 +170,7 @@ impl Join for Vertex {
         let next = next.vertex_mut();
         // copy the flow from prev move
         let flow = next.flow();
-        next.from = self.to;
+        next.from = self.to.clone();
         next.prev = Some(self as *mut Vertex);
         next.to.e = next.dist() * flow;
     }

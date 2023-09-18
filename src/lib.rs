@@ -242,7 +242,7 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
         panic!("blending from non-move node");
     };
     curr.prev = prev;
-    curr.from = unsafe { (*prev.unwrap()).to }.clone();
+    curr.from = unsafe { (*prev.unwrap()).to.clone() };
 }
 
 
