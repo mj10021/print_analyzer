@@ -171,7 +171,7 @@ impl Join for Vertex {
         let next = next.vertex_mut();
         // copy the flow from prev move
         let flow = next.flow();
-        next.from = self.to;
+        next.from = self.to.clone();
         next.prev = Some(self as *mut Vertex);
         next.to.e = next.dist() * flow;
     }
