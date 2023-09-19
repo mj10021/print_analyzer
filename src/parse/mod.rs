@@ -254,10 +254,8 @@ fn tran_test() {
     use crate::transform::Translate;
     let test = "G28\ng1x1e1\ng1x2e1\ng1x3e1\n";
     let mut gcode = crate::read(test).expect("failed to parse");
-    let mut cursor = gcode.nodes.cursor_front_mut();
-    cursor.move_next();
-    cursor.move_next();
-    if let Node::Vertex(v) = cursor.current().unwrap() {
+    let mut nodes = get_nodes(gcode.nodes);
+    if let Some(Node::Vertex(v)) = nodes.iter().ith(3) {
         v.translate(0.0, 1.0, 0.0);
     }
     panic!("{:?}", gcode);
