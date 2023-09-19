@@ -110,7 +110,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
     let mut g1_moves = 0;
     let mut temp_lines = VecDeque::new();
     // prev holds a raw mut pointer to the to position of the previous vertex
-    let mut prev: Option<*mut Vertex> = None;
+    let mut prev: Option<Box<Vertex>> = None;
     for line in lines {
         // remove all comments and whitespace
         let line = clean_line(&line);
@@ -143,7 +143,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                         temp_lines.push_back(node);
                         if let Node::Vertex(v) = temp_lines.back_mut().unwrap() {
                             // prev now points to the homing node, this shows that it is the first extrusion move
-                            prev = Some(v as *mut Vertex);
+                            prev = Some(Box::from(*v));
                         } else {
                             panic!("failed to read last pushed node")
                         }
@@ -157,7 +157,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                         let node = Node::Vertex(vrtx);
                         temp_lines.push_back(node);
                         if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
-                            prev = Some(v as *mut Vertex);
+                            prev = Some(Box::from(*v));
                         } else {
                             panic!("failed to read pointer to last vertex");
                         }

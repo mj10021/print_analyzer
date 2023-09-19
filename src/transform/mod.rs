@@ -165,14 +165,20 @@ impl SubDivide for Vertex {
 trait Join {
     fn join(&mut self, next: &mut Node);
 }
+impl Vertex {
+    fn make_prev(&mut self, prev: Vertex) {
+        let prev = Box::from(prev);
+        self.prev = Some(prev);
+    }
+}
 impl Join for Vertex {
-    fn join(&mut self, next: &mut Node) {
-        let next = next.vertex_mut();
+    fn join(&mut self, prev: &mut Node) {
+        let prev = prev.vertex_mut();
         // copy the flow from prev move
-        let flow = next.flow();
-        next.from = self.to.clone();
-        next.prev = Some(self as *mut Vertex);
-        next.to.e = next.dist() * flow;
+        let flow = prev.flow();
+        self.from = prev.to.clone();
+        self.to.e = prev.dist() * flow;
+        self.prev = Some(Box::from(*prev));
     }
 }
 

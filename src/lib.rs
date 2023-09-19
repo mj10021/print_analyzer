@@ -286,7 +286,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         };
         cur.insert_before(Node::Vertex(v));
         prev = match cur.peek_prev() {
-            Some(Node::Vertex(v)) => Some(v as *mut Vertex),
+            Some(Node::Vertex(v)) => Some(Box::from(*v)),
             _ => panic!("failed to insert vertex"),
         }
     }
