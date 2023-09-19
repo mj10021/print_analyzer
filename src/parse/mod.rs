@@ -153,7 +153,7 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq)]
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
@@ -275,7 +275,7 @@ impl std::fmt::Debug for Vertex {
 }
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line),
@@ -410,68 +410,13 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
 }
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Shape {
     pub nodes: LinkedList<Node>,
     pub closed: bool,
     pub len: f32,
 }
-impl Shape {
-    pub fn build_planar(gcode: &Parsed) -> Vec<Shape> {
-        let mut out = Vec::new();
-        let mut in_shape = false;
-        let mut dist = 0.0;
-        let mut curr_shape = LinkedList::new();
-        for node in gcode.nodes.iter() {
-            match node {
-                Node::Vertex(v) => {
-                    if !in_shape {
-                        if v.extrusion_move()
-                        {
-                            curr_shape.push_back(node.clone());
-                            in_shape = true;
-                            dist += v.dist();
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        if v.extrusion_move()
-                        {
-                            dist += v.dist();
-                            curr_shape.push_back(node.clone());
-                        } else {
-                            in_shape = false;
-                            let closed = { 
-                                if let Some(Node::Vertex(v)) = curr_shape.back() {
-                                    if let Some(Node::Vertex(v2)) = curr_shape.front() {
-                                        if v.to.dist(&v2.to) < std::f32::EPSILON {
-                                            true;
-                                        }
-                                    }
-                                }
-                                false
-                            };
-                            let s = Shape {
-                                nodes: curr_shape.clone(),
-                                closed,
-                                len: dist,
-                            };
-                            curr_shape = LinkedList::new();
-                            out.push(s);
-                            dist = 0.0;
-                        }
-                    }
-                }
-                _ => (),
-            }
-        }
-        out
-    }
-    fn get_center(&self) -> (f32, f32, f32) {
-        todo!();
-    }
-}
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Layer {
     pub id: i32,
     pub nodes: LinkedList<Node>,
@@ -524,23 +469,7 @@ impl Parsed {
             rel_e,
         }
     }
-    fn generate_layers(&mut self) {
-        let mut new_nodes = LinkedList::new();
-        let mut id = 1;
-        let mut temp = LinkedList::new();
 
-        for node in self.nodes.iter() {
-            if let Node::LayerChange(_) = node {
-                new_nodes.push_back(Node::Layer ( Layer {
-                    id,
-                    nodes: temp,
-                }));
-                temp = LinkedList::new();
-                id += 1
-            } else { temp.push_back(node.clone())}
-        }
-        self.nodes = new_nodes;
-    }
     pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
         let min_y = 5.0;
@@ -576,8 +505,8 @@ impl Parsed {
 fn node_test() {
     let parsed = crate::read("test.gcode").expect("failed to read file");
     let nodes = get_nodes(parsed.nodes);
-    let nodes = nodes[0..60].to_vec();
-    for node in nodes {
+    for i in 0..60 {
+        let node = &nodes[i];
         if let Node::Vertex(v) = node {
             if v.prev.is_some() {
                 let prev = unsafe{ &(*(v.prev.unwrap())) };
