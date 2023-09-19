@@ -154,17 +154,17 @@ fn pre_home(p: &Pos) -> bool {
     false
 }
 #[derive(PartialEq)]
-pub struct Vertex {
+pub struct Vertex<'a> {
     pub id: i32,
     pub label: Label,
     // this is a pointer to the previous extrusion move node
-    pub prev: Option<*mut Vertex>,
+    pub prev: Option<&'a mut Vertex<'a>>,
     pub from: Pos,
     pub to: Pos,
 }
 
-impl Vertex {
-    fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
+impl<'a> Vertex<'a> {
+    fn build(g1_moves: i32, prev: Option<&mut Vertex<'a>>, g1: G1) -> Vertex<'a> {
         let from = unsafe { (*(prev.unwrap())).to.clone() };
             
         let mut vrtx = Vertex {
@@ -262,7 +262,7 @@ fn tran_test() {
     }
     panic!("{:?}", gcode);
 }
-impl std::fmt::Debug for Vertex {
+impl std::fmt::Debug for Vertex<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Point")
             .field("id", &self.id)
@@ -276,16 +276,16 @@ impl std::fmt::Debug for Vertex {
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
 #[derive(Debug, PartialEq)]
-pub enum Node {
-    Vertex(Vertex),
+pub enum Node<'a> {
+    Vertex(Vertex<'a>),
     NonMove(Line),
-    Shape(Shape),
-    Layer(Layer),
-    LayerChange(Vec<Node>),
-    ShapeChange(Vec<Node>),
-    PrePrint(Vec<Node>),
+    Shape(Shape<'a>),
+    Layer(Layer<'a>),
+    LayerChange(Vec<Node<'a>>),
+    ShapeChange(Vec<Node<'a>>),
+    PrePrint(Vec<Node<'a>>),
 }
-impl Node {
+impl<'a> Node<'a> {
     pub fn vertex(&self) -> &Vertex {
         match self {
             Node::Vertex(v) => v,
@@ -316,7 +316,7 @@ impl Node {
             _ => panic!("not a layer"),
         }
     }
-    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node<'a> {
         let mut out = LinkedList::new();
         let mut len = 0.0;
         loop {
@@ -343,7 +343,7 @@ impl Node {
             len,
         } )
     }
-    fn pop_change(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_change(nodes: &mut VecDeque<Node>) -> Node<'a> {
         // the change should end before the first extrusion move
         // note: that does not count deretractions (e move with no x/y/z travel)
         // keep track of the first and last position of the sequence to decide 
@@ -374,7 +374,7 @@ impl Node {
         }
         Node::ShapeChange(out)
     }
-    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node<'a> {
         let mut out = Vec::new();
         loop {
             let cur = nodes.pop_front();
@@ -411,27 +411,25 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
 
 
 #[derive(Debug, PartialEq)]
-pub struct Shape {
-    pub nodes: LinkedList<Node>,
+pub struct Shape<'a> {
+    pub nodes: LinkedList<Node<'a>>,
     pub closed: bool,
     pub len: f32,
 }
 #[derive(Debug, PartialEq)]
-pub struct Layer {
+pub struct Layer<'a> {
     pub id: i32,
-    pub nodes: LinkedList<Node>,
-}
-impl Layer {    
+    pub nodes: LinkedList<Node<'a>>,
 }
 // Parsed struct contains a linked list of nodes and any other print information
 // needed to correctly emit g-code
 #[derive(Debug, PartialEq)]
-pub struct Parsed {
-    pub nodes: LinkedList<Node>,
+pub struct Parsed<'a> {
+    pub nodes: LinkedList<Node<'a>>,
     rel_xyz: bool,
     rel_e: bool,
 }
-impl Parsed {
+impl<'a> Parsed<'a> {
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;

@@ -4,7 +4,7 @@ pub trait Translate {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32);
 }
 
-impl Translate for Vertex {
+impl Translate for Vertex<'_> {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         if self.prev.is_none() {
             return;
@@ -17,10 +17,7 @@ impl Translate for Vertex {
         };
 
         let prev = self.prev.unwrap();
-        let prev = unsafe{ &mut*prev };
         
-        assert!(prev.to == self.from, "{:#?}\r\n{:#?}", prev, self);
-
         self.to.x += dx;
         self.to.y += dy;
         self.to.z += dz;
@@ -46,7 +43,7 @@ impl Translate for Vertex {
     }
 }
 
-impl Translate for Shape {
+impl Translate for Shape<'_> {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         for node in self.nodes.iter_mut() {
             node.translate(dx, dy, dz);
@@ -54,14 +51,14 @@ impl Translate for Shape {
     }
 }
 
-impl Translate for Layer {
+impl Translate for Layer<'_> {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) { 
         for node in self.nodes.iter_mut() {
             node.translate(dx, dy, dz);
         }
     }
 }
-impl Translate for Node {
+impl Translate for Node<'_> {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         match self {
             Node::Layer(l) => { l.translate(dx, dy, dz); },
@@ -94,7 +91,7 @@ enum Axis {
     Y,
     Z,
 }
-impl Rotate for Vertex {
+impl Rotate for Vertex<'_> {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         let axis = match axis {
             Axis::X => Vector3::x_axis(),
@@ -116,21 +113,21 @@ impl Rotate for Vertex {
     }
 }
 
-impl Rotate for Shape {
+impl Rotate for Shape<'_> {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         for node in self.nodes.iter_mut() {
             node.rotate(angle, axis);
         }
     }
 }
-impl Rotate for Layer {
+impl Rotate for Layer<'_> {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         for node in self.nodes.iter_mut() {
             node.rotate(angle, axis);
         }
     }
 }
-impl Rotate for Node {
+impl Rotate for Node<'_> {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         match self {
             Node::Layer(l) => { l.rotate(angle, axis); },
@@ -158,7 +155,7 @@ trait SubDivide {
     fn subdivide(&self, max_length: f32);
 }
 
-impl SubDivide for Vertex {
+impl SubDivide for Vertex<'_> {
     fn subdivide(&self, max_length: f32) {
     }
 }
@@ -166,18 +163,18 @@ impl SubDivide for Vertex {
 trait Join {
     fn join(&mut self, next: &mut Node);
 }
-impl Join for Vertex {
+impl Join for Vertex<'_> {
     fn join(&mut self, next: &mut Node) {
         let next = next.vertex_mut();
         // copy the flow from prev move
         let flow = next.flow();
         next.from = self.to.clone();
-        next.prev = Some(self as *mut Vertex);
+        next.prev = self.prev;
         next.to.e = next.dist() * flow;
     }
 }
 
-impl Join for Shape {
+impl Join for Shape<'_> {
     fn join(&mut self, next: &mut Node) {
         let mut last = self.nodes.pop_back().unwrap();
         let last = last.vertex_mut();
@@ -189,7 +186,7 @@ impl Join for Shape {
     }
 }
 
-impl Join for Layer {
+impl Join for Layer<'_> {
     fn join(&mut self, next: &mut Node) {
         let mut last = self.nodes.pop_back().unwrap();
         let last = last.vertex_mut();

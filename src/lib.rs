@@ -221,7 +221,7 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
         panic!("blend_verteces called from non-move node");
     };
     assert!(curr.id < until);
-    let prev = curr.prev.clone();
+    let prev = curr.prev;
     let mut i = curr.id;
     cur.move_next();
     while i < until {
@@ -242,7 +242,7 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
         panic!("blending from non-move node");
     };
     curr.prev = prev;
-    curr.from = unsafe { (*prev.unwrap()).to.clone() };
+    curr.from = prev.unwrap().to.clone();
 }
 
 
@@ -253,35 +253,33 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         return;
     }
     assert!(count > 1);
-    // take a copy of the value of the current node
-    let (end_from, end_to, end_prev) = match cur.current() {
-        Some(Node::Vertex(v)) => (v.from.clone(), v.to.clone(), v.prev.clone()),
-        _ => panic!("subdivide called from non-move node"),
+    // pop the current node
+    let Some(Node::Vertex(end)) = cur.remove_current() else {
+        panic!("subdivide called from non-move node");
     };
-    let start = end_prev.unwrap();
-    let x_seg = (end_to.x - end_from.x) / count as f32;
-    let y_seg = (end_to.y - end_from.y) / count as f32;
-    let z_seg = (end_to.z - end_from.z) / count as f32;
-    let e_seg = end_to.e / count as f32;
-    let mut prev = Some(start);
+    let x_seg = (end.to.x - end.from.x) / count as f32;
+    let y_seg = (end.to.y - end.from.y) / count as f32;
+    let z_seg = (end.to.z - end.from.z) / count as f32;
+    let e_seg = end.to.e / count as f32;
+    let prev = end.prev;
     for i in 1..count {
         let v = Vertex {
             id: -1,
             label: Label::Uninitialized,
             prev,
             from: Pos {
-                x: end_from.x,
-                y: end_from.y,
-                z: end_from.z,
-                e: end_from.e,
-                f: end_from.f,
+                x: end.from.x,
+                y: end.from.y,
+                z: end.from.z,
+                e: end.from.e,
+                f: end.from.f,
             },
             to: Pos {
-                x: end_from.x + x_seg * i as f32,
-                y: end_from.y + y_seg * i as f32,
-                z: end_from.z + z_seg * i as f32,
+                x: end.from.x + x_seg * i as f32,
+                y: end.from.y + y_seg * i as f32,
+                z: end.from.z + z_seg * i as f32,
                 e: e_seg,
-                f: end_to.f,
+                f: end.to.f,
             },
         };
         cur.insert_before(Node::Vertex(v));
