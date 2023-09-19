@@ -473,23 +473,6 @@ impl Parsed {
             rel_e,
         }
     }
-    fn generate_layers(&mut self) {
-        let mut new_nodes = LinkedList::new();
-        let mut id = 1;
-        let mut temp = LinkedList::new();
-
-        for node in self.nodes.iter() {
-            if let Node::LayerChange(_) = node {
-                new_nodes.push_back(Node::Layer ( Layer {
-                    id,
-                    nodes: temp,
-                }));
-                temp = LinkedList::new();
-                id += 1
-            } else { temp.push_back(node.clone())}
-        }
-        self.nodes = new_nodes;
-    }
     pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
         let min_y = 5.0;
