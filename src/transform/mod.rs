@@ -21,11 +21,6 @@ impl Translate for Vertex {
         
         assert!(prev.to == self.from, "{:#?}\r\n{:#?}", prev, self);
 
-        self.to.x += dx;
-        self.to.y += dy;
-        self.to.z += dz;
-
-
         let prev_dist = (*prev).dist();
         prev.to.x += dx;
         prev.to.y += dy;
