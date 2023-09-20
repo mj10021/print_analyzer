@@ -6,20 +6,20 @@ pub trait Translate {
 
 impl Translate for Vertex {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        if self.prev.is_none() {
-            return;
-        }
         let init_dist = self.dist();
         let init_flow = {
             if self.extrusion_move() {
                 self.flow()
             } else { 0.0 }
         };
-
-        let prev = self.prev.unwrap();
-        let prev = unsafe{ &mut*prev };
+        // return if homing vertex (prev = None)
+        let Some(prev) = self.prev else { return; };
+        // FIXME: this wrong
+        let prev = unsafe{ &mut(*prev) };
+        let test = prev.to.clone();
+        let test2 = self.from.clone();
         
-        assert!(prev.to == self.from, "{:#?}\r\n{:#?}", prev, self);
+        assert!(test == test2, "{:#?}\r\n{:#?}", prev, self);
 
         let prev_dist = (*prev).dist();
         prev.to.x += dx;
@@ -73,10 +73,12 @@ fn translate_test() {
     use std::fs::File;
     use std::io::Write;
     use crate::emit::Emit;
-    let mut gcode = crate::read("test.gcode").expect("failed to read file");
-    for node in gcode.nodes.iter_mut() {
+    //let mut gcode = crate::read("test.gcode").expect("failed to read file");
+    let mut nodes = file_reader::build_nodes("test.gcode").expect("failed to read file");
+    for node in nodes.iter_mut() {
         node.translate(10.0, 10.0, 10.0);
     }
+    let gcode = Parsed::build(std::collections::VecDeque::from(nodes));
     let mut file = File::create("test_translate.gcode").expect("failed to create file");
     file.write_all(gcode.emit(false).as_bytes()).expect("failed to write file");
 }

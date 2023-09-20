@@ -132,9 +132,6 @@ impl Pos {
         }
     }
     pub fn build(prev: &Pos, g1: &G1) -> Pos {
-        if pre_home(*prev) {
-            panic!("g1 move from unhomed state")
-        }
         Pos {
             x: g1.x.unwrap_or(prev.x),
             y: g1.y.unwrap_or(prev.y),
@@ -157,7 +154,7 @@ fn pre_home(p: Pos) -> bool {
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
-    // this is a pointer to the previous extrusion move node
+    // this is a pointer to the previous verted where self.extrusion_move()
     pub prev: Option<*mut Vertex>,
     pub from: Pos,
     pub to: Pos,
@@ -165,7 +162,9 @@ pub struct Vertex {
 
 impl Vertex {
     fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
-        let from = unsafe { (*(prev.unwrap())).to.clone() };
+        let from = if prev.is_some() {
+            unsafe { (*(prev.unwrap())).to.clone() }
+        } else { Pos::unhomed() }; // FIXME: check this
             
         let mut vrtx = Vertex {
             id: g1_moves,
@@ -253,12 +252,12 @@ impl Vertex {
 fn tran_test() {
     use crate::transform::Translate;
     let test = "G28\ng1x1e1\ng1x2e1\ng1x3e1\n";
-    let mut gcode = crate::read(test).expect("failed to parse");
+    let gcode = crate::read(test).expect("failed to parse");
     let mut nodes = get_nodes(gcode.nodes);
-    if let Some(Node::Vertex(v)) = nodes.iter().ith(3) {
+    if let Some(Node::Vertex(v)) = nodes.iter_mut().nth(3) {
         v.translate(0.0, 1.0, 0.0);
     }
-    panic!("{:?}", gcode);
+    panic!("{:#?}", nodes);
 }
 impl std::fmt::Debug for Vertex {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
