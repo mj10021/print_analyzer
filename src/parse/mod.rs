@@ -1,6 +1,7 @@
 use std::collections::{LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
 
+
 pub mod file_reader;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -151,30 +152,63 @@ fn pre_home(p: Pos) -> bool {
     false
 }
 #[derive(PartialEq)]
-pub struct Vertex {
-    pub id: i32,
+pub struct Vertex<'a> {
+    pub id: &'a i32,
     pub label: Label,
-    // this is a pointer to the previous verted where self.extrusion_move()
-    pub prev: Option<*mut Vertex>,
+    // this is a pointer to the previous vertex where self.extrusion_move() == True
+    pub prev: LastVertex<'a>,
     pub from: Pos,
     pub to: Pos,
 }
+type LastVertex<'a> = Option<Box<Vertex<'a>>>;
+trait Move {
+    fn to(&self) -> Pos;
+}
+impl<'a> Move for LastVertex<'a> {
+    fn to(&self) -> Pos {
+        match self {
+            Some(v) => v.to.clone(),
+            None => Pos::unhomed(),
+        }
+    }
+}
+impl<'a> Vertex<'a> {
+    fn build(g1_moves: i32, prev: &mut LastVertex, g1: G1) -> Vertex<'a> {
+        let from = if let Some(prev) = prev {
+            prev.to.clone()
+        } else {
+            Pos::unhomed()
+        }; // FIXME: check this
 
-impl Vertex {
-    fn build(g1_moves: i32, prev: Option<*mut Vertex>, g1: G1) -> Vertex {
-        let from = if prev.is_some() {
-            unsafe { (*(prev.unwrap())).to.clone() }
-        } else { Pos::unhomed() }; // FIXME: check this
-            
         let mut vrtx = Vertex {
-            id: g1_moves,
+            id: &g1_moves,
             label: Label::Uninitialized,
             to: Pos::build(&from, &g1),
             from,
-            prev,
+            prev: None,
         };
+        Vertex::append(&mut vrtx, prev);
         vrtx.label();
         vrtx
+    }
+    fn append(vrtx: &mut Vertex, placeholder: &mut LastVertex) {
+        if vrtx.extrusion_move() {
+            if vrtx.from == placeholder.to() {
+                vrtx.prev = *placeholder;
+                *placeholder = Some(Box::new(*vrtx));
+            }
+        }
+     //       let truth = {
+     //           if let Some(v) = &prev {
+     //               v.to == vrtx.from
+     //           } else { false }
+     //       };
+     //       if truth {
+     //           vrtx.prev = *placeholder;
+     //           *placeholder = Some(Box::new(*vrtx));
+     //       }
+     //   }
+        
     }
     fn label(&mut self) {
         let dx = self.to.x - self.from.x;
@@ -214,6 +248,12 @@ impl Vertex {
                 Label::MysteryMove
             }
         };
+    }
+    pub fn to(&self) -> Pos {
+        self.to.clone()
+    }
+    pub fn from(&self) -> Pos {
+        self.from.clone()
     }
     pub fn dist(&self) -> f32 {
         ((self.to.x - self.from.x).powf(2.0)
@@ -259,7 +299,7 @@ fn tran_test() {
     }
     panic!("{:#?}", nodes);
 }
-impl std::fmt::Debug for Vertex {
+impl std::fmt::Debug for Vertex<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Point")
             .field("id", &self.id)
@@ -273,16 +313,16 @@ impl std::fmt::Debug for Vertex {
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
 #[derive(Debug, PartialEq)]
-pub enum Node {
-    Vertex(Vertex),
+pub enum Node<'a> {
+    Vertex(Vertex<'a>),
     NonMove(Line),
-    Shape(Shape),
-    Layer(Layer),
-    LayerChange(Vec<Node>),
-    ShapeChange(Vec<Node>),
-    PrePrint(Vec<Node>),
+    Shape(Shape<'a>),
+    Layer(Layer<'a>),
+    LayerChange(Vec<Node<'a>>),
+    ShapeChange(Vec<Node<'a>>),
+    PrePrint(Vec<Node<'a>>),
 }
-impl Node {
+impl<'a> Node<'a> {
     pub fn vertex(&self) -> &Vertex {
         match self {
             Node::Vertex(v) => v,
@@ -313,57 +353,57 @@ impl Node {
             _ => panic!("not a layer"),
         }
     }
-    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node<'a> {
         let mut out = LinkedList::new();
         let mut len = 0.0;
         loop {
             let cur = nodes.pop_front();
-            if cur.is_none() { break; }
+            if cur.is_none() {
+                break;
+            }
             if let Some(Node::Vertex(v)) = &cur {
                 if v.extrusion_move() {
                     len += v.dist();
                 // if the vertex is no extrusion or feedrate change,
                 // break and return the errant node to the front of the list
-                } else if v.label != Label::FeedrateChangeOnly { 
+                } else if v.label != Label::FeedrateChangeOnly {
                     nodes.push_front(cur.unwrap());
                     break;
-                 }
-
+                }
             }
             out.push_back(cur.unwrap());
-
         }
         assert!(out.len() > 0, "no nodes popped");
-        Node::Shape( Shape {
+        Node::Shape(Shape {
             nodes: out,
             closed: false,
             len,
-        } )
+        })
     }
-    fn pop_change(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_change(nodes: &mut VecDeque<Node>) -> Node<'a> {
         // the change should end before the first extrusion move
         // note: that does not count deretractions (e move with no x/y/z travel)
-        // keep track of the first and last position of the sequence to decide 
+        // keep track of the first and last position of the sequence to decide
         // if it should be labelled as a shape or a layer change
         let mut out = Vec::new();
         let mut start = None;
         let mut end = None;
         loop {
             let cur = nodes.pop_front();
-            if cur.is_none() { break; }
+            if cur.is_none() {
+                break;
+            }
             if let Some(Node::Vertex(v)) = &cur {
                 if start.is_none() {
                     start = Some(v.from);
                 }
                 if v.extrusion_move() {
-
-                    end = Some(v.to); 
+                    end = Some(v.to);
                     nodes.push_front(cur.unwrap());
                     break;
                 }
             }
             out.push(cur.unwrap());
-
         }
         assert!(out.len() > 0, "no nodes popped");
         if start.is_some() && end.is_some() && start.unwrap().z != end.unwrap().z {
@@ -371,11 +411,13 @@ impl Node {
         }
         Node::ShapeChange(out)
     }
-    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node {
+    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node<'a> {
         let mut out = Vec::new();
         loop {
             let cur = nodes.pop_front();
-            if cur.is_none() { break; }
+            if cur.is_none() {
+                break;
+            }
             if let Some(Node::Vertex(v)) = &cur {
                 if v.extrusion_move() && v.label != Label::PrePrintMove {
                     nodes.push_front(cur.unwrap());
@@ -392,43 +434,43 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
     let mut out = Vec::new();
     for node in nodes {
         match node {
-            Node::NonMove(_) => {out.push(node)},
-            Node::Vertex(_) => {out.push(node);},
+            Node::NonMove(_) => out.push(node),
+            Node::Vertex(_) => {
+                out.push(node);
+            }
             Node::Shape(s) => {
-                out.append(&mut get_nodes(s.nodes)); 
-            },
+                out.append(&mut get_nodes(s.nodes));
+            }
             Node::Layer(l) => {
-                out.append(&mut get_nodes(l.nodes)); 
-            },
-            Node::PrePrint(mut v) | Node::LayerChange(mut v) | Node::ShapeChange(mut v) => {out.append(&mut v);},
+                out.append(&mut get_nodes(l.nodes));
+            }
+            Node::PrePrint(mut v) | Node::LayerChange(mut v) | Node::ShapeChange(mut v) => {
+                out.append(&mut v);
+            }
         }
     }
     out
 }
 
-
 #[derive(Debug, PartialEq)]
-pub struct Shape {
-    pub nodes: LinkedList<Node>,
+pub struct Shape<'a> {
+    pub nodes: LinkedList<Node<'a>>,
     pub closed: bool,
     pub len: f32,
 }
 #[derive(Debug, PartialEq)]
-pub struct Layer {
+pub struct Layer<'a> {
     pub id: i32,
-    pub nodes: LinkedList<Node>,
+    pub nodes: LinkedList<Node<'a>>,
 }
-impl Layer {    
-}
-// Parsed struct contains a linked list of nodes and any other print information
-// needed to correctly emit g-code
+
 #[derive(Debug, PartialEq)]
-pub struct Parsed {
-    pub nodes: LinkedList<Node>,
+pub struct Parsed<'a> {
+    pub nodes: LinkedList<Node<'a>>,
     rel_xyz: bool,
     rel_e: bool,
 }
-impl Parsed {
+impl Parsed<'_> {
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;
@@ -444,20 +486,33 @@ impl Parsed {
                     } else {
                         parsed.push_back(nodes.pop_front().unwrap());
                     }
-                },
+                }
                 Some(_) => {
-                    if let Some(Node::NonMove(Line::Instruction(Instruction {first_word: Word(letter, number, ..), ..}))) = nodes.front() {
+                    if let Some(Node::NonMove(Line::Instruction(Instruction {
+                        first_word: Word(letter, number, ..),
+                        ..
+                    }))) = nodes.front()
+                    {
                         let number = number.round() as i32;
                         match (letter, number) {
-                            ('G', 90) => { rel_xyz = false; }
-                            ('G', 91) => { rel_xyz = true; }
-                            ('M', 82) => { rel_e = false; }
-                            ('M', 83) => { rel_e = true; }
+                            ('G', 90) => {
+                                rel_xyz = false;
+                            }
+                            ('G', 91) => {
+                                rel_xyz = true;
+                            }
+                            ('M', 82) => {
+                                rel_e = false;
+                            }
+                            ('M', 83) => {
+                                rel_e = true;
+                            }
                             _ => {}
                         }
                     }
-                    parsed.push_back(nodes.pop_front().unwrap())},
-                _ => {},
+                    parsed.push_back(nodes.pop_front().unwrap())
+                }
+                _ => {}
             }
         }
         Parsed {
@@ -467,7 +522,7 @@ impl Parsed {
         }
     }
 
-    pub fn first_move_id(&self) -> i32 {
+    pub fn first_move_id(&self) -> &i32 {
         let min_x = 5.0;
         let min_y = 5.0;
         for node in self.nodes.iter() {
@@ -477,18 +532,16 @@ impl Parsed {
                 }
             }
         }
-        -1
+        &-1
     }
     pub fn update_nodes(&mut self) {
         let mut id = 1;
         for node in self.nodes.iter_mut() {
             if let Node::Vertex(v) = node {
-                v.id = id;
+                v.id = &id;
                 id += 1;
-                if v.prev.is_some() {
-                    unsafe {
-                        v.from = (*(v.prev.unwrap())).to.clone();
-                    }
+                if let Some(prev) = &v.prev {
+                    v.from = prev.to();
                 }
                 v.label();
             }
@@ -497,20 +550,6 @@ impl Parsed {
 
     fn delete() {}
     fn insert() {}
-}
-#[test]
-fn node_test() {
-    let parsed = crate::read("test.gcode").expect("failed to read file");
-    let nodes = get_nodes(parsed.nodes);
-    for i in 0..60 {
-        let node = &nodes[i];
-        if let Node::Vertex(v) = node {
-            if v.prev.is_some() {
-                let prev = unsafe{ &(*(v.prev.unwrap())) };
-                assert!(prev.to == v.from, "{:#?}\r\n\r\n{:#?}", prev.to, v.from);
-            }
-        }
-    }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Label {
@@ -563,71 +602,7 @@ impl Annotation {
         let ex = (in_area * self.de) / move_dist;
         return ex / layer_height;
     }
-    pub fn build(gcode: &Parsed) -> std::collections::BTreeMap<i32, Annotation> {
-        let mut ann = std::collections::BTreeMap::new();
-        let first_move = gcode.first_move_id();
-
-        for node in gcode.nodes.iter() {
-            match node {
-                Node::Vertex(Vertex {
-                    id,
-                    label: Label::Uninitialized,
-                    prev: _,
-                    from,
-                    to,
-                }) => {
-                    let mut a = Annotation {
-                        label: Label::Uninitialized,
-                        dx: to.x - from.x,
-                        dy: to.y - from.y,
-                        dz: to.z - from.z,
-                        de: to.e,
-                        dt: 0.0,
-                        ex_width_mm: 0.0,
-                    };
-                    // FIXME: read layer heights from gcode for each layer
-                    a.ex_width_mm = a.get_ex_width(0.2);
-                    a.dt = a.get_time(to.f);
-                    a.label = {
-                        if *id == 1 {
-                            Label::FirstG1
-                        } else if *id < first_move {
-                            Label::PrePrintMove
-                        } else if a.de > EPSILON {
-                            if a.dx.abs() > EPSILON || a.dy.abs() > EPSILON {
-                                if a.dz.abs() > EPSILON {
-                                    Label::PlanarExtrustion
-                                } else {
-                                    Label::NonPlanarExtrusion
-                                }
-                            } else {
-                                Label::DeRetraction
-                            }
-                        } else if a.dz > EPSILON {
-                            Label::LiftZ
-                        } else if a.dz < EPSILON {
-                            Label::LowerZ
-                        } else if a.de < EPSILON {
-                            if a.dx.abs() > EPSILON || a.dy.abs() > EPSILON {
-                                Label::Wipe
-                            } else {
-                                Label::Retraction
-                            }
-                        } else if a.dx.abs() + a.dy.abs() > EPSILON {
-                            Label::TravelMove
-                        } else if (from.f - to.f).abs() > EPSILON {
-                            Label::FeedrateChangeOnly
-                        } else {
-                            Label::MysteryMove
-                        }
-                    };
-                    ann.insert(id.clone(), a);
-                }
-                _ => (),
-            }
-        }
-        ann
-    }
+   
 }
 #[test]
 #[should_panic]

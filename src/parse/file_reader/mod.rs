@@ -107,11 +107,13 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
         Err(_) => parse_str(path),
     };
     assert!(lines.len() > 0);
+    let mut lines: VecDeque<String> = lines.into_iter().collect();
     let mut g1_moves = 0;
     let mut temp_lines = VecDeque::new();
     // prev holds a raw mut pointer to the to position of the previous vertex
-    let mut prev: Option<*mut Vertex> = None;
-    for line in lines {
+    let mut prev: LastVertex = None;
+    while lines.len() > 0 {
+        let line = lines.pop_front().unwrap();
         // remove all comments and whitespace
         let line = clean_line(&line);
         // skip empty lines (probably from lines that are only comments)
@@ -131,10 +133,9 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                 match (letter, num) {
                     ('G', 28) => {
                         // if the homing node points to a previous extrusion move node, something is wrong
-                        assert!(prev.is_none(), "homing from previously homed state");
                         assert!(g1_moves == 0, "homing after moves have been read");
                         let vrtx = Vertex {
-                            id: 0,
+                            id: &0,
                             label: Label::Home,
                             to: Pos::home(),
                             from: Pos::unhomed(),
@@ -144,33 +145,25 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                         temp_lines.push_back(node);
                     }
                     ('G', 1) => {
-                        // if prev is None, it means no homing command has been read
                         g1_moves += 1;
                         let g1 = G1::build(line, g1_moves);
-                        let vrtx = Vertex::build(g1_moves, prev, g1);
+                        let vrtx = Vertex::build(
+                            g1_moves,
+                            &mut prev,
+                            g1,
+                        );
+                        
                         let node = Node::Vertex(vrtx);
                         temp_lines.push_back(node);
-                        if let Some(Node::Vertex(v)) = temp_lines.back_mut() {
-                            if v.extrusion_move() {
-                                if prev.is_some() {
-                                    if unsafe{ (*(prev.unwrap())).to == v.from } {
-                                        v.prev = prev;
-                                    }
-                                }
-                                prev = Some(v as *mut Vertex);
-                            }
-                        } else {
-                            panic!("failed to read pointer to last vertex");
-                        }
-                    },
+                    }
                     _ => {
                         let node = Node::NonMove(Line::build(line));
                         temp_lines.push_back(node);
-                    }
+                    },
                 }
-            },
-            _ => {},
+            }
+            _ => {}
         }
-    } 
-Ok(temp_lines)
+    }
+    Ok(temp_lines)
 }

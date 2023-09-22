@@ -34,7 +34,10 @@ impl Emit for Line {
 impl Emit for Pos {
     fn emit(&self, debug: bool) -> String {
         if debug {
-            return format!("X{} Y{} Z{} E{} F{}; {:?}\n", self.x, self.y, self.z, self.e, self.f, self);
+            return format!(
+                "X{} Y{} Z{} E{} F{}; {:?}\n",
+                self.x, self.y, self.z, self.e, self.f, self
+            );
         }
         assert!(self.x.is_finite() && !self.x.is_nan());
         assert!(self.y.is_finite() && !self.y.is_nan());
@@ -48,13 +51,13 @@ impl Emit for Pos {
         )
     }
 }
-impl Emit for Vertex {
+impl Emit for Vertex<'_> {
     fn emit(&self, debug: bool) -> String {
         if self.to.x == 0.0
             && self.to.y == 0.0
             && self.to.z == 0.0
             && self.to.e == 0.0
-            && self.id == 0
+            && self.id == &0
         {
             return "G28\n".to_string();
         }
@@ -86,7 +89,7 @@ impl Emit for Vertex {
         out
     }
 }
-impl Emit for Shape {
+impl Emit for Shape<'_> {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START SHAPE\n");
         for node in self.nodes.iter() {
@@ -96,7 +99,7 @@ impl Emit for Shape {
         out
     }
 }
-impl Emit for Layer {
+impl Emit for Layer<'_> {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START LAYER\n");
         for node in self.nodes.iter() {
@@ -106,13 +109,13 @@ impl Emit for Layer {
         out
     }
 }
-impl Emit for Node {
+impl Emit for Node<'_> {
     fn emit(&self, debug: bool) -> String {
         match self {
             Node::Vertex(v) => v.emit(debug),
             Node::NonMove(line) => line.emit(debug),
-            Node::Shape(s) => { s.emit(debug) },
-            Node::Layer(l) => { l.emit(debug) }
+            Node::Shape(s) => s.emit(debug),
+            Node::Layer(l) => l.emit(debug),
             Node::LayerChange(nodes) => {
                 let mut out = String::from("; START LAYER CHANGE\n");
                 for node in nodes {
@@ -140,7 +143,7 @@ impl Emit for Node {
         }
     }
 }
-impl Emit for Parsed {
+impl Emit for Parsed<'_> {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::new();
         for node in &self.nodes {
@@ -150,4 +153,3 @@ impl Emit for Parsed {
         out
     }
 }
-

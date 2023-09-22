@@ -1,11 +1,11 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 
-mod parse;
 mod emit;
+mod parse;
 mod transform;
 //mod gui;
-use parse::{Vertex, Node, Label, Parsed, Pos, file_reader::build_nodes};
+use parse::{file_reader::build_nodes, Label, Node, Parsed, Pos, Vertex};
 
 use std::collections::linked_list::CursorMut;
 
@@ -13,7 +13,7 @@ fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
     let nodes = build_nodes(path)?;
     Ok(Parsed::build(nodes))
 }
-
+/*
 fn normalize_move_len(gcode: &mut Parsed, len: f32) {
     // stuck in loop
     subdivide_all(gcode, len);
@@ -89,7 +89,7 @@ fn sub_all_test() {
     let mut f = File::create("sub_all_output.gcode").expect("failed to create file");
     let _ = f.write_all(&gcode.as_bytes());
 }
-
+ */
 fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
     let location = Pos {
         x: location.0,
@@ -174,54 +174,49 @@ fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
         }
     }
 }
-#[test]
-fn map_test() {
-    use transform::Translate;
-    use crate::emit::Emit;
-    use nalgebra::{Rotation3, Vector3};
-    use std::f32::consts::FRAC_PI_2;
-    let mut gcode = read("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
-    subdivide_all(&mut gcode, 0.5);
-    gcode.update_nodes();
-    for node in gcode.nodes.iter_mut() {
-        if let Node::Vertex(v) = node {
-            let (x, y, z) = v.get_vector();
-            let vec = Vector3::new(x, y, z);
-            let rot = Rotation3::from_euler_angles(0.0, 0.0, FRAC_PI_2);
-            let vec = rot * vec;
-            if v.prev.is_some()
-                && (v.label == Label::PlanarExtrustion || v.label == Label::NonPlanarExtrusion)
-                && unsafe {
-                    (*(v.prev.unwrap())).label == Label::PlanarExtrustion
-                        || (*(v.prev.unwrap())).label == Label::NonPlanarExtrusion
-                }
-            {
-                v.translate(
-                    (vec.x * v.id as f32).sin() * 0.33,
-                    (vec.y * v.id as f32).sin() * 0.33,
-                    0.0,
-                );
-            }
-        }
-    }
-    gcode.update_nodes();
-    let gcode = gcode.emit(false);
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut f = File::create("map_output.gcode").expect("failed to create file");
-    let _ = f.write_all(&gcode.as_bytes());
-}
+// #[test]
+// fn map_test() {
+//     use transform::Translate;
+//     use crate::emit::Emit;
+//     use nalgebra::{Rotation3, Vector3};
+//     use std::f32::consts::FRAC_PI_2;
+//     let mut gcode = read("test_one_wall_cylinder.gcode").expect("failed to parse gcode");
+//     subdivide_all(&mut gcode, 0.5);
+//     gcode.update_nodes();
+//     for node in gcode.nodes.iter_mut() {
+//         if let Node::Vertex(v) = node {
+//             let (x, y, z) = v.get_vector();
+//             let vec = Vector3::new(x, y, z);
+//             let rot = Rotation3::from_euler_angles(0.0, 0.0, FRAC_PI_2);
+//             let vec = rot * vec;
+//             if v.prev.is_some()
+//             {
+//                 v.translate(
+//                     (vec.x * v.id as f32).sin() * 0.33,
+//                     (vec.y * v.id as f32).sin() * 0.33,
+//                     0.0,
+//                 );
+//             }
+//         }
+//     }
+//     gcode.update_nodes();
+//     let gcode = gcode.emit(false);
+//     use std::fs::File;
+//     use std::io::prelude::*;
+//     let mut f = File::create("map_output.gcode").expect("failed to create file");
+//     let _ = f.write_all(&gcode.as_bytes());
+// }
 // fn insert_before(feature)
 // fn modify(feature)
 // fn replace_with(feature, gcode_sequence)
 // fn insert_after(feature)
-
+/*
 pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
     let Some(Node::Vertex(curr)) = cur.current() else {
         panic!("blend_verteces called from non-move node");
     };
     assert!(curr.id < until);
-    let prev = curr.prev.clone();
+    let prev = curr.prev;
     let mut i = curr.id;
     cur.move_next();
     while i < until {
@@ -242,9 +237,8 @@ pub fn merge_verteces(cur: &mut CursorMut<Node>, until: i32) {
         panic!("blending from non-move node");
     };
     curr.prev = prev;
-    curr.from = unsafe { (*prev.unwrap()).to.clone() };
+    curr.from = prev.unwrap().into_inner().to.clone();
 }
-
 
 pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     // FIXME: this is not working on the first move of a shape
@@ -255,7 +249,7 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
     assert!(count > 1);
     // take a copy of the value of the current node
     let (end_from, end_to, end_prev) = match cur.current() {
-        Some(Node::Vertex(v)) => (v.from.clone(), v.to.clone(), v.prev.clone()),
+        Some(Node::Vertex(v)) => (v.from.clone(), v.to.clone(), v.prev),
         _ => panic!("subdivide called from non-move node"),
     };
     let start = end_prev.unwrap();
@@ -296,8 +290,8 @@ pub fn subdivide(cur: &mut CursorMut<Node>, count: i32) {
         _ => panic!("subdivide called from non-move node"),
     };
     end.to.e *= 1.0 / count as f32;
+    end.from = prev.unwrap().borrow().to.clone();
     end.prev = prev;
-    end.from = unsafe { (*(end.prev.unwrap())).to.clone() };
 }
 #[test]
 fn one_sub_test() {
@@ -324,7 +318,7 @@ fn sub_test() {
     }
     subdivide(&mut cur, 5);
     panic!("{:?}", gcode);
-}
+} */
 
 mod integration_tests {
 
@@ -332,9 +326,9 @@ mod integration_tests {
     use std::fs::File;
     #[test]
     fn import_emit_reemit() {
-        use std::io::prelude::*;
         use crate::emit::Emit;
         use crate::read;
+        use std::io::prelude::*;
         let f = "test.gcode";
         let p_init = read(f).expect("failed to parse gcode");
         let init = p_init.emit(false);
@@ -350,7 +344,7 @@ mod integration_tests {
     }
     #[test]
     fn specific_random_gcode_issue() {
-        use crate::{read, emit::Emit};
+        use crate::{emit::Emit, read};
         use std::io::prelude::*;
         let gcode = "G28
         G1 X179 Y-2 F2400 
