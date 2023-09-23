@@ -135,7 +135,7 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                         // if the homing node points to a previous extrusion move node, something is wrong
                         assert!(g1_moves == 0, "homing after moves have been read");
                         let vrtx = Vertex {
-                            id: &0,
+                            id: 0,
                             label: Label::Home,
                             to: Pos::home(),
                             from: Pos::unhomed(),

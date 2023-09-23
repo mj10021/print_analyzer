@@ -4,7 +4,7 @@ pub trait Translate {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32);
 }
 
-impl Translate for Vertex<'_> {
+impl Translate for Vertex {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         let init_dist = self.dist();
         let init_flow = {
@@ -49,7 +49,7 @@ impl Translate for Vertex<'_> {
     }
 }
 
-impl Translate for Shape<'_> {
+impl Translate for Shape {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         for node in self.nodes.iter_mut() {
             node.translate(dx, dy, dz);
@@ -57,14 +57,14 @@ impl Translate for Shape<'_> {
     }
 }
 
-impl Translate for Layer<'_> {
+impl Translate for Layer {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         for node in self.nodes.iter_mut() {
             node.translate(dx, dy, dz);
         }
     }
 }
-impl Translate for Node<'_> {
+impl Translate for Node {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         match self {
             Node::Layer(l) => {
@@ -106,7 +106,7 @@ enum Axis {
     Y,
     Z,
 }
-impl Rotate for Vertex<'_> {
+impl Rotate for Vertex {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         let axis = match axis {
             Axis::X => Vector3::x_axis(),
@@ -126,21 +126,21 @@ impl Rotate for Vertex<'_> {
     }
 }
 
-impl Rotate for Shape<'_> {
+impl Rotate for Shape {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         for node in self.nodes.iter_mut() {
             node.rotate(angle, axis);
         }
     }
 }
-impl Rotate for Layer<'_> {
+impl Rotate for Layer {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         for node in self.nodes.iter_mut() {
             node.rotate(angle, axis);
         }
     }
 }
-impl Rotate for Node<'_> {
+impl Rotate for Node {
     fn rotate(&mut self, angle: f32, axis: &Axis) {
         match self {
             Node::Layer(l) => {
@@ -174,7 +174,7 @@ trait SubDivide {
     fn subdivide(&self, max_length: f32);
 }
 
-impl SubDivide for Vertex<'_> {
+impl SubDivide for Vertex {
     fn subdivide(&self, max_length: f32) {}
 }
 /*

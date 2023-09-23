@@ -51,13 +51,13 @@ impl Emit for Pos {
         )
     }
 }
-impl Emit for Vertex<'_> {
+impl Emit for Vertex {
     fn emit(&self, debug: bool) -> String {
         if self.to.x == 0.0
             && self.to.y == 0.0
             && self.to.z == 0.0
             && self.to.e == 0.0
-            && self.id == &0
+            && self.id == 0
         {
             return "G28\n".to_string();
         }
@@ -89,7 +89,7 @@ impl Emit for Vertex<'_> {
         out
     }
 }
-impl Emit for Shape<'_> {
+impl Emit for Shape {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START SHAPE\n");
         for node in self.nodes.iter() {
@@ -99,7 +99,7 @@ impl Emit for Shape<'_> {
         out
     }
 }
-impl Emit for Layer<'_> {
+impl Emit for Layer {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START LAYER\n");
         for node in self.nodes.iter() {
@@ -109,7 +109,7 @@ impl Emit for Layer<'_> {
         out
     }
 }
-impl Emit for Node<'_> {
+impl Emit for Node {
     fn emit(&self, debug: bool) -> String {
         match self {
             Node::Vertex(v) => v.emit(debug),
@@ -143,7 +143,7 @@ impl Emit for Node<'_> {
         }
     }
 }
-impl Emit for Parsed<'_> {
+impl Emit for Parsed {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::new();
         for node in &self.nodes {

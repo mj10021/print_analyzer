@@ -152,19 +152,19 @@ fn pre_home(p: Pos) -> bool {
     false
 }
 #[derive(PartialEq)]
-pub struct Vertex<'a> {
-    pub id: &'a i32,
+pub struct Vertex {
+    pub id: i32,
     pub label: Label,
     // this is a pointer to the previous vertex where self.extrusion_move() == True
     pub prev: LastVertex<'a>,
     pub from: Pos,
     pub to: Pos,
 }
-type LastVertex<'a> = Option<Box<Vertex<'a>>>;
+type LastVertex<'a> = Option<&'a mut Vertex>;
 trait Move {
     fn to(&self) -> Pos;
 }
-impl<'a> Move for LastVertex<'a> {
+impl Move for LastVertex {
     fn to(&self) -> Pos {
         match self {
             Some(v) => v.to.clone(),
@@ -172,8 +172,8 @@ impl<'a> Move for LastVertex<'a> {
         }
     }
 }
-impl<'a> Vertex<'a> {
-    fn build(g1_moves: i32, prev: &mut LastVertex, g1: G1) -> Vertex<'a> {
+impl Vertex {
+    fn build(g1_moves: i32, prev: &mut LastVertex, g1: G1) {
         let from = if let Some(prev) = prev {
             prev.to.clone()
         } else {
@@ -181,21 +181,22 @@ impl<'a> Vertex<'a> {
         }; // FIXME: check this
 
         let mut vrtx = Vertex {
-            id: &g1_moves,
+            id: g1_moves,
             label: Label::Uninitialized,
             to: Pos::build(&from, &g1),
             from,
             prev: None,
         };
-        Vertex::append(&mut vrtx, prev);
         vrtx.label();
-        vrtx
+        Vertex::append(Box::new(vrtx), prev);
     }
-    fn append(vrtx: &mut Vertex, placeholder: &mut LastVertex) {
+    fn append(mut vrtx: Box<Vertex>, placeholder: &mut LastVertex) {
         if vrtx.extrusion_move() {
             if vrtx.from == placeholder.to() {
-                vrtx.prev = *placeholder;
-                *placeholder = Some(Box::new(*vrtx));
+                let mut temp: LastVertex = None;
+                std::mem::swap(placeholder, &mut temp);
+                vrtx.prev = temp;
+                *placeholder = Some(vrtx);
             }
         }
      //       let truth = {
@@ -299,8 +300,8 @@ fn tran_test() {
     }
     panic!("{:#?}", nodes);
 }
-impl std::fmt::Debug for Vertex<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl std::fmt::Debug for Vertex {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         f.debug_struct("Point")
             .field("id", &self.id)
             .field("from", &self.from)
@@ -313,16 +314,16 @@ impl std::fmt::Debug for Vertex<'_> {
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
 #[derive(Debug, PartialEq)]
-pub enum Node<'a> {
-    Vertex(Vertex<'a>),
+pub enum Node {
+    Vertex(Vertex),
     NonMove(Line),
-    Shape(Shape<'a>),
-    Layer(Layer<'a>),
-    LayerChange(Vec<Node<'a>>),
-    ShapeChange(Vec<Node<'a>>),
-    PrePrint(Vec<Node<'a>>),
+    Shape(Shape),
+    Layer(Layer),
+    LayerChange(Vec<Node>),
+    ShapeChange(Vec<Node>),
+    PrePrint(Vec<Node>),
 }
-impl<'a> Node<'a> {
+impl Node {
     pub fn vertex(&self) -> &Vertex {
         match self {
             Node::Vertex(v) => v,
@@ -353,7 +354,7 @@ impl<'a> Node<'a> {
             _ => panic!("not a layer"),
         }
     }
-    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node<'a> {
+    fn pop_shape(nodes: &mut VecDeque<Node>) -> Node {
         let mut out = LinkedList::new();
         let mut len = 0.0;
         loop {
@@ -380,7 +381,7 @@ impl<'a> Node<'a> {
             len,
         })
     }
-    fn pop_change(nodes: &mut VecDeque<Node>) -> Node<'a> {
+    fn pop_change(nodes: &mut VecDeque<Node>) -> Node {
         // the change should end before the first extrusion move
         // note: that does not count deretractions (e move with no x/y/z travel)
         // keep track of the first and last position of the sequence to decide
@@ -411,7 +412,7 @@ impl<'a> Node<'a> {
         }
         Node::ShapeChange(out)
     }
-    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node<'a> {
+    fn pop_preprint(nodes: &mut VecDeque<Node>) -> Node {
         let mut out = Vec::new();
         loop {
             let cur = nodes.pop_front();
@@ -428,6 +429,18 @@ impl<'a> Node<'a> {
         }
         assert!(out.len() > 0, "no nodes popped");
         Node::PrePrint(out)
+    }
+}
+struct NodeList {
+    nodes: LinkedList<Node>,
+    last_vertex: LastVertex,
+}
+impl NodeList {
+    fn new() -> NodeList {
+        NodeList {
+            nodes: LinkedList::new(),
+            last_vertex: None
+        }
     }
 }
 fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
@@ -453,24 +466,24 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Shape<'a> {
-    pub nodes: LinkedList<Node<'a>>,
+pub struct Shape {
+    pub nodes: LinkedList<Node>,
     pub closed: bool,
     pub len: f32,
 }
 #[derive(Debug, PartialEq)]
-pub struct Layer<'a> {
+pub struct Layer {
     pub id: i32,
-    pub nodes: LinkedList<Node<'a>>,
+    pub nodes: LinkedList<Node>,
 }
 
 #[derive(Debug, PartialEq)]
-pub struct Parsed<'a> {
-    pub nodes: LinkedList<Node<'a>>,
+pub struct Parsed {
+    pub nodes: LinkedList<Node>,
     rel_xyz: bool,
     rel_e: bool,
 }
-impl Parsed<'_> {
+impl Parsed {
     pub fn build(mut nodes: VecDeque<Node>) -> Parsed {
         let mut rel_xyz = false;
         let mut rel_e = true;
@@ -522,7 +535,7 @@ impl Parsed<'_> {
         }
     }
 
-    pub fn first_move_id(&self) -> &i32 {
+    pub fn first_move_id(&self) -> i32 {
         let min_x = 5.0;
         let min_y = 5.0;
         for node in self.nodes.iter() {
@@ -532,13 +545,13 @@ impl Parsed<'_> {
                 }
             }
         }
-        &-1
+        -1
     }
     pub fn update_nodes(&mut self) {
         let mut id = 1;
         for node in self.nodes.iter_mut() {
             if let Node::Vertex(v) = node {
-                v.id = &id;
+                v.id = id;
                 id += 1;
                 if let Some(prev) = &v.prev {
                     v.from = prev.to();
