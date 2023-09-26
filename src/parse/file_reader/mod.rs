@@ -99,7 +99,7 @@ fn read_line(line: VecDeque<char>) -> VecDeque<Word> {
     }
     split_line(line)
 }
-pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Error>> {
+pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     // tries reading the input as raw g-code if file parse error,
     // this is really just for running the tests
     let lines = match parse_file(path) {
@@ -109,9 +109,8 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
     assert!(lines.len() > 0);
     let mut lines: VecDeque<String> = lines.into_iter().collect();
     let mut g1_moves = 0;
-    let mut temp_lines = VecDeque::new();
-    // prev holds a raw mut pointer to the to position of the previous vertex
-    let mut prev: LastVertex = None;
+    let mut temp_lines = NodeList::new();
+    let mut last_state = Pos::unhomed();
     while lines.len() > 0 {
         let line = lines.pop_front().unwrap();
         // remove all comments and whitespace
@@ -147,17 +146,16 @@ pub fn build_nodes(path: &str) -> Result<VecDeque<Node>, Box<dyn std::error::Err
                     ('G', 1) => {
                         g1_moves += 1;
                         let g1 = G1::build(line, g1_moves);
-                        let vrtx = Vertex::build(
+                        let tail = unsafe {
+                            Vertex::build(
                             g1_moves,
-                            &mut prev,
-                            g1,
-                        );
-                        
-                        let node = Node::Vertex(vrtx);
-                        temp_lines.push_back(node);
+                            &mut temp_lines,
+                            g1,)
+                        };
+                        last_state = unsafe { (*tail).to() };
                     }
                     _ => {
-                        let node = Node::NonMove(Line::build(line));
+                        let node = Node::NonMove(Line::build(line), last_state);
                         temp_lines.push_back(node);
                     },
                 }

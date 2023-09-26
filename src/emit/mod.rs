@@ -92,7 +92,7 @@ impl Emit for Vertex {
 impl Emit for Shape {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START SHAPE\n");
-        for node in self.nodes.iter() {
+        for node in self.nodes.nodes.iter() {
             out += &node.emit(debug);
         }
         out += "; END SHAPE\n";
@@ -102,7 +102,7 @@ impl Emit for Shape {
 impl Emit for Layer {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::from("; START LAYER\n");
-        for node in self.nodes.iter() {
+        for node in self.nodes.nodes.iter() {
             out += &node.emit(debug);
         }
         out += "; END LAYER\n";
@@ -113,7 +113,7 @@ impl Emit for Node {
     fn emit(&self, debug: bool) -> String {
         match self {
             Node::Vertex(v) => v.emit(debug),
-            Node::NonMove(line) => line.emit(debug),
+            Node::NonMove(line, _) => line.emit(debug),
             Node::Shape(s) => s.emit(debug),
             Node::Layer(l) => l.emit(debug),
             Node::LayerChange(nodes) => {
@@ -146,7 +146,7 @@ impl Emit for Node {
 impl Emit for Parsed {
     fn emit(&self, debug: bool) -> String {
         let mut out = String::new();
-        for node in &self.nodes {
+        for node in &self.nodes.nodes {
             out += &node.emit(debug);
         }
         out += "\n";

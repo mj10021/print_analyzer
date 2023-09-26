@@ -98,7 +98,7 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
         ..Pos::unhomed()
     };
 
-    for node in gcode.nodes.iter_mut() {
+    for node in gcode.nodes.nodes.iter_mut() {
         match node {
             Node::Vertex(v) => {
                 let dist = v.to.dist(&location);
@@ -122,7 +122,7 @@ fn erode_test() {
     let _ = f.write_all(&gcode.as_bytes());
 }
 fn filter(gcode: &mut Parsed, filter: fn(&Vertex) -> bool) {
-    for node in gcode.nodes.iter_mut() {
+    for node in gcode.nodes.nodes.iter_mut() {
         match node {
             Node::Vertex(v) => {
                 if filter(v) {
@@ -148,7 +148,7 @@ fn filter_test() {
     let _ = f.write_all(&gcode.as_bytes());
 }
 fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vertex)) {
-    for node in gcode.nodes.iter_mut() {
+    for node in gcode.nodes.nodes.iter_mut() {
         match node {
             Node::Vertex(v) => {
                 if filter(v) {
@@ -163,7 +163,7 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
     gcode.update_nodes();
 }
 fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
-    for node in gcode.nodes.iter_mut() {
+    for node in gcode.nodes.nodes.iter_mut() {
         match node {
             Node::Vertex(v) => {
                 map(v);
