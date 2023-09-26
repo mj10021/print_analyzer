@@ -1,5 +1,6 @@
 use std::collections::{LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
+use std::ptr::addr_of_mut;
 
 
 pub mod file_reader;
@@ -450,12 +451,17 @@ impl NodeList {
         }
     }
     pub fn push_back(&mut self, mut node: Node) {
+        // FIXME: doesn't work for shapes, see below
         let mut ex_move = false;
         match &mut node {
             Node::Vertex(v) => {
                 v.prev = self.last_vertex;
                 ex_move = v.extrusion_move();
             },
+            Node::Shape(s) => {
+                // FIXME: need to handle the shape's nodelist's tail here
+            },
+            Node::Layer(l) => {}, // FIXME: same as above
             _ => {},
         }
         self.nodes.push_back(node);
@@ -466,6 +472,31 @@ impl NodeList {
     fn append(&mut self, mut list: NodeList) {
         self.nodes.append(&mut list.nodes);
         self.last_vertex = list.last_vertex;
+    }
+    pub fn update(&mut self) {
+        let mut prev: Tail = None;
+        let mut state: Pos = Pos::unhomed();
+        for node in self.nodes.iter_mut() {
+            let cur = node as *mut Node;
+            match node {
+                Node::Vertex(v) => {
+                    if v.extrusion_move() {
+                        v.prev = prev;
+                        prev = Some(cur);
+                    }
+                    v.from = state;
+                    state = v.to();
+                    v.label();
+                },
+                Node::NonMove(_, pos) => {
+                    *pos = state.clone();
+                },
+                node => {
+                    node.set_from(state);
+                    state = node.to();
+                }
+            }
+        }
     }
 }
 fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
@@ -505,6 +536,7 @@ pub struct Layer {
 pub trait State {
     fn from(&self) -> Pos;
     fn to(&self) -> Pos;
+    fn set_from(&mut self, new_from: Pos);
 }
 
 impl State for Node {
@@ -530,8 +562,60 @@ impl State for Node {
             }
         }
     }
+    fn set_from(&mut self, new_from: Pos) {
+        match self {
+            Node::Vertex(v) => v.from = new_from,
+            Node::NonMove(_, p) => *p = new_from,
+            Node::Shape(s) => {
+                s.nodes.nodes.front_mut().unwrap().set_from(new_from);
+                s.nodes.update();
+            },
+            Node::Layer(l) => {
+                l.nodes.nodes.front_mut().unwrap().set_from(new_from);
+                l.nodes.update();
+            },
+            Node::LayerChange(nodes) | Node::ShapeChange(nodes) | Node::PrePrint(nodes) => {
+                let mut prev = new_from;
+                // update all nodes in vec
+                for node in nodes {
+                    node.set_from(prev);
+                    prev = node.to();
+                }
+            }
+        }
+    }
 }
-
+// enum of the gcode commands that we are ready to handle
+enum Command {
+    G1,
+    G28,
+    M82,
+    M83,
+    M91,
+    M92,
+}
+impl Command {
+    fn is_valid(word: &Word) -> bool {
+        let supported_letters = ['G', 'M'];
+        let supported_numbers = [1, 28, 82, 83, 91, 92];
+        let Word(letter, num, _) = word;
+        let num = num.round() as i32;
+        supported_letters.contains(letter) && supported_numbers.contains(&num)
+    }
+    fn from_word(word: Word) -> Command {
+        let Word(letter, num, _) = word;
+        let num = num.round() as i32;
+        match (letter, num) {
+            ('G', 1) => Command::G1,
+            ('G', 28) => Command::G28,
+            ('M', 82) => Command::M82,
+            ('M', 83) => Command::M83,
+            ('M', 91) => Command::M91,
+            ('M', 92) => Command::M92,
+            _ => panic!("invalid command"),
+        }
+    }
+}
 #[derive(Debug, PartialEq)]
 pub struct Parsed {
     pub nodes: NodeList,
@@ -584,39 +668,13 @@ impl Parsed {
                 _ => {}
             }
         }
+        parsed.update();
         Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
         }
     }
-
-    pub fn first_move_id(&self) -> i32 {
-        let min_x = 5.0;
-        let min_y = 5.0;
-        for node in self.nodes.nodes.iter() {
-            if let Node::Vertex(v) = node {
-                if v.to.x > min_x && v.to.y > min_y {
-                    return v.id;
-                }
-            }
-        }
-        -1
-    }
-    pub fn update_nodes(&mut self) {
-        let mut id = 1;
-        for node in self.nodes.nodes.iter_mut() {
-            if let Node::Vertex(v) = node {
-                v.id = id;
-                id += 1;
-                if let Some(prev) = &v.prev {
-                    unsafe{ v.from = (**prev).vert_to(); }
-                }
-                v.label();
-            }
-        }
-    }
-
     fn delete() {}
     fn insert() {}
 }

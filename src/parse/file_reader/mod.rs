@@ -99,6 +99,7 @@ fn read_line(line: VecDeque<char>) -> VecDeque<Word> {
     }
     split_line(line)
 }
+
 pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     // tries reading the input as raw g-code if file parse error,
     // this is really just for running the tests
@@ -107,25 +108,33 @@ pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
         Err(_) => parse_str(path),
     };
     assert!(lines.len() > 0);
+    // collect the lines into a double ended queue
     let mut lines: VecDeque<String> = lines.into_iter().collect();
+
+    // initialize the g1 move counter at 0
     let mut g1_moves = 0;
-    let mut temp_lines = NodeList::new();
+
+    let mut out = NodeList::new();
     let mut last_state = Pos::unhomed();
+
     while lines.len() > 0 {
+        // pop the next line off the vecdeque until it is empty 
         let line = lines.pop_front().unwrap();
         // remove all comments and whitespace
         let line = clean_line(&line);
-        // skip empty lines (probably from lines that are only comments)
+        // skip empty lines (probably from lines that are only comment)
         if line.len() < 1 {
             continue;
         }
-        // parse the line into a vecdeque of words (currently storing the instruction numbers and paramters both as floats
+        // parse the line into gcode words (currently storing the instruction numbers and paramters both as floats
         // might want to change instruction number to int, but sometimes a decimal is used in the instruction in prusa gcode )
         let mut line = read_line(line);
         // throw away logical line numbers
         while let Some(Word('N', _, _)) = line.front() {
             let _ = line.pop_front();
         }
+        // match against the first gcode word in the line, only checking for
+        // homing and move commands to correctly build the vertices
         match line.front() {
             Some(Word(letter, number, _params)) => {
                 let num = number.round() as i32;
@@ -140,28 +149,31 @@ pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
                             from: Pos::unhomed(),
                             prev: None,
                         };
+                        last_state = vrtx.to;
                         let node = Node::Vertex(vrtx);
-                        temp_lines.push_back(node);
+                        out.push_back(node);
                     }
                     ('G', 1) => {
                         g1_moves += 1;
                         let g1 = G1::build(line, g1_moves);
+                        // the Vertex build method pushes the vertex onto the NodeList
+                        // and returns a pointer to the tail of the list
                         let tail = unsafe {
                             Vertex::build(
                             g1_moves,
-                            &mut temp_lines,
+                            &mut out,
                             g1,)
                         };
                         last_state = unsafe { (*tail).to() };
                     }
                     _ => {
                         let node = Node::NonMove(Line::build(line), last_state);
-                        temp_lines.push_back(node);
+                        out.push_back(node);
                     },
                 }
             }
             _ => {}
         }
     }
-    Ok(temp_lines)
+    Ok(out)
 }

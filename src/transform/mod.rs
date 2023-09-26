@@ -35,8 +35,8 @@ impl Translate for Vertex {
                 return;
             }
             let prev = self.prev.unwrap();
-            let test = unsafe { (*prev).vert_to().clone() };
-            let test2 = self.from.clone();
+            let test = unsafe { (*prev).to() };
+            let test2 = self.from();
 
             assert!(test == test2, "{:#?}\r\n{:#?}", test, test2);
             // SAFETY: prev needs to be a raw pointer to a Node::Vertex
@@ -69,10 +69,11 @@ impl Translate for Vertex {
 fn translate_unit_test() {
     let mut gcode = crate::read("G28\nG1 X10 Y10 Z10 E10 F1000\nG1 X20 Y20 Z20 E20 F1000\n")
         .expect("failed to read file");
-    // for node in gcode.nodes.nodes.iter_mut() {
-    //     node.translate(10.0, 10.0, 10.0);
-    // }
-    panic!("{:#?}", gcode);
+    for node in gcode.nodes.nodes.iter_mut() {
+        node.translate(10.0, 10.0, 10.0);
+    }
+    gcode.nodes.update();
+    panic!("{:#?}", gcode.nodes);
 }
 impl Translate for Shape {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {

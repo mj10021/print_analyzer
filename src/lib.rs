@@ -140,7 +140,7 @@ fn filter_test() {
     use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
-    gcode.update_nodes();
+    gcode.nodes.update();
     let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
@@ -160,7 +160,7 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
             }
         }
     }
-    gcode.update_nodes();
+    gcode.nodes.update();
 }
 fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
     for node in gcode.nodes.nodes.iter_mut() {
