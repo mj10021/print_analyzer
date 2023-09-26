@@ -459,9 +459,18 @@ impl NodeList {
                 ex_move = v.extrusion_move();
             },
             Node::Shape(s) => {
-                // FIXME: need to handle the shape's nodelist's tail here
+                // FIXME: I think that the pointer to the last node inside the shape will move
+                // when the shape is copied into the main NodeList
+                // so I guess I need to make a method for nodes that 
+                // recursively searches the nodelists to return the innermost last
+                // vertex
+                self.last_vertex = s.nodes.last_vertex();
+                self.nodes.append(&mut s.nodes.nodes);
             },
-            Node::Layer(l) => {}, // FIXME: same as above
+            Node::Layer(l) => {
+                self.last_vertex = l.nodes.last_vertex();
+                self.nodes.append(&mut l.nodes.nodes);
+            },
             _ => {},
         }
         self.nodes.push_back(node);
@@ -495,6 +504,20 @@ impl NodeList {
                     node.set_from(state);
                     state = node.to();
                 }
+            }
+        }
+    }
+    fn last_vertex(&self) -> Tail {
+        if self.last_vertex.is_none() {
+            return None;
+        }
+        let tail = self.last_vertex.unwrap();
+        unsafe {
+            match &*tail { // FIXME: need to check safety here with mix of *mut and &
+                Node::Vertex(_) => self.last_vertex,
+                Node::Layer(l) => l.nodes.last_vertex(),
+                Node::Shape(s) => s.nodes.last_vertex(),
+                _ => panic!("last vertex is not a vertex"),
             }
         }
     }
