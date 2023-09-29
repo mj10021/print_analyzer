@@ -1,106 +1,8 @@
 use std::collections::{LinkedList, VecDeque};
 use std::f32::{EPSILON, NEG_INFINITY};
-use std::ptr::addr_of_mut;
-
 
 pub mod file_reader;
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Word(pub char, pub f32, pub Option<String>);
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Line {
-    Instruction(Instruction),
-    Raw(String),
-}
-impl Line {
-    fn build(mut line: VecDeque<Word>) -> Line {
-        let Word(letter, num, _) = line[0];
-        let num = num.round() as i32;
-        match (letter, num, letter.is_ascii_alphabetic()) {
-            ('N', _, _) => {
-                let _ = line.pop_front();
-                let _ = line.pop_front();
-                Line::build(line)
-            }
-            (_, _, true) => Line::Instruction(Instruction::build(line)),
-            (_, _, false) => {
-                let mut raw_line = String::new();
-                for word in line {
-                    let Word(letter, num, _) = word;
-                    raw_line += format!("{letter}{num}").as_str();
-                }
-                Line::Raw(raw_line)
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Instruction {
-    pub first_word: Word,
-    pub params: Option<VecDeque<Word>>,
-}
-
-impl Instruction {
-    fn build(mut line: VecDeque<Word>) -> Instruction {
-        let first_word = line.pop_front().unwrap();
-        if line.len() < 1 {
-            return Instruction {
-                first_word,
-                params: None,
-            };
-        }
-        Instruction {
-            first_word,
-            params: Some(line),
-        }
-    }
-}
-
-// intermediary struct for parsing line into vertex
-// exists because all of the params are optional
-#[derive(Clone, Debug, PartialEq)]
-pub struct G1 {
-    // the g1 move id is 1-indexed
-    pub move_id: i32,
-    pub x: Option<f32>,
-    pub y: Option<f32>,
-    pub z: Option<f32>,
-    pub e: Option<f32>,
-    pub f: Option<f32>,
-}
-
-impl G1 {
-    fn build(params: VecDeque<Word>, move_id: i32) -> G1 {
-        let mut x = None;
-        let mut y = None;
-        let mut z = None;
-        let mut e = None;
-        let mut f = None;
-        for param in params {
-            match param.0 {
-                'X' => x = Some(param.1),
-                'Y' => y = Some(param.1),
-                'Z' => z = Some(param.1),
-                'E' => e = Some(param.1),
-                'F' => f = Some(param.1),
-                _ => (),
-            }
-        }
-        G1 {
-            move_id,
-            x,
-            y,
-            z,
-            e,
-            f,
-        }
-    }
-    pub fn ann_i(&self) -> usize {
-        self.move_id as usize - 1
-    }
-}
 // state tracking struct for vertices
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pos {
@@ -608,37 +510,7 @@ impl State for Node {
         }
     }
 }
-// enum of the gcode commands that we are ready to handle
-enum Command {
-    G1,
-    G28,
-    M82,
-    M83,
-    M91,
-    M92,
-}
-impl Command {
-    fn is_valid(word: &Word) -> bool {
-        let supported_letters = ['G', 'M'];
-        let supported_numbers = [1, 28, 82, 83, 91, 92];
-        let Word(letter, num, _) = word;
-        let num = num.round() as i32;
-        supported_letters.contains(letter) && supported_numbers.contains(&num)
-    }
-    fn from_word(word: Word) -> Command {
-        let Word(letter, num, _) = word;
-        let num = num.round() as i32;
-        match (letter, num) {
-            ('G', 1) => Command::G1,
-            ('G', 28) => Command::G28,
-            ('M', 82) => Command::M82,
-            ('M', 83) => Command::M83,
-            ('M', 91) => Command::M91,
-            ('M', 92) => Command::M92,
-            _ => panic!("invalid command"),
-        }
-    }
-}
+
 #[derive(Debug, PartialEq)]
 pub struct Parsed {
     pub nodes: NodeList,

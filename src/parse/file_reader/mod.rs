@@ -1,4 +1,136 @@
-use super::*;
+use std::collections::VecDeque;
+use std::f32::NEG_INFINITY;
+use super::NodeList;
+// enum of the gcode commands that we are ready to handle
+enum Command {
+    G1,
+    G28,
+    M82,
+    M83,
+    M91,
+    M92,
+}
+impl Command {
+    fn is_valid(word: &Word) -> bool {
+        let supported_letters = ['G', 'M'];
+        let supported_numbers = [1, 28, 82, 83, 91, 92];
+        let Word(letter, num, _) = word;
+        let num = num.round() as i32;
+        supported_letters.contains(letter) && supported_numbers.contains(&num)
+    }
+    fn from_word(word: Word) -> Command {
+        let Word(letter, num, _) = word;
+        let num = num.round() as i32;
+        match (letter, num) {
+            ('G', 1) => Command::G1,
+            ('G', 28) => Command::G28,
+            ('M', 82) => Command::M82,
+            ('M', 83) => Command::M83,
+            ('M', 91) => Command::M91,
+            ('M', 92) => Command::M92,
+            _ => panic!("invalid command"),
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Word(pub char, pub f32, pub Option<String>);
+
+// enum to process and store the inputted lines of gcode, with structs
+// to handle specific commands as necessary, with the option to just keep the 
+// line as a raw string if it can't be parsed
+#[derive(Clone, Debug, PartialEq)]
+pub enum Line {
+    G1(G1),
+    G28,
+    M82,
+    M83,
+    M91,
+    M92,
+    OtherInstruction(Instruction),
+    Raw(String),
+}
+impl Line {
+    fn build(mut line: Vec<Word>) -> Line {
+        let Word(letter, num, _) = line[0];
+        let num = num.round() as i32;
+        match (letter, num) {
+            // throw away logical line numbers
+            ('N', _) => {
+                Line::build(line[1..])
+            }
+            (_, _) => Line::Instruction(Instruction::build(line)),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Instruction {
+    pub first_word: Word,
+    pub params: Option<VecDeque<Word>>,
+}
+
+impl Instruction {
+    fn build(mut line: VecDeque<Word>) -> Instruction {
+        let first_word = line.pop_front().unwrap();
+        if line.len() < 1 {
+            return Instruction {
+                first_word,
+                params: None,
+            };
+        }
+        Instruction {
+            first_word,
+            params: Some(line),
+        }
+    }
+}
+
+// intermediary struct for parsing line into vertex
+// exists because all of the params are optional
+#[derive(Clone, Debug, PartialEq)]
+pub struct G1 {
+    // the g1 move id is 1-indexed
+    pub move_id: i32,
+    pub x: Option<f32>,
+    pub y: Option<f32>,
+    pub z: Option<f32>,
+    pub e: Option<f32>,
+    pub f: Option<f32>,
+}
+
+impl G1 {
+    fn build(params: VecDeque<Word>, move_id: i32) -> G1 {
+        let mut x = None;
+        let mut y = None;
+        let mut z = None;
+        let mut e = None;
+        let mut f = None;
+        for param in params {
+            match param.0 {
+                'X' => x = Some(param.1),
+                'Y' => y = Some(param.1),
+                'Z' => z = Some(param.1),
+                'E' => e = Some(param.1),
+                'F' => f = Some(param.1),
+                _ => (),
+            }
+        }
+        G1 {
+            move_id,
+            x,
+            y,
+            z,
+            e,
+            f,
+        }
+    }
+    pub fn ann_i(&self) -> usize {
+        self.move_id as usize - 1
+    }
+}
+
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
@@ -18,8 +150,9 @@ fn parse_str(str: &str) -> Vec<String> {
         .collect()
 }
 
-fn clean_line(line: &str) -> VecDeque<char> {
-    let mut temp_line = VecDeque::new();
+// remove whitespace and comments and read string into vec of chars
+fn clean_line(line: &str) -> Vec<char> {
+    let mut temp_line = Vec::new();
 
     for c in line.chars() {
         // end reading line at start of comments
@@ -30,13 +163,13 @@ fn clean_line(line: &str) -> VecDeque<char> {
         if c == ' ' || c == '\n' || c == '\r' {
             continue;
         } else {
-            temp_line.push_back(c.to_ascii_uppercase());
+            temp_line.push(c.to_ascii_uppercase());
         }
     }
     temp_line
 }
 
-fn check_line(line: &VecDeque<char>) -> bool {
+fn check_line(line: &Vec<char>) -> bool {
     if line.len() < 2 {
         return false;
     }
@@ -63,43 +196,88 @@ fn check_line(line: &VecDeque<char>) -> bool {
     }
     true
 }
-fn split_line(mut line: VecDeque<char>) -> VecDeque<Word> {
+fn split_line(mut line: Vec<char>) -> Vec<Word> {
+    // reverse the line so that we can pop from the front
+    line.reverse();
     let mut temp: Vec<char> = Vec::new();
-    let mut out = VecDeque::new();
-    temp.push(line.pop_front().unwrap());
+    let mut out = Vec::new();
+    temp.push(line.pop().unwrap());
     while line.len() > 0 {
         while line.len() > 0 && !line[0].is_ascii_alphabetic() {
-            temp.push(line.pop_front().unwrap());
+            temp.push(line.pop().unwrap());
         }
         if temp.len() > 1 {
-            out.push_back(Word(
+            out.push(Word(
                 temp[0],
                 temp[1..].iter().collect::<String>().parse::<f32>().unwrap(),
                 None,
             ));
         }
         if line.len() > 0 {
-            temp = vec![line.pop_front().unwrap()];
+            temp = vec![line.pop().unwrap()];
         }
     }
     out
 }
 
-fn read_line(line: VecDeque<char>) -> VecDeque<Word> {
+fn read_line(line: Vec<char>) -> Vec<Word> {
     // here i rly want to check if there is a character that doesn't make sense
     // and just pass the raw string through if that's the case
     if !check_line(&line) {
         if line.len() > 1 {
             let word = Word('X', NEG_INFINITY, Some(line.iter().collect()));
-            return VecDeque::from([word]);
-        } else {
+            return Vec::from([word]);
+        } else { // don't like this
             let word = Word('X', NEG_INFINITY, None);
-            return VecDeque::from([word]);
+            return Vec::from([word]);
         }
     }
     split_line(line)
 }
+fn build_lines(path: &str) -> Vec<Line> {
+    // tries reading the input as raw g-code if file parse error,
+    // this is really just for running the tests
+    let lines = match parse_file(path) {
+        Ok(str) => str,
+        Err(_) => parse_str(path),
+    };
+    assert!(lines.len() > 0);
 
+    // collect the lines into a reversed vec, so the lines can be popped in order
+    let mut lines: Vec<String> = lines.into_iter().collect();
+    lines.reverse();
+
+    let mut out = Vec::new();
+    let mut g1_moves = 0;
+
+    while lines.len() > 0 {
+        // pop the next line off the vec until it is empty 
+        let line = lines.pop().unwrap();
+        // remove all comments and whitespace
+        let line = clean_line(&line);
+        // skip empty lines (probably from lines that are only comment)
+        if line.len() < 1 {
+            continue;
+        }
+
+        // if the first character of the line is not an ASCII letter,
+        // it is not gcode and can just be copied as a string
+        // right now these lines will probably be trimmed since they are all comments
+
+        if !line[0].is_ascii_alphabetic() {
+            out.push(Line::Raw(line.iter().collect()));
+            continue;
+        }
+
+        // parse the line into gcode word struct
+        let line = read_line(line);
+
+
+        
+
+
+
+}
 pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     // tries reading the input as raw g-code if file parse error,
     // this is really just for running the tests
