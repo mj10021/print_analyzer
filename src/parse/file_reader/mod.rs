@@ -1,37 +1,6 @@
 use std::collections::VecDeque;
 use std::f32::NEG_INFINITY;
 use super::NodeList;
-// enum of the gcode commands that we are ready to handle
-enum Command {
-    G1,
-    G28,
-    M82,
-    M83,
-    M91,
-    M92,
-}
-impl Command {
-    fn is_valid(word: &Word) -> bool {
-        let supported_letters = ['G', 'M'];
-        let supported_numbers = [1, 28, 82, 83, 91, 92];
-        let Word(letter, num, _) = word;
-        let num = num.round() as i32;
-        supported_letters.contains(letter) && supported_numbers.contains(&num)
-    }
-    fn from_word(word: Word) -> Command {
-        let Word(letter, num, _) = word;
-        let num = num.round() as i32;
-        match (letter, num) {
-            ('G', 1) => Command::G1,
-            ('G', 28) => Command::G28,
-            ('M', 82) => Command::M82,
-            ('M', 83) => Command::M83,
-            ('M', 91) => Command::M91,
-            ('M', 92) => Command::M92,
-            _ => panic!("invalid command"),
-        }
-    }
-}
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -60,6 +29,12 @@ impl Line {
             ('N', _) => {
                 Line::build(line[1..])
             }
+            ('G', 1) => Line::G1(G1::build(line)),
+            ('G', 28) => Line::G28,
+            ('M', 82) => Line::M82,
+            ('M', 83) => Line::M83,
+            ('M', 91) => Line::M91,
+            ('M', 92) => Line::M92,
             (_, _) => Line::Instruction(Instruction::build(line)),
         }
     }
@@ -72,17 +47,18 @@ pub struct Instruction {
 }
 
 impl Instruction {
-    fn build(mut line: VecDeque<Word>) -> Instruction {
+    fn build(mut line: Vec<Word>) -> Instruction {
         let first_word = line.pop_front().unwrap();
-        if line.len() < 1 {
-            return Instruction {
-                first_word,
-                params: None,
-            };
-        }
+        let params = {
+            if line.len() > 0 {
+                Some(line)
+            } else {
+                None
+            }
+        };
         Instruction {
             first_word,
-            params: Some(line),
+            params,
         }
     }
 }
@@ -91,8 +67,6 @@ impl Instruction {
 // exists because all of the params are optional
 #[derive(Clone, Debug, PartialEq)]
 pub struct G1 {
-    // the g1 move id is 1-indexed
-    pub move_id: i32,
     pub x: Option<f32>,
     pub y: Option<f32>,
     pub z: Option<f32>,
@@ -101,7 +75,7 @@ pub struct G1 {
 }
 
 impl G1 {
-    fn build(params: VecDeque<Word>, move_id: i32) -> G1 {
+    fn build(params: VecDeque<Word>) -> G1 {
         let mut x = None;
         let mut y = None;
         let mut z = None;
@@ -118,16 +92,12 @@ impl G1 {
             }
         }
         G1 {
-            move_id,
             x,
             y,
             z,
             e,
             f,
         }
-    }
-    pub fn ann_i(&self) -> usize {
-        self.move_id as usize - 1
     }
 }
 
