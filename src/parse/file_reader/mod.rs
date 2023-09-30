@@ -1,54 +1,25 @@
-use std::collections::VecDeque;
 use std::f32::NEG_INFINITY;
-use super::NodeList;
 
-
+// Words are the base unit of gcode, the first word of a command is a letter
+// followed by an int or float depending on the context
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32, pub Option<String>);
 
-// enum to process and store the inputted lines of gcode, with structs
-// to handle specific commands as necessary, with the option to just keep the 
-// line as a raw string if it can't be parsed
-#[derive(Clone, Debug, PartialEq)]
-pub enum Line {
-    G1(G1),
-    G28,
-    M82,
-    M83,
-    M91,
-    M92,
-    OtherInstruction(Instruction),
-    Raw(String),
-}
-impl Line {
-    fn build(mut line: Vec<Word>) -> Line {
-        let Word(letter, num, _) = line[0];
-        let num = num.round() as i32;
-        match (letter, num) {
-            // throw away logical line numbers
-            ('N', _) => {
-                Line::build(line[1..])
-            }
-            ('G', 1) => Line::G1(G1::build(line)),
-            ('G', 28) => Line::G28,
-            ('M', 82) => Line::M82,
-            ('M', 83) => Line::M83,
-            ('M', 91) => Line::M91,
-            ('M', 92) => Line::M92,
-            (_, _) => Line::Instruction(Instruction::build(line)),
-        }
-    }
-}
-
+// the Instruction struct splits off the command (first) word from a line,
+// and stores the parameters as a vec of words
 #[derive(Clone, Debug, PartialEq)]
 pub struct Instruction {
     pub first_word: Word,
-    pub params: Option<VecDeque<Word>>,
+    pub params: Option<Vec<Word>>,
 }
 
 impl Instruction {
     fn build(mut line: Vec<Word>) -> Instruction {
-        let first_word = line.pop_front().unwrap();
+        // reverse line to maintain order while popping
+        line.reverse();
+        let first_word = line.pop().unwrap();
+        // now that the first word is removed, reverse the line again
+        line.reverse();
         let params = {
             if line.len() > 0 {
                 Some(line)
@@ -75,7 +46,7 @@ pub struct G1 {
 }
 
 impl G1 {
-    fn build(params: VecDeque<Word>) -> G1 {
+    fn build(params: Vec<Word>) -> G1 {
         let mut x = None;
         let mut y = None;
         let mut z = None;
@@ -100,6 +71,40 @@ impl G1 {
         }
     }
 }
+// enum to process and store the inputted lines of gcode, with structs
+// to handle specific commands as necessary, with the option to just keep the 
+// line as a raw string if it can't be parsed
+#[derive(Clone, Debug, PartialEq)]
+pub enum Line {
+    G1(G1),
+    G28,
+    M82,
+    M83,
+    G90,
+    G91,
+    OtherInstruction(Instruction),
+    Raw(String),
+}
+impl Line {
+    fn build(mut line: Vec<Word>) -> Line {
+        let Word(letter, num, _) = line[0];
+        let num = num.round() as i32;
+        match (letter, num) {
+            // throw away logical line numbers
+            ('N', _) => {
+                let _ = line.remove(0);
+                Line::build(line)
+            }
+            ('G', 1) => Line::G1(G1::build(line)),
+            ('G', 28) => Line::G28,
+            ('M', 82) => Line::M82,
+            ('M', 83) => Line::M83,
+            ('G', 90) => Line::G90,
+            ('G', 91) => Line::G91,
+            (_, _) => Line::OtherInstruction(Instruction::build(line)),
+        }
+    }
+}
 
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
@@ -120,7 +125,7 @@ fn parse_str(str: &str) -> Vec<String> {
         .collect()
 }
 
-// remove whitespace and comments and read string into vec of chars
+// remove whitespace and comments and read &str into vec of chars
 fn clean_line(line: &str) -> Vec<char> {
     let mut temp_line = Vec::new();
 
@@ -218,7 +223,6 @@ fn build_lines(path: &str) -> Vec<Line> {
     lines.reverse();
 
     let mut out = Vec::new();
-    let mut g1_moves = 0;
 
     while lines.len() > 0 {
         // pop the next line off the vec until it is empty 
@@ -241,14 +245,15 @@ fn build_lines(path: &str) -> Vec<Line> {
 
         // parse the line into gcode word struct
         let line = read_line(line);
-
-
-        
-
-
-
+        out.push(Line::build(line));
+    }
+    out
 }
-pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
+
+
+/* FIXME: nodes should be built in the main parse module
+
+fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     // tries reading the input as raw g-code if file parse error,
     // this is really just for running the tests
     let lines = match parse_file(path) {
@@ -325,3 +330,4 @@ pub fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     }
     Ok(out)
 }
+*/

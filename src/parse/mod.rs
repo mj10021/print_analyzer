@@ -1,7 +1,9 @@
-use std::collections::{LinkedList, VecDeque};
+use std::collections::LinkedList;
 use std::f32::{EPSILON, NEG_INFINITY};
 
 pub mod file_reader;
+use self::file_reader::*;
+
 
 // state tracking struct for vertices
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -76,28 +78,35 @@ impl Move for Tail {
     }
 }
 impl Vertex {
-    unsafe fn build(g1_moves: i32, nodes: &mut NodeList, g1: G1) -> *mut Node {
-        // vertices can't be built without a NodeList to be loaded into
-        // if the NodeList is empty (nodes.back().is_none()), then the vertex is 
-        // being built before a homing node has been parsed, which is not supported
-        let tail = nodes.nodes.back().unwrap();
-        let from = tail.to();
+    unsafe fn build(g1_moves: i32, g1: G1, prev: Tail) -> Vertex {
+
+        let from = unsafe {
+            if prev.is_none() {
+                Pos::unhomed()
+            } else {
+                (*prev.unwrap()).to()
+            }
+        };
 
         let mut vrtx = Vertex {
             id: g1_moves,
             label: Label::Uninitialized,
             to: Pos::build(&from, &g1),
             from,
-            prev: None,
+            prev,
         };
         // label the vertex based on the from and to fields
         vrtx.label();
-        // the push_back method for NodeList automatically updates the last_vertex pointer
-        // and the vertex prev field
-        nodes.push_back(Node::Vertex(vrtx));
-        // return a raw pointer to the new tail node for convenience
-        // this pointer should always match the tail field of the NodeList
-        nodes.nodes.back_mut().unwrap() as *mut Node
+        vrtx
+    }
+    fn home() -> Vertex {
+        Vertex {
+            id: 0,
+            label: Label::Home,
+            prev: None,
+            from: Pos::unhomed(),
+            to: Pos::home(),
+        }
     }
     fn label(&mut self) {
         let dx = self.to.x - self.from.x;
@@ -518,11 +527,65 @@ pub struct Parsed {
     rel_e: bool,
 }
 impl Parsed {
-    pub fn build(mut nodes: NodeList) -> Parsed {
+    pub fn build(mut lines: Vec<Line>) -> Parsed {
+
         let mut rel_xyz = false;
         let mut rel_e = true;
+
+        let mut prev: Tail = None;
+        let mut last_pos = Pos::unhomed();
+        let mut g1_moves = 0;
+
         let mut parsed = NodeList::new();
-        let mut nodes = nodes.nodes;
+
+        // reverse the lines to pop in the correct order
+        lines.reverse();
+
+        // FIXME: this is fine but it doesn't use the shape and layer nodes which i like
+        while lines.len() > 0 {
+            let line = lines.pop().unwrap();
+            match line {
+                Line::M82 => {
+                    rel_e = false;
+                },
+                Line::M83 => {
+                    rel_e = true;
+                },
+                Line::G90 => {
+                    rel_xyz = false;
+                },
+                Line::G91 => {
+                    rel_xyz = true;
+                },
+                Line::G28 => {
+                    assert!(prev.is_none(), "homing twice");
+                    parsed.push_back(Node::Vertex(Vertex::home()));
+                }
+                Line::G1(g1) => {
+                    assert!(prev.is_some(), "attempting to move from unhomed state");
+                    let node = Node::Vertex(
+                        unsafe { Vertex::build(g1_moves, g1, prev) }
+                    );
+                    last_pos = node.to();
+                    g1_moves += 1;
+                    parsed.push_back(node);
+
+                },
+                Line::OtherInstruction(ins) => {
+
+                },
+                Line::Raw(string) => {
+                    let node = Node::NonMove(line, last_pos);
+                    parsed.push_back(node);
+                }
+            }
+        }
+
+
+
+
+
+
         parsed.nodes.push_back(Node::pop_preprint(&mut nodes));
         while nodes.front().is_some() {
             match nodes.front() {
