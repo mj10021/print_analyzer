@@ -27,10 +27,7 @@ impl Instruction {
                 None
             }
         };
-        Instruction {
-            first_word,
-            params,
-        }
+        Instruction { first_word, params }
     }
 }
 
@@ -62,17 +59,11 @@ impl G1 {
                 _ => (),
             }
         }
-        G1 {
-            x,
-            y,
-            z,
-            e,
-            f,
-        }
+        G1 { x, y, z, e, f }
     }
 }
 // enum to process and store the inputted lines of gcode, with structs
-// to handle specific commands as necessary, with the option to just keep the 
+// to handle specific commands as necessary, with the option to just keep the
 // line as a raw string if it can't be parsed
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
@@ -202,7 +193,8 @@ fn read_line(line: Vec<char>) -> Vec<Word> {
         if line.len() > 1 {
             let word = Word('X', NEG_INFINITY, Some(line.iter().collect()));
             return Vec::from([word]);
-        } else { // don't like this
+        } else {
+            // don't like this
             let word = Word('X', NEG_INFINITY, None);
             return Vec::from([word]);
         }
@@ -225,7 +217,7 @@ fn build_lines(path: &str) -> Vec<Line> {
     let mut out = Vec::new();
 
     while lines.len() > 0 {
-        // pop the next line off the vec until it is empty 
+        // pop the next line off the vec until it is empty
         let line = lines.pop().unwrap();
         // remove all comments and whitespace
         let line = clean_line(&line);
@@ -250,7 +242,6 @@ fn build_lines(path: &str) -> Vec<Line> {
     out
 }
 
-
 /* FIXME: nodes should be built in the main parse module
 
 fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
@@ -271,7 +262,7 @@ fn build_nodes(path: &str) -> Result<NodeList, Box<dyn std::error::Error>> {
     let mut last_state = Pos::unhomed();
 
     while lines.len() > 0 {
-        // pop the next line off the vecdeque until it is empty 
+        // pop the next line off the vecdeque until it is empty
         let line = lines.pop_front().unwrap();
         // remove all comments and whitespace
         let line = clean_line(&line);

@@ -4,7 +4,6 @@ use std::f32::{EPSILON, NEG_INFINITY};
 pub mod file_reader;
 use self::file_reader::*;
 
-
 // state tracking struct for vertices
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pos {
@@ -79,7 +78,6 @@ impl Move for Tail {
 }
 impl Vertex {
     unsafe fn build(g1_moves: i32, g1: G1, prev: Tail) -> Vertex {
-
         let from = unsafe {
             if prev.is_none() {
                 Pos::unhomed()
@@ -214,6 +212,18 @@ impl Node {
         match self {
             Node::Vertex(v) => v,
             _ => panic!("not a vertex"),
+        }
+    }
+    pub fn is_extrusion(&self) -> bool {
+        match self {
+            Node::Vertex(v) => v.extrusion_move(),
+            _ => false,
+        }
+    }
+    pub fn feedrate_only(&self) -> bool {
+        match self {
+            Node::Vertex(v) => v.label == Label::FeedrateChangeOnly,
+            _ => false,
         }
     }
     pub fn vertex_mut(&mut self) -> &mut Vertex {
@@ -355,10 +365,71 @@ impl NodeList {
             last_vertex: None,
         }
     }
-    fn from(nodes: LinkedList<Node>, last_vertex: Tail) -> NodeList {
-        NodeList {
-            nodes,
-            last_vertex,
+    fn build_shapes(&mut self) {
+        let mut start: Option<Pos> = None;
+        let mut end: Option<Pos> = None;
+        let mut shape = Shape::new();
+        let mut cur = self.nodes.cursor_front_mut();
+        while cur.peek_next().is_some() {
+            let node = cur.remove_current().unwrap();
+            if node.is_extrusion() {
+                let v = node.vertex();
+                if start.is_none() {
+                    start = Some(v.from());
+                }
+                end = Some(v.to());
+                shape.len += v.dist();
+                shape.nodes.push_back(node);
+            // if the move is just a feedrate change we will keep it inside
+            // an existing shape or keep it in the main list if we are between
+            // shapes
+            } else if node.feedrate_only() {
+                if shape.len > 0.0 {
+                    shape.nodes.push_back(node);
+                } else {
+                    cur.insert_before(node);
+                }
+            } else {
+                // if the shape has some length and the current node is not
+                // an extrusion move, then the shape is complete
+                if shape.len > 0.0 {
+                    // if the start and end of the shape are less than 0.1mm apart
+                    // we will consider the shape closed
+                    shape.closed = start.unwrap().dist(&end.unwrap()) < 0.1;
+                    // put shape back into the list before the cursor
+                    // and then insert the current post-shape node back into the list
+                    // in between the shape and the cursor
+                    cur.insert_before(Node::Shape(shape));
+                    cur.insert_before(node);
+                }
+            }
+        }
+    }
+    fn build_layers(&mut self) {
+        let mut id = 0;
+        let mut layer = Layer {
+            id: 0,
+            nodes: NodeList::new(),
+        };
+        let mut cur = self.nodes.cursor_front_mut();
+        let mut z = 0.0;
+        while cur.peek_next().is_some() {
+            let node = cur.remove_current().unwrap();
+            if node.shape() {
+                if (node.shape_z() - z).abs() > EPSILON {
+                    id += 1;
+                    z = node.shape_z();
+                    if layer.nodes.len() > 0 {
+                        cur.insert_before(layer);
+                    }
+                    layer = Layer {
+                        id,
+                        nodes: NodeList::new(),
+                    };
+                    layer.nodes.push_back(node);
+                }
+            }
+
         }
     }
     pub fn push_back(&mut self, mut node: Node) {
@@ -368,21 +439,21 @@ impl NodeList {
             Node::Vertex(v) => {
                 v.prev = self.last_vertex;
                 ex_move = v.extrusion_move();
-            },
+            }
             Node::Shape(s) => {
                 // FIXME: I think that the pointer to the last node inside the shape will move
                 // when the shape is copied into the main NodeList
-                // so I guess I need to make a method for nodes that 
+                // so I guess I need to make a method for nodes that
                 // recursively searches the nodelists to return the innermost last
                 // vertex
                 self.last_vertex = s.nodes.last_vertex();
                 self.nodes.append(&mut s.nodes.nodes);
-            },
+            }
             Node::Layer(l) => {
                 self.last_vertex = l.nodes.last_vertex();
                 self.nodes.append(&mut l.nodes.nodes);
-            },
-            _ => {},
+            }
+            _ => {}
         }
         self.nodes.push_back(node);
         if ex_move {
@@ -407,10 +478,10 @@ impl NodeList {
                     v.from = state;
                     state = v.to();
                     v.label();
-                },
+                }
                 Node::NonMove(_, pos) => {
                     *pos = state.clone();
-                },
+                }
                 node => {
                     node.set_from(state);
                     state = node.to();
@@ -424,7 +495,8 @@ impl NodeList {
         }
         let tail = self.last_vertex.unwrap();
         unsafe {
-            match &*tail { // FIXME: need to check safety here with mix of *mut and &
+            match &*tail {
+                // FIXME: need to check safety here with mix of *mut and &
                 Node::Vertex(_) => self.last_vertex,
                 Node::Layer(l) => l.nodes.last_vertex(),
                 Node::Shape(s) => s.nodes.last_vertex(),
@@ -461,10 +533,28 @@ pub struct Shape {
     pub closed: bool,
     pub len: f32,
 }
+impl Shape {
+    fn new() -> Shape {
+        Shape {
+            nodes: NodeList::new(),
+            closed: false,
+            len: 0.0,
+        }
+    }
+}
 #[derive(Debug, PartialEq)]
 pub struct Layer {
     pub id: i32,
     pub nodes: NodeList,
+}
+
+impl Layer {
+    fn start() -> Layer {
+        Layer {
+            id: 0,
+            nodes: NodeList::new(),
+        }
+    }
 }
 
 pub trait State {
@@ -503,11 +593,11 @@ impl State for Node {
             Node::Shape(s) => {
                 s.nodes.nodes.front_mut().unwrap().set_from(new_from);
                 s.nodes.update();
-            },
+            }
             Node::Layer(l) => {
                 l.nodes.nodes.front_mut().unwrap().set_from(new_from);
                 l.nodes.update();
-            },
+            }
             Node::LayerChange(nodes) | Node::ShapeChange(nodes) | Node::PrePrint(nodes) => {
                 let mut prev = new_from;
                 // update all nodes in vec
@@ -528,7 +618,6 @@ pub struct Parsed {
 }
 impl Parsed {
     pub fn build(mut lines: Vec<Line>) -> Parsed {
-
         let mut rel_xyz = false;
         let mut rel_e = true;
 
@@ -547,33 +636,28 @@ impl Parsed {
             match line {
                 Line::M82 => {
                     rel_e = false;
-                },
+                }
                 Line::M83 => {
                     rel_e = true;
-                },
+                }
                 Line::G90 => {
                     rel_xyz = false;
-                },
+                }
                 Line::G91 => {
                     rel_xyz = true;
-                },
+                }
                 Line::G28 => {
                     assert!(prev.is_none(), "homing twice");
                     parsed.push_back(Node::Vertex(Vertex::home()));
                 }
                 Line::G1(g1) => {
                     assert!(prev.is_some(), "attempting to move from unhomed state");
-                    let node = Node::Vertex(
-                        unsafe { Vertex::build(g1_moves, g1, prev) }
-                    );
+                    let node = Node::Vertex(unsafe { Vertex::build(g1_moves, g1, prev) });
                     last_pos = node.to();
                     g1_moves += 1;
                     parsed.push_back(node);
-
-                },
-                Line::OtherInstruction(ins) => {
-
-                },
+                }
+                Line::OtherInstruction(ins) => {}
                 Line::Raw(string) => {
                     let node = Node::NonMove(line, last_pos);
                     parsed.push_back(node);
@@ -581,11 +665,7 @@ impl Parsed {
             }
         }
 
-
-
-
-
-
+        /*
         parsed.nodes.push_back(Node::pop_preprint(&mut nodes));
         while nodes.front().is_some() {
             match nodes.front() {
@@ -631,7 +711,7 @@ impl Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
-        }
+        } */
     }
     fn delete() {}
     fn insert() {}
@@ -687,7 +767,6 @@ impl Annotation {
         let ex = (in_area * self.de) / move_dist;
         return ex / layer_height;
     }
-   
 }
 #[test]
 #[should_panic]
