@@ -1,5 +1,3 @@
-use std::f32::NEG_INFINITY;
-
 // Words are the base unit of gcode, the first word of a command is a letter
 // followed by an int or float depending on the context
 #[derive(Clone, Debug, PartialEq)]
@@ -112,17 +110,21 @@ impl Line {
     }
 }
 
-fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+// opens a gcode file and returns 
+// a Vec of Line for each line in the file
+fn parse_file(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
-        .split("\n")
+        .lines()
         .map(|s| clean_line(s))
         .filter(|s| s.len() > 0)
+        .map(|s| split_line(s))
+        .map(|v| Line::build(v))
         .collect();
     Ok(out)
 }
 
-// remove whitespace and comments and read &str into String
+// remove whitespace and comments and make everything uppercase
 fn clean_line(line: &str) -> String {
     line.split(';')
         .next()
@@ -133,34 +135,7 @@ fn clean_line(line: &str) -> String {
         .collect::<String>()
 }
 
-fn check_line(line: &String) -> bool {
-    let line = &line.clone().chars().collect::<Vec<char>>();
-    if line.len() < 2 {
-        return false;
-    }
-    if !line[0].is_ascii_alphabetic() || line[line.len() - 1].is_ascii_alphabetic() {
-        return false;
-    }
-    let mut letter = false;
-    let mut number = true;
-    for char in line {
-        if !char.is_ascii_alphanumeric() && *char != '.' && *char != '-' {
-            return false;
-        }
-        if char.is_ascii_alphabetic() {
-            if letter || !number {
-                return false;
-            } else {
-                letter = true;
-                number = false;
-            }
-        } else {
-            letter = false;
-            number = true;
-        }
-    }
-    true
-}
+// splits a valid gcode line into a vec of gcode words
 fn split_line(line: String) -> Vec<Word> {
     let words = line
         .split_inclusive(|c: char| c.is_ascii_alphabetic())
@@ -169,35 +144,4 @@ fn split_line(line: String) -> Vec<Word> {
         .map(|s| Word::from(s))
         .collect::<Vec<Word>>();
     words
-}
-
-pub fn build_lines(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
-    // tries reading the input as raw g-code if file parse error,
-    // this is really just for running the tests
-    let mut lines = match parse_file(path) {
-        Ok(str) => str,
-        Err(_) => path.split('\n').map(|s| clean_line(s)).collect(),
-    };
-    assert!(lines.len() > 0);
-
-    // reverse the lines so they can be popped in order
-    lines.reverse();
-
-    let mut out = Vec::new();
-
-    while lines.len() > 0 {
-        // pop the next line off the vec until it is empty
-        let line = lines.pop().unwrap();
-        // remove all comments and whitespace
-        let line = clean_line(&line);
-        // skip empty lines (probably from lines that are only comment)
-        if line.len() < 1 {
-            continue;
-        }
-
-        // parse the line into gcode word struct
-        let line = read_line(line);
-        out.push(Line::build(line));
-    }
-    Ok(out)
 }

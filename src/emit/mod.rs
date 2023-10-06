@@ -5,15 +5,12 @@ pub trait Emit {
 impl Emit for Instruction {
     fn emit(&self, debug: bool) -> String {
         let Instruction {
-            first_word: Word(letter, num, string),
+            first_word: Word(letter, num),
             params,
         } = self;
-        if let Some(string) = string {
-            return string.clone() + "\n";
-        }
         let mut out = format!("{}{}", letter, num.round() as i32);
         if let Some(params) = params {
-            for Word(letter, val, _) in params {
+            for Word(letter, val) in params {
                 out += &format!(" {}{}", letter, val);
             }
         }
