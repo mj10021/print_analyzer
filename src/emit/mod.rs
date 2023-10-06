@@ -1,4 +1,4 @@
-use super::parse::{*, file_reader::*};
+use super::parse::{file_reader::*, *};
 pub trait Emit {
     fn emit(&self, debug: bool) -> String;
 }

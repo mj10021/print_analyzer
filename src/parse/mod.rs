@@ -374,7 +374,6 @@ impl NodeList {
         }
     }
     fn build_shapes(&mut self) {
-
         let mut cur = self.nodes.cursor_front_mut();
 
         // keep walking forward through the print nodes until an extrusion node is reached
@@ -391,17 +390,19 @@ impl NodeList {
                 let mut shape = Shape::new();
                 shape.nodes.push_back(node);
                 loop {
-                    if cur.current().is_none() { break; }
+                    if cur.current().is_none() {
+                        break;
+                    }
                     let node = cur.remove_current().unwrap();
                     // if a shape or layer change is detected,
                     // reinsert the current node in the main list and
                     // exit the loop
-                    if node.is_change() { 
+                    if node.is_change() {
                         cur.insert_before(node);
                         break;
                     }
                     // FIXME: need to deal with shape changes vs layer changes
-                    // i guess keep track of position at beginning and end of change and 
+                    // i guess keep track of position at beginning and end of change and
                     // see id theres a z change???????
                     end = node.to();
                     shape.nodes.push_back(node);
@@ -415,34 +416,34 @@ impl NodeList {
             }
         }
     }
-    
-   //  fn build_layers(&mut self) {
-   //      let mut id = 0;
-   //      let mut layer = Layer {
-   //          id: 0,
-   //          nodes: NodeList::new(),
-   //      };
-   //      let mut cur = self.nodes.cursor_front_mut();
-   //      let mut z = 0.0;
-   //      while cur.peek_next().is_some() {
-   //          let node = cur.remove_current().unwrap();
-   //          if let Node::Shape(shape) = node {
-   //              if (shape.z() - z).abs() > EPSILON {
-   //                  id += 1;
-   //                  z = shape.z();
-   //                  if layer.nodes.nodes.len() > 0 {
-   //                      cur.insert_before(Node::Layer(layer));
-   //                  }
-   //                  layer = Layer {
-   //                      id,
-   //                      nodes: NodeList::new(),
-   //                  };
-   //                  layer.nodes.push_back(node);
-   //              }
-   //          }
 
-   //      }
-   //  }
+    //  fn build_layers(&mut self) {
+    //      let mut id = 0;
+    //      let mut layer = Layer {
+    //          id: 0,
+    //          nodes: NodeList::new(),
+    //      };
+    //      let mut cur = self.nodes.cursor_front_mut();
+    //      let mut z = 0.0;
+    //      while cur.peek_next().is_some() {
+    //          let node = cur.remove_current().unwrap();
+    //          if let Node::Shape(shape) = node {
+    //              if (shape.z() - z).abs() > EPSILON {
+    //                  id += 1;
+    //                  z = shape.z();
+    //                  if layer.nodes.nodes.len() > 0 {
+    //                      cur.insert_before(Node::Layer(layer));
+    //                  }
+    //                  layer = Layer {
+    //                      id,
+    //                      nodes: NodeList::new(),
+    //                  };
+    //                  layer.nodes.push_back(node);
+    //              }
+    //          }
+
+    //      }
+    //  }
     pub fn push_back(&mut self, mut node: Node) {
         // FIXME: doesn't work for shapes, see below
         let mut ex_move = false;
@@ -609,9 +610,7 @@ impl State for Node {
             Node::NonMove(_, p) => p.clone(),
             Node::Shape(s) => s.nodes.nodes.front().unwrap().from(),
             Node::Layer(l) => l.nodes.nodes.front().unwrap().from(),
-            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
-                nodes[0].from()
-            }
+            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => nodes[0].from(),
         }
     }
     fn to(&self) -> Pos {

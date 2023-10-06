@@ -7,7 +7,6 @@ mod transform;
 //mod gui;
 use parse::{Node, Parsed, Pos, Vertex};
 
-
 fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
     let nodes = crate::parse::file_reader::build_lines(path)?;
     panic!("{:?}", nodes);

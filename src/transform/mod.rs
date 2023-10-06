@@ -103,10 +103,7 @@ impl Translate for Node {
                 v.translate(dx, dy, dz);
             }
             // FIXME: layer changes and shape changes probably also need to get translated
-            Node::PrePrint(_)
-            | Node::PostPrint(_)
-            | Node::Change(_)
-            | Node::NonMove(_, _) => {}
+            Node::PrePrint(_) | Node::PostPrint(_) | Node::Change(_) | Node::NonMove(_, _) => {}
         }
     }
 }
@@ -180,10 +177,7 @@ impl Rotate for Node {
             Node::Vertex(v) => {
                 v.rotate(angle, axis);
             }
-            Node::Change(_)
-            | Node::NonMove(_, _)
-            | Node::PostPrint(_)
-            | Node::PrePrint(_) => {}
+            Node::Change(_) | Node::NonMove(_, _) | Node::PostPrint(_) | Node::PrePrint(_) => {}
         }
     }
 }
