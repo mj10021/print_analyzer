@@ -1,4 +1,4 @@
-use super::parse::*;
+use super::parse::{*, file_reader::*};
 pub trait Emit {
     fn emit(&self, debug: bool) -> String;
 }
@@ -26,8 +26,14 @@ impl Emit for Instruction {
 impl Emit for Line {
     fn emit(&self, debug: bool) -> String {
         match self {
-            Line::Instruction(ins) => ins.emit(debug),
+            Line::G1(g1) => panic!("g1 struct only for parsing, should not be emitted"),
+            Line::OtherInstruction(ins) => ins.emit(debug),
             Line::Raw(string) => string.clone(),
+            Line::G28 => "G28\n".to_string(),
+            Line::M82 => "M82\n".to_string(),
+            Line::M83 => "M83\n".to_string(),
+            Line::G90 => "G90\n".to_string(),
+            Line::G91 => "G91\n".to_string(),
         }
     }
 }
@@ -116,20 +122,12 @@ impl Emit for Node {
             Node::NonMove(line, _) => line.emit(debug),
             Node::Shape(s) => s.emit(debug),
             Node::Layer(l) => l.emit(debug),
-            Node::LayerChange(nodes) => {
-                let mut out = String::from("; START LAYER CHANGE\n");
+            Node::Change(nodes) => {
+                let mut out = String::from("; START CHANGE\n");
                 for node in nodes {
                     out += &node.emit(debug);
                 }
-                out += "; END LAYER CHANGE\n";
-                out
-            }
-            Node::ShapeChange(nodes) => {
-                let mut out = String::from("; START SHAPE CHANGE\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END SHAPE CHANGE\n";
+                out += "; END CHANGE\n";
                 out
             }
             Node::PrePrint(nodes) => {
@@ -138,6 +136,14 @@ impl Emit for Node {
                     out += &node.emit(debug);
                 }
                 out += "; END PREPRINT\n";
+                out
+            }
+            Node::PostPrint(nodes) => {
+                let mut out = String::from("; START POSTPRINT\n");
+                for node in nodes {
+                    out += &node.emit(debug);
+                }
+                out += "; END POSTPRINT\n";
                 out
             }
         }

@@ -203,9 +203,9 @@ pub enum Node {
     NonMove(Line, Pos),
     Shape(Shape),
     Layer(Layer),
-    LayerChange(Vec<Node>),
-    ShapeChange(Vec<Node>),
+    Change(Vec<Node>),
     PrePrint(Vec<Node>),
+    PostPrint(Vec<Node>),
 }
 impl Node {
     pub fn vertex(&self) -> &Vertex {
@@ -219,6 +219,16 @@ impl Node {
             Node::Vertex(v) => v.extrusion_move(),
             _ => false,
         }
+    }
+    pub fn is_change(&self) -> bool {
+        match self {
+            Node::Vertex(v) => v.change_move(),
+            Node::Change(_) => true,
+            _ => false,
+        }
+    }
+    fn planar_z_change(&self) -> bool {
+        (self.from().z - self.to().z).abs() > EPSILON && self.is_change()
     }
     pub fn feedrate_only(&self) -> bool {
         match self {
@@ -300,6 +310,7 @@ impl Node {
         Node::Shape(Shape {
             nodes: out,
             closed: false,
+            planar: false,
             len,
         })
     }
@@ -329,10 +340,7 @@ impl Node {
             out.push(cur.unwrap());
         }
         assert!(out.len() > 0, "no nodes popped");
-        if start.is_some() && end.is_some() && start.unwrap().z != end.unwrap().z {
-            return Node::LayerChange(out);
-        }
-        Node::ShapeChange(out)
+        Node::Change(out)
     }
     fn pop_preprint(nodes: &mut LinkedList<Node>) -> Node {
         let mut out = Vec::new();
@@ -366,72 +374,75 @@ impl NodeList {
         }
     }
     fn build_shapes(&mut self) {
-        let mut start: Option<Pos> = None;
-        let mut end: Option<Pos> = None;
-        let mut shape = Shape::new();
+
         let mut cur = self.nodes.cursor_front_mut();
-        while cur.peek_next().is_some() {
+
+        // keep walking forward through the print nodes until an extrusion node is reached
+        // and then keep popping nodes into the shape list until a change node is reached
+        loop {
+            if cur.current().is_none() {
+                break;
+            }
             let node = cur.remove_current().unwrap();
-            if node.is_extrusion() {
-                let v = node.vertex();
-                if start.is_none() {
-                    start = Some(v.from());
-                }
-                end = Some(v.to());
-                shape.len += v.dist();
+            let start = node.is_extrusion();
+            if start {
+                let start = node.from();
+                let mut end = node.to();
+                let mut shape = Shape::new();
                 shape.nodes.push_back(node);
-            // if the move is just a feedrate change we will keep it inside
-            // an existing shape or keep it in the main list if we are between
-            // shapes
-            } else if node.feedrate_only() {
-                if shape.len > 0.0 {
+                loop {
+                    if cur.current().is_none() { break; }
+                    let node = cur.remove_current().unwrap();
+                    // if a shape or layer change is detected,
+                    // reinsert the current node in the main list and
+                    // exit the loop
+                    if node.is_change() { 
+                        cur.insert_before(node);
+                        break;
+                    }
+                    // FIXME: need to deal with shape changes vs layer changes
+                    // i guess keep track of position at beginning and end of change and 
+                    // see id theres a z change???????
+                    end = node.to();
                     shape.nodes.push_back(node);
-                } else {
-                    cur.insert_before(node);
+                }
+                if shape.nodes.nodes.len() > 0 {
+                    shape.closed = start.dist(&end) < 1.0;
+                    cur.insert_before(Node::Shape(shape));
                 }
             } else {
-                // if the shape has some length and the current node is not
-                // an extrusion move, then the shape is complete
-                if shape.len > 0.0 {
-                    // if the start and end of the shape are less than 0.1mm apart
-                    // we will consider the shape closed
-                    shape.closed = start.unwrap().dist(&end.unwrap()) < 0.1;
-                    // put shape back into the list before the cursor
-                    // and then insert the current post-shape node back into the list
-                    // in between the shape and the cursor
-                    cur.insert_before(Node::Shape(shape));
-                    cur.insert_before(node);
-                }
+                cur.insert_before(node);
             }
         }
     }
-    fn build_layers(&mut self) {
-        let mut id = 0;
-        let mut layer = Layer {
-            id: 0,
-            nodes: NodeList::new(),
-        };
-        let mut cur = self.nodes.cursor_front_mut();
-        let mut z = 0.0;
-        while cur.peek_next().is_some() {
-            let node = cur.remove_current().unwrap();
-            if node.shape() {
-                if (node.shape_z() - z).abs() > EPSILON {
-                    id += 1;
-                    z = node.shape_z();
-                    if layer.nodes.len() > 0 {
-                        cur.insert_before(layer);
-                    }
-                    layer = Layer {
-                        id,
-                        nodes: NodeList::new(),
-                    };
-                    layer.nodes.push_back(node);
-                }
-            }
+    
+   //  fn build_layers(&mut self) {
+   //      let mut id = 0;
+   //      let mut layer = Layer {
+   //          id: 0,
+   //          nodes: NodeList::new(),
+   //      };
+   //      let mut cur = self.nodes.cursor_front_mut();
+   //      let mut z = 0.0;
+   //      while cur.peek_next().is_some() {
+   //          let node = cur.remove_current().unwrap();
+   //          if let Node::Shape(shape) = node {
+   //              if (shape.z() - z).abs() > EPSILON {
+   //                  id += 1;
+   //                  z = shape.z();
+   //                  if layer.nodes.nodes.len() > 0 {
+   //                      cur.insert_before(Node::Layer(layer));
+   //                  }
+   //                  layer = Layer {
+   //                      id,
+   //                      nodes: NodeList::new(),
+   //                  };
+   //                  layer.nodes.push_back(node);
+   //              }
+   //          }
 
-        }
-    }
+   //      }
+   //  }
     pub fn push_back(&mut self, mut node: Node) {
         // FIXME: doesn't work for shapes, see below
         let mut ex_move = false;
@@ -519,18 +530,36 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
             Node::Layer(l) => {
                 out.append(&mut get_nodes(l.nodes.nodes));
             }
-            Node::PrePrint(mut v) | Node::LayerChange(mut v) | Node::ShapeChange(mut v) => {
+            Node::PrePrint(mut v) | Node::Change(mut v) | Node::PostPrint(mut v) => {
                 out.append(&mut v);
             }
         }
     }
     out
 }
-
+#[test]
+fn layer_test() {
+    use crate::emit::Emit;
+    let test = "
+    G28
+    G1 f123
+    G1 X100 Y100 Z0.2
+    G1 X110 Y100 E1.1
+    G1 X110 Y110 E1.1
+    G1 X100 Y110 E1.1
+    G1 X100 Y100 E1.1
+    g1 f234
+    G1 X100 Y105 E-0.05
+    G1 X100 Y100 Z0.4
+    ";
+    let parsed = crate::read(test).expect("asdf");
+    panic!("{:?}", parsed.nodes);
+}
 #[derive(Debug, PartialEq)]
 pub struct Shape {
     pub nodes: NodeList,
     pub closed: bool,
+    pub planar: bool,
     pub len: f32,
 }
 impl Shape {
@@ -538,8 +567,18 @@ impl Shape {
         Shape {
             nodes: NodeList::new(),
             closed: false,
+            planar: false,
             len: 0.0,
         }
+    }
+    fn z(&self) -> f32 {
+        if !self.planar {
+            return -1.0;
+        }
+        let Some(Node::Vertex(v)) = self.nodes.nodes.front() else {
+            panic!("invalid node in shape");
+        };
+        v.to.z
     }
 }
 #[derive(Debug, PartialEq)]
@@ -570,7 +609,7 @@ impl State for Node {
             Node::NonMove(_, p) => p.clone(),
             Node::Shape(s) => s.nodes.nodes.front().unwrap().from(),
             Node::Layer(l) => l.nodes.nodes.front().unwrap().from(),
-            Node::LayerChange(nodes) | Node::ShapeChange(nodes) | Node::PrePrint(nodes) => {
+            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
                 nodes[0].from()
             }
         }
@@ -581,7 +620,7 @@ impl State for Node {
             Node::NonMove(_, p) => p.clone(),
             Node::Shape(s) => s.nodes.nodes.back().unwrap().to(),
             Node::Layer(l) => l.nodes.nodes.back().unwrap().to(),
-            Node::LayerChange(nodes) | Node::ShapeChange(nodes) | Node::PrePrint(nodes) => {
+            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
                 nodes[nodes.len() - 1].to()
             }
         }
@@ -598,7 +637,7 @@ impl State for Node {
                 l.nodes.nodes.front_mut().unwrap().set_from(new_from);
                 l.nodes.update();
             }
-            Node::LayerChange(nodes) | Node::ShapeChange(nodes) | Node::PrePrint(nodes) => {
+            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
                 let mut prev = new_from;
                 // update all nodes in vec
                 for node in nodes {
@@ -657,9 +696,9 @@ impl Parsed {
                     g1_moves += 1;
                     parsed.push_back(node);
                 }
-                Line::OtherInstruction(ins) => {}
+                Line::OtherInstruction(_ins) => {}
                 Line::Raw(string) => {
-                    let node = Node::NonMove(line, last_pos);
+                    let node = Node::NonMove(Line::Raw(string), last_pos);
                     parsed.push_back(node);
                 }
             }
@@ -705,13 +744,13 @@ impl Parsed {
                 }
                 _ => {}
             }
-        }
+        } */
         parsed.update();
         Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
-        } */
+        }
     }
     fn delete() {}
     fn insert() {}

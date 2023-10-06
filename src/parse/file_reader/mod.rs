@@ -4,6 +4,16 @@ use std::f32::NEG_INFINITY;
 // followed by an int or float depending on the context
 #[derive(Clone, Debug, PartialEq)]
 pub struct Word(pub char, pub f32, pub Option<String>);
+impl Word {
+    fn from(s: String) -> Word {
+        let (letter, nums) = s.split_at(1);
+        let letter = letter.chars().next().unwrap();
+        let nums = nums.parse::<f32>().expect("failed to parse float parameter");
+        assert!(letter.is_ascii_alphabetic(), "{} is invalid first character", letter);
+        Word(letter, nums, None)
+
+    }
+}
 
 // the Instruction struct splits off the command (first) word from a line,
 // and stores the parameters as a vec of words
@@ -97,6 +107,22 @@ impl Line {
     }
 }
 
+#[test]
+fn g1_line_build() {
+    let line = "G1 x1 y1 z1 e1 f1";
+    let line = clean_line(line);
+    panic!("{:?}", line);
+    let line = read_line(line);
+    panic!("{:?}", line);
+    let mut out = Vec::new();
+    let mut lines = Vec::new();
+    lines.push(line);
+    for line in lines {
+        out.push(Line::build(line))
+    }
+    panic!("{:?}", out);
+}
+
 fn parse_file(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
@@ -116,26 +142,24 @@ fn parse_str(str: &str) -> Vec<String> {
         .collect()
 }
 
-// remove whitespace and comments and read &str into vec of chars
-fn clean_line(line: &str) -> Vec<char> {
-    let mut temp_line = Vec::new();
+// remove whitespace and comments and read &str into String
+fn clean_line(line: &str) -> String {
+    line.split(';')
+        .next()
+        .unwrap()
+        .chars()
+        .filter(|&c| c != ' ' && c != '\n' && c != '\r')
+        .map(|c| c.to_ascii_uppercase())
+        .collect::<String>()
 
-    for c in line.chars() {
-        // end reading line at start of comments
-        if c == ';' {
-            break;
-        }
-        // skip all whitespace
-        if c == ' ' || c == '\n' || c == '\r' {
-            continue;
-        } else {
-            temp_line.push(c.to_ascii_uppercase());
-        }
-    }
-    temp_line
+}
+#[test]
+fn remove_comment_and_spaces() {
+    assert_eq!("ASDF", clean_line("a   s  D f    ;aljehbalwebfoiy34pbq9823g0r8q34ygpqyi3hqfADGW$%G@Q#$Fqg"));
 }
 
-fn check_line(line: &Vec<char>) -> bool {
+fn check_line(line: &String) -> bool {
+    let line = &line.clone().chars().collect::<Vec<char>>();
     if line.len() < 2 {
         return false;
     }
@@ -162,36 +186,32 @@ fn check_line(line: &Vec<char>) -> bool {
     }
     true
 }
-fn split_line(mut line: Vec<char>) -> Vec<Word> {
-    // reverse the line so that we can pop from the front
-    line.reverse();
-    let mut temp: Vec<char> = Vec::new();
-    let mut out = Vec::new();
-    temp.push(line.pop().unwrap());
-    while line.len() > 0 {
-        while line.len() > 0 && !line[0].is_ascii_alphabetic() {
-            temp.push(line.pop().unwrap());
-        }
-        if temp.len() > 1 {
-            out.push(Word(
-                temp[0],
-                temp[1..].iter().collect::<String>().parse::<f32>().unwrap(),
-                None,
-            ));
-        }
-        if line.len() > 0 {
-            temp = vec![line.pop().unwrap()];
-        }
-    }
-    out
+fn split_line(line: String) -> Vec<Word> {
+    let words = line
+        .split_inclusive(|c: char| c.is_ascii_alphabetic())
+        .map(|s| s.chars().rev().collect::<String>())
+        .rev()
+        .map(|s| Word::from(s))
+        .collect::<Vec<Word>>();
+    words
 }
 
-fn read_line(line: Vec<char>) -> Vec<Word> {
+#[test]
+fn split_test() {
+    let a = Word('A', 100.0, None);
+    let b = Word('B', 123.1212343, None);
+    let test_a = "A100".to_string();
+    let test_b = "B123.1212343".to_string();
+    assert_eq!(Word::from(test_a), a);
+    assert_eq!(Word::from(test_b), b);
+}
+
+fn read_line(line: String) -> Vec<Word> {
     // here i rly want to check if there is a character that doesn't make sense
     // and just pass the raw string through if that's the case
     if !check_line(&line) {
         if line.len() > 1 {
-            let word = Word('X', NEG_INFINITY, Some(line.iter().collect()));
+            let word = Word('X', NEG_INFINITY, Some(line));
             return Vec::from([word]);
         } else {
             // don't like this
@@ -201,11 +221,12 @@ fn read_line(line: Vec<char>) -> Vec<Word> {
     }
     split_line(line)
 }
-fn build_lines(path: &str) -> Vec<Line> {
+pub fn build_lines(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
     // tries reading the input as raw g-code if file parse error,
     // this is really just for running the tests
     let lines = match parse_file(path) {
         Ok(str) => str,
+        // parse_str should return a result too right?
         Err(_) => parse_str(path),
     };
     assert!(lines.len() > 0);
@@ -230,16 +251,16 @@ fn build_lines(path: &str) -> Vec<Line> {
         // it is not gcode and can just be copied as a string
         // right now these lines will probably be trimmed since they are all comments
 
-        if !line[0].is_ascii_alphabetic() {
-            out.push(Line::Raw(line.iter().collect()));
-            continue;
-        }
+        // if !line[0].is_ascii_alphabetic() {
+        //     out.push(Line::Raw(line.iter().collect()));
+        //     continue;
+        // }
 
         // parse the line into gcode word struct
         let line = read_line(line);
         out.push(Line::build(line));
     }
-    out
+    Ok(out)
 }
 
 /* FIXME: nodes should be built in the main parse module

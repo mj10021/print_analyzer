@@ -5,12 +5,12 @@ mod emit;
 mod parse;
 mod transform;
 //mod gui;
-use parse::{file_reader::build_nodes, Label, Node, Parsed, Pos, Vertex};
+use parse::{Node, Parsed, Pos, Vertex};
 
-use std::collections::linked_list::CursorMut;
 
 fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
-    let nodes = build_nodes(path)?;
+    let nodes = crate::parse::file_reader::build_lines(path)?;
+    panic!("{:?}", nodes);
     Ok(Parsed::build(nodes))
 }
 /*
