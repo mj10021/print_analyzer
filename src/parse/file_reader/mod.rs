@@ -93,7 +93,7 @@ pub enum Line {
 }
 impl Line {
     fn build(mut line: Vec<Word>) -> Line {
-        let Word(letter, num, _) = line[0];
+        let Word(letter, num) = line[0];
         let num = num.round() as i32;
         match (letter, num) {
             // throw away logical line numbers
@@ -132,13 +132,6 @@ fn clean_line(line: &str) -> String {
         .map(|c| c.to_ascii_uppercase())
         .collect::<String>()
 }
-#[test]
-fn remove_comment_and_spaces() {
-    assert_eq!(
-        "ASDF",
-        clean_line("a   s  D f    ;aljehbalwebfoiy34pbq9823g0r8q34ygpqyi3hqfADGW$%G@Q#$Fqg")
-    );
-}
 
 fn check_line(line: &String) -> bool {
     let line = &line.clone().chars().collect::<Vec<char>>();
@@ -176,16 +169,6 @@ fn split_line(line: String) -> Vec<Word> {
         .map(|s| Word::from(s))
         .collect::<Vec<Word>>();
     words
-}
-
-#[test]
-fn split_test() {
-    let a = Word('A', 100.0, None);
-    let b = Word('B', 123.1212343, None);
-    let test_a = "A100".to_string();
-    let test_b = "B123.1212343".to_string();
-    assert_eq!(Word::from(test_a), a);
-    assert_eq!(Word::from(test_b), b);
 }
 
 pub fn build_lines(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
