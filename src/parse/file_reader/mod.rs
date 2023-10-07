@@ -8,11 +8,12 @@ impl Word {
         let letter = letter.chars().next().unwrap();
         let nums = nums
             .parse::<f32>()
-            .expect("failed to parse float parameter");
+            .expect(&format!("failed to parse float parameter: `{}`", nums));
         assert!(
             letter.is_ascii_alphabetic(),
-            "{} is invalid first character",
-            letter
+            "{} is invalid first character\n{}",
+            letter,
+            s
         );
         Word(letter, nums)
     }
@@ -90,8 +91,18 @@ pub enum Line {
     Raw(String),
 }
 impl Line {
+    // fixme: this should take a string as an argument instead of a vec of words
+    // so that otherinstructions and raw lines can be processed without parsing
+    // as char and float
     fn build(mut line: Vec<Word>) -> Line {
         let Word(letter, num) = line[0];
+        if num == std::f32::NEG_INFINITY {
+            let mut out = String::from(letter);
+            for Word(letter, _) in line {
+                out.push(letter);
+            }
+            return Line::Raw(out); 
+        }
         let num = num.round() as i32;
         match (letter, num) {
             // throw away logical line numbers
@@ -112,7 +123,7 @@ impl Line {
 
 // opens a gcode file and returns 
 // a Vec of Line for each line in the file
-fn parse_file(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
+pub fn parse_file(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
         .unwrap()
         .lines()
@@ -137,11 +148,34 @@ fn clean_line(line: &str) -> String {
 
 // splits a valid gcode line into a vec of gcode words
 fn split_line(line: String) -> Vec<Word> {
-    let words = line
+    // check if line should be passed for raw string line
+    if line.chars().filter(|&c| !c.is_ascii_alphanumeric() || c == '-' || c == '.').collect::<Vec<_>>().len() > 0 {
+        let mut out = Vec::new();
+        for char in line.chars() {
+            out.push(Word(char, std::f32::NEG_INFINITY));
+        }
+        return out;
+    }
+    line
+        .chars()
+        .rev()
+        .collect::<String>()
         .split_inclusive(|c: char| c.is_ascii_alphabetic())
         .map(|s| s.chars().rev().collect::<String>())
         .rev()
         .map(|s| Word::from(s))
-        .collect::<Vec<Word>>();
-    words
+        .collect()
+}
+
+#[cfg(test)]
+#[test]
+
+fn read_file() {
+    let file = "test.gcode";
+    let x = parse_file(file).expect("Asdf");
+    let mut test = String::new();
+    for i in 0..100 {
+        test += &(format!("{:?}\n", x[i]));
+    }
+    panic!("{:?}", test);
 }
