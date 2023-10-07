@@ -149,7 +149,7 @@ fn clean_line(line: &str) -> String {
 // splits a valid gcode line into a vec of gcode words
 fn split_line(line: String) -> Vec<Word> {
     // check if line should be passed for raw string line
-    if line.chars().filter(|&c| !c.is_ascii_alphanumeric() || c == '-' || c == '.').collect::<Vec<_>>().len() > 0 {
+    if line.chars().filter(|&c| !c.is_ascii_alphanumeric() && c != '-' && c != '.').collect::<Vec<_>>().len() > 0 {
         let mut out = Vec::new();
         for char in line.chars() {
             out.push(Word(char, std::f32::NEG_INFINITY));
@@ -172,7 +172,7 @@ fn split_line(line: String) -> Vec<Word> {
 
 fn read_file() {
     let file = "test.gcode";
-    let x = parse_file(file).expect("Asdf");
+    let x = parse_file(file).expect("asdf");
     let mut test = String::new();
     for i in 0..100 {
         test += &(format!("{:?}\n", x[i]));
