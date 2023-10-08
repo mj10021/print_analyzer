@@ -91,9 +91,6 @@ pub enum Line {
     Raw(String),
 }
 impl Line {
-    // fixme: this should take a string as an argument instead of a vec of words
-    // so that otherinstructions and raw lines can be processed without parsing
-    // as char and float
     fn build(mut line: Vec<Word>) -> Line {
         let Word(letter, num) = line[0];
         if num == std::f32::NEG_INFINITY {
@@ -148,7 +145,8 @@ fn clean_line(line: &str) -> String {
 
 // splits a valid gcode line into a vec of gcode words
 fn split_line(line: String) -> Vec<Word> {
-    // check if line should be passed for raw string line
+    // HACK: checks if line should be passed for raw string line
+    // and makes a Word for each char in the string
     if line.chars().filter(|&c| !c.is_ascii_alphanumeric() && c != '-' && c != '.').collect::<Vec<_>>().len() > 0 {
         let mut out = Vec::new();
         for char in line.chars() {

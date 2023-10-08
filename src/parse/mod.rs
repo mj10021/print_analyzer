@@ -59,7 +59,7 @@ fn pre_home(p: Pos) -> bool {
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
-    // this is a pointer to the previous vertex where self.extrusion_move() == True
+    // this is a pointer to the previous vertex node where self.extrusion_move() == True
     pub prev: Tail,
     pub from: Pos,
     pub to: Pos,
@@ -77,7 +77,9 @@ impl Move for Tail {
     }
 }
 impl Vertex {
+    // the input g1 gets dropped here and should never be needed again
     unsafe fn build(g1_moves: i32, g1: G1, prev: Tail) -> Vertex {
+        // use the `to` field of the tail node to build the vertex `from`
         let from = unsafe {
             if prev.is_none() {
                 Pos::unhomed()
@@ -106,6 +108,7 @@ impl Vertex {
             to: Pos::home(),
         }
     }
+    // FIXME: check these
     fn label(&mut self) {
         let dx = self.to.x - self.from.x;
         let dy = self.to.y - self.from.y;
@@ -272,95 +275,8 @@ impl Node {
             _ => panic!("not a vertex"),
         }
     }
-    fn pop_shape(nodes: &mut LinkedList<Node>) -> Node {
-        let mut out = NodeList::new();
-        let mut len = 0.0;
-        loop {
-            let cur = nodes.pop_front();
-            if cur.is_none() {
-                break;
-            }
-            if let Some(Node::Vertex(v)) = &cur {
-                if v.extrusion_move() {
-                    len += v.dist();
-                // if the vertex is no extrusion or feedrate change,
-                // break and return the errant node to the front of the list
-                } else if v.label != Label::FeedrateChangeOnly {
-                    nodes.push_front(cur.unwrap());
-                    break;
-                }
-            }
-            out.nodes.push_back(cur.unwrap());
-        }
-        let mut tail: Tail = None;
-        for node in out.nodes.iter_mut() {
-            let mut new_tail = false;
-            if let Node::Vertex(v) = node {
-                if v.extrusion_move() {
-                    v.prev = tail;
-                    new_tail = true;
-                }
-            }
-            if new_tail {
-                tail = Some(node as *mut Node);
-            }
-        }
-        out.last_vertex = tail;
-        assert!(out.nodes.len() > 0, "no nodes popped");
-        Node::Shape(Shape {
-            nodes: out,
-            closed: false,
-            planar: false,
-            len,
-        })
-    }
-    fn pop_change(nodes: &mut LinkedList<Node>) -> Node {
-        // the change should end before the first extrusion move
-        // note: that does not count deretractions (e move with no x/y/z travel)
-        // keep track of the first and last position of the sequence to decide
-        // if it should be labelled as a shape or a layer change
-        let mut out = Vec::new();
-        let mut start = None;
-        let mut end = None;
-        loop {
-            let cur = nodes.pop_front();
-            if cur.is_none() {
-                break;
-            }
-            if let Some(Node::Vertex(v)) = &cur {
-                if start.is_none() {
-                    start = Some(v.from);
-                }
-                if v.extrusion_move() {
-                    end = Some(v.to);
-                    nodes.push_front(cur.unwrap());
-                    break;
-                }
-            }
-            out.push(cur.unwrap());
-        }
-        assert!(out.len() > 0, "no nodes popped");
-        Node::Change(out)
-    }
-    fn pop_preprint(nodes: &mut LinkedList<Node>) -> Node {
-        let mut out = Vec::new();
-        loop {
-            let cur = nodes.pop_front();
-            if cur.is_none() {
-                break;
-            }
-            if let Some(Node::Vertex(v)) = &cur {
-                if v.extrusion_move() && v.label != Label::PrePrintMove {
-                    nodes.push_front(cur.unwrap());
-                    break;
-                }
-            }
-            out.push(cur.unwrap());
-        }
-        assert!(out.len() > 0, "no nodes popped");
-        Node::PrePrint(out)
-    }
 }
+
 #[derive(Debug, PartialEq)]
 pub struct NodeList {
     pub nodes: LinkedList<Node>,
@@ -540,7 +456,6 @@ fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
 }
 #[test]
 fn layer_test() {
-    use crate::emit::Emit;
     let test = "
     G28
     G1 f123

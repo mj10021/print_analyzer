@@ -23,7 +23,7 @@ impl Emit for Instruction {
 impl Emit for Line {
     fn emit(&self, debug: bool) -> String {
         match self {
-            Line::G1(g1) => panic!("g1 struct only for parsing, should not be emitted"),
+            Line::G1(_) => panic!("g1 struct only for parsing, should not be emitted"),
             Line::OtherInstruction(ins) => ins.emit(debug),
             Line::Raw(string) => string.clone(),
             Line::G28 => "G28\n".to_string(),
