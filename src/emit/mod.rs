@@ -66,23 +66,23 @@ impl Emit for Vertex {
         }
         let mut out = String::from("G1 ");
         if self.from.x != self.to.x {
-            assert!(self.to.x.is_finite() && !self.to.x.is_nan());
+            assert!(self.to.x.is_finite() && !self.to.x.is_nan(), "{:#?}", self);
             out += &format!("X{} ", self.to.x);
         }
         if self.from.y != self.to.y {
-            assert!(self.to.y.is_finite() && !self.to.y.is_nan());
+            assert!(self.to.y.is_finite() && !self.to.y.is_nan(), "{:#?}", self);
             out += &format!("Y{} ", self.to.y);
         }
         if self.from.z != self.to.z {
-            assert!(self.to.z.is_finite() && !self.to.z.is_nan());
+            assert!(self.to.z.is_finite() && !self.to.z.is_nan(), "{:#?}", self);
             out += &format!("Z{} ", self.to.z);
         }
         if self.to.e != 0.0 {
-            assert!(self.to.e.is_finite() && !self.to.e.is_nan());
+            assert!(self.to.e.is_finite() && !self.to.e.is_nan(), "{:#?}", self);
             out += &format!("E{} ", self.to.e);
         }
         if self.from.f != self.to.f {
-            assert!(self.to.f.is_finite() && !self.to.f.is_nan());
+            assert!(self.to.f.is_finite() && !self.to.f.is_nan(), "{:#?}", self);
             out += &format!("F{} ", self.to.f);
         }
         out += "\n";

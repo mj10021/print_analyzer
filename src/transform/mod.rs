@@ -72,7 +72,7 @@ fn translate_unit_test() {
     for node in gcode.nodes.nodes.iter_mut() {
         node.translate(10.0, 10.0, 10.0);
     }
-    gcode.nodes.update();
+    gcode.nodes.update(None, Pos::unhomed());
     panic!("{:#?}", gcode.nodes);
 }
 impl Translate for Shape {

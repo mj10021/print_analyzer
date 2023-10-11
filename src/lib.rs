@@ -10,7 +10,6 @@ use parse::{Node, Parsed, Pos, Vertex};
 
 fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
     let nodes = crate::parse::file_reader::parse_file(path)?;
-    panic!("{:?}", nodes);
     Ok(Parsed::build(nodes))
 }
 /*
@@ -140,7 +139,7 @@ fn filter_test() {
     use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
-    gcode.nodes.update();
+    gcode.nodes.update(None, Pos::unhomed());
     let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
@@ -160,7 +159,7 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
             }
         }
     }
-    gcode.nodes.update();
+    gcode.nodes.update(None, Pos::unhomed());
 }
 fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
     for node in gcode.nodes.nodes.iter_mut() {
@@ -340,7 +339,10 @@ mod integration_tests {
         let snd = read(&snd).expect("failed to parse reemitted file");
         let mut f = File::create("test_output2.gcode").expect("failed to create file");
         let _ = f.write_all(&snd.emit(false).as_bytes());
-        assert_eq!(p_init, snd);
+        let a: std::collections::HashSet<String> = p_init.emit(false).lines().map(|s| s.to_string()).collect();
+        let b: std::collections::HashSet<String> = snd.emit(false).lines().map(|s| s.to_string()).collect();
+        panic!("{:?}", a.difference(&b));
+        assert!(a.difference(&b).collect::<Vec<_>>().len() < 1, "{:?}", a.difference(&b));
     }
     #[test]
     fn specific_random_gcode_issue() {

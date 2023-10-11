@@ -99,6 +99,14 @@ impl Vertex {
         vrtx.label();
         vrtx
     }
+
+    fn update(&mut self) {
+        self.from = match self.prev {
+            Some(prev) => unsafe {(*prev).to()},
+            None => Pos::unhomed(),
+        };
+    }
+
     fn home() -> Vertex {
         Vertex {
             id: 0,
@@ -275,7 +283,50 @@ impl Node {
             _ => panic!("not a vertex"),
         }
     }
+    // returns the state of the updated node
+    fn update(&mut self, prev_ptr: Tail, prev_state: Pos) -> Pos {
+        match self {
+            Node::Vertex(v) => {
+                v.from = prev_state;
+                v.prev = prev_ptr;
+                v.label();
+                v.to()
+            }
+            Node::Shape(s) => {
+                s.nodes.update(prev_ptr, prev_state)
+            },
+            Node::Layer(l) => {
+                l.nodes.update(prev_ptr, prev_state)
+            },
+            Node::PrePrint(v)
+            | Node::PostPrint(v)
+            | Node::Change(v) => {
+                let mut ptr = prev_ptr.clone();
+                let mut state = prev_state.clone();
+                for node in v {
+                    state = node.update(ptr, state);
+                    // if node is_extrusion, update tail
+                    let ex = {
+                        let mut out = false;
+                        if let Node::Vertex(v) = node {
+                            if v.extrusion_move() {
+                                out = true;
+                            }
+                        }
+                        out
+                    };
+                    if ex {ptr = Some(std::ptr::addr_of_mut!(*node))};
+                }
+                state
+            },
+            Node::NonMove(_, pos) => {
+                *pos = prev_state.clone();
+                pos.clone()
+            }
+        }
+    }
 }
+
 
 #[derive(Debug, PartialEq)]
 pub struct NodeList {
@@ -289,16 +340,18 @@ impl NodeList {
             last_vertex: None,
         }
     }
+
     fn build_shapes(&mut self) {
         let mut cur = self.nodes.cursor_front_mut();
-
         // keep walking forward through the print nodes until an extrusion node is reached
         // and then keep popping nodes into the shape list until a change node is reached
         loop {
             if cur.current().is_none() {
                 break;
             }
+            // pop off the first node
             let node = cur.remove_current().unwrap();
+            // unwrap the node and check if it is an extrusion move
             let start = node.is_extrusion();
             if start {
                 let start = node.from();
@@ -317,14 +370,12 @@ impl NodeList {
                         cur.insert_before(node);
                         break;
                     }
-                    // FIXME: need to deal with shape changes vs layer changes
-                    // i guess keep track of position at beginning and end of change and
-                    // see id theres a z change???????
                     end = node.to();
                     shape.nodes.push_back(node);
                 }
                 if shape.nodes.nodes.len() > 0 {
-                    shape.closed = start.dist(&end) < 1.0;
+                    // shape closed if the start and end are < 0.1mm apart
+                    shape.closed = start.dist(&end) < 0.1;
                     cur.insert_before(Node::Shape(shape));
                 }
             } else {
@@ -333,33 +384,7 @@ impl NodeList {
         }
     }
 
-    //  fn build_layers(&mut self) {
-    //      let mut id = 0;
-    //      let mut layer = Layer {
-    //          id: 0,
-    //          nodes: NodeList::new(),
-    //      };
-    //      let mut cur = self.nodes.cursor_front_mut();
-    //      let mut z = 0.0;
-    //      while cur.peek_next().is_some() {
-    //          let node = cur.remove_current().unwrap();
-    //          if let Node::Shape(shape) = node {
-    //              if (shape.z() - z).abs() > EPSILON {
-    //                  id += 1;
-    //                  z = shape.z();
-    //                  if layer.nodes.nodes.len() > 0 {
-    //                      cur.insert_before(Node::Layer(layer));
-    //                  }
-    //                  layer = Layer {
-    //                      id,
-    //                      nodes: NodeList::new(),
-    //                  };
-    //                  layer.nodes.push_back(node);
-    //              }
-    //          }
-
-    //      }
-    //  }
+    // CHECK THIS NEXT
     pub fn push_back(&mut self, mut node: Node) {
         // FIXME: doesn't work for shapes, see below
         let mut ex_move = false;
@@ -369,53 +394,106 @@ impl NodeList {
                 ex_move = v.extrusion_move();
             }
             Node::Shape(s) => {
-                // FIXME: I think that the pointer to the last node inside the shape will move
-                // when the shape is copied into the main NodeList
-                // so I guess I need to make a method for nodes that
-                // recursively searches the nodelists to return the innermost last
-                // vertex
                 self.last_vertex = s.nodes.last_vertex();
                 self.nodes.append(&mut s.nodes.nodes);
             }
             Node::Layer(l) => {
                 self.last_vertex = l.nodes.last_vertex();
                 self.nodes.append(&mut l.nodes.nodes);
-            }
-            _ => {}
+            },
+            Node::PrePrint(v) | Node::PostPrint(v) {
+                // todo: need to update tail when I append these ones too
+            },
+            Node::NonMove(_, _)
+            | Node::Change(_) => {}
         }
+        // FIXME: i should really have a method go through the entire list
+        // or at least the new section to reset the vertices, states, and 
+        // to updates the tail of the list
+        // probably every time something is pushed or appneded its address
+        // changes so all of the dependent pointers need to be updated
         self.nodes.push_back(node);
         if ex_move {
             self.last_vertex = Some(self.nodes.back_mut().unwrap() as *mut Node);
         }
     }
+
+    // appends the nodelist and searches from the front of the 
+    // new node list to set the prev of the first extrustion
+    // and the new tail
     fn append(&mut self, mut list: NodeList) {
-        self.nodes.append(&mut list.nodes);
-        self.last_vertex = list.last_vertex;
-    }
-    pub fn update(&mut self) {
-        let mut prev: Tail = None;
-        let mut state: Pos = Pos::unhomed();
-        for node in self.nodes.iter_mut() {
-            let cur = node as *mut Node;
-            match node {
-                Node::Vertex(v) => {
-                    if v.extrusion_move() {
-                        v.prev = prev;
-                        prev = Some(cur);
-                    }
-                    v.from = state;
-                    state = v.to();
-                    v.label();
+
+        // FIXME: recheck this
+        let mut tail = self.last_vertex;
+        let mut cur = self.nodes.cursor_back_mut();
+
+        // append the list
+        while list.nodes.len() > 0 {
+            cur.insert_after(list.nodes.pop_back().unwrap());
+        }
+        // move to the fist appended node
+        cur.move_next();
+        while cur.current().is_some() {
+            let ex = {
+                let mut ret = false;
+                // update the current vertex with the current tail, and set 
+                // the tail to the node holding the current vertex
+                if let Some(Node::Vertex(v)) = cur.current () {
+                    v.prev = tail;
+                    v.update();
+                    ret = v.extrusion_move();
                 }
+                ret
+            };
+            if ex {
+                tail = Some(cur.current().unwrap() as *mut Node);
+            }
+            cur.move_next();
+        }
+        self.last_vertex = tail;
+    }
+
+    pub fn update(&mut self, prev_ptr: Tail, prev_state: Pos) -> Pos {
+        let mut state = prev_state.clone();
+        let mut ptr = prev_ptr.clone();
+        for node in self.nodes.iter_mut() {
+            match node {
+                Node::Vertex(_) => {
+                    state = node.update(ptr, state);
+                    let ex = node.is_extrusion();
+                    if ex {
+                        ptr = Some(std::ptr::addr_of_mut!(*node));
+                    }
+                }
+                Node::Shape(_) => {
+                    state = node.update(ptr, state);
+                    // shape always has extrusion move, so we update the tail
+                    ptr = Some(std::ptr::addr_of_mut!(*node));
+                },
+                Node::Layer(_) => {
+                    state = node.update(ptr, state);
+                    // layer always has extrusion move so we update the tail
+                    ptr = Some(std::ptr::addr_of_mut!(*node));
+                },
+                Node::PrePrint(v)
+                | Node::PostPrint(v)
+                | Node::Change(v) => {
+                    for node in v {
+                        // FIXME: need to check if I need to update the tail here 
+                        // since some of these might contain extrusion moves
+                        let ex = node.is_extrusion();
+                        state = node.update(ptr, state);
+                        if ex {
+                            ptr = Some(std::ptr::addr_of_mut!(*node));
+                        }
+                    }
+                },
                 Node::NonMove(_, pos) => {
                     *pos = state.clone();
                 }
-                node => {
-                    node.set_from(state);
-                    state = node.to();
-                }
             }
         }
+        state
     }
     fn last_vertex(&self) -> Tail {
         if self.last_vertex.is_none() {
@@ -515,7 +593,6 @@ impl Layer {
 pub trait State {
     fn from(&self) -> Pos;
     fn to(&self) -> Pos;
-    fn set_from(&mut self, new_from: Pos);
 }
 
 impl State for Node {
@@ -536,28 +613,6 @@ impl State for Node {
             Node::Layer(l) => l.nodes.nodes.back().unwrap().to(),
             Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
                 nodes[nodes.len() - 1].to()
-            }
-        }
-    }
-    fn set_from(&mut self, new_from: Pos) {
-        match self {
-            Node::Vertex(v) => v.from = new_from,
-            Node::NonMove(_, p) => *p = new_from,
-            Node::Shape(s) => {
-                s.nodes.nodes.front_mut().unwrap().set_from(new_from);
-                s.nodes.update();
-            }
-            Node::Layer(l) => {
-                l.nodes.nodes.front_mut().unwrap().set_from(new_from);
-                l.nodes.update();
-            }
-            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
-                let mut prev = new_from;
-                // update all nodes in vec
-                for node in nodes {
-                    node.set_from(prev);
-                    prev = node.to();
-                }
             }
         }
     }
@@ -583,7 +638,6 @@ impl Parsed {
         // reverse the lines to pop in the correct order
         lines.reverse();
 
-        // FIXME: this is fine but it doesn't use the shape and layer nodes which i like
         while lines.len() > 0 {
             let line = lines.pop().unwrap();
             match line {
@@ -606,6 +660,7 @@ impl Parsed {
                 Line::G1(g1) => {
                     assert!(prev.is_some(), "attempting to move from unhomed state");
                     let node = Node::Vertex(unsafe { Vertex::build(g1_moves, g1, prev) });
+                    // fixme: I THINK I NEED TO UPDATE THE PREV HERE, might be happening on line 666
                     last_pos = node.to();
                     g1_moves += 1;
                     parsed.push_back(node);
@@ -616,58 +671,31 @@ impl Parsed {
                     parsed.push_back(node);
                 }
             }
+            let new_tail = {
+                let mut out = false;
+                if let Some(Node::Vertex(v)) = parsed.nodes.back() {
+                    if v.extrusion_move() || *v == Vertex::home() {
+                        out = true;
+                    }
+                }
+                out
+            };
+            if new_tail {
+                // i think push_back() handles the tail updating so i only need
+                // to set the local prev variable
+                prev = Some(parsed.nodes.back_mut().unwrap() as *mut Node);
+            }
         }
 
-        /*
-        parsed.nodes.push_back(Node::pop_preprint(&mut nodes));
-        while nodes.front().is_some() {
-            match nodes.front() {
-                Some(Node::Vertex(v)) => {
-                    if v.extrusion_move() || v.label == Label::FeedrateChangeOnly {
-                        parsed.push_back(Node::pop_shape(&mut nodes));
-                    } else if v.change_move() {
-                        parsed.push_back(Node::pop_change(&mut nodes));
-                    } else {
-                        parsed.push_back(nodes.pop_front().unwrap());
-                    }
-                }
-                Some(_) => {
-                    if let Some(Node::NonMove(Line::Instruction(Instruction {
-                        first_word: Word(letter, number, ..),
-                        ..
-                    }), _)) = nodes.front()
-                    {
-                        let number = number.round() as i32;
-                        match (letter, number) {
-                            ('G', 90) => {
-                                rel_xyz = false;
-                            }
-                            ('G', 91) => {
-                                rel_xyz = true;
-                            }
-                            ('M', 82) => {
-                                rel_e = false;
-                            }
-                            ('M', 83) => {
-                                rel_e = true;
-                            }
-                            _ => {}
-                        }
-                    }
-                    parsed.push_back(nodes.pop_front().unwrap())
-                }
-                _ => {}
-            }
-        } */
-        parsed.update();
+        parsed.update(None, Pos::unhomed());
         Parsed {
             nodes: parsed,
             rel_xyz,
             rel_e,
         }
     }
-    fn delete() {}
-    fn insert() {}
+    fn delete() { todo!() }
+    fn insert() { todo!() }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Label {
@@ -686,41 +714,7 @@ pub enum Label {
     Wipe,
     FeedrateChangeOnly,
 }
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Annotation {
-    pub label: Label,
-    dx: f32,
-    dy: f32,
-    dz: f32,
-    pub de: f32,
-    dt: f32, // calc time from feedrate
-    ex_width_mm: f32,
-}
-impl Annotation {
-    pub fn new() -> Annotation {
-        Annotation {
-            label: Label::Uninitialized,
-            dx: NEG_INFINITY,
-            dy: NEG_INFINITY,
-            dz: NEG_INFINITY,
-            de: NEG_INFINITY,
-            dt: NEG_INFINITY,
-            ex_width_mm: 0.0,
-        }
-    }
-    fn get_time(&self, feedrate: f32) -> f32 {
-        // because all axes move at the same time, use the longest axis distance to calculate time
-        let max_axis_dist =
-            (self.dx.abs()).max(self.dy.abs().max(self.dz.abs().max(self.de.abs())));
-        return (max_axis_dist / feedrate) * 60.0;
-    }
-    fn get_ex_width(&self, layer_height: f32) -> f32 {
-        let move_dist = (self.dx.powf(2.0) + self.dy.powf(2.0) + self.dz.powf(2.0)).sqrt();
-        let in_area = ((1.75 / 2.0) * std::f32::consts::PI).powf(2.0);
-        let ex = (in_area * self.de) / move_dist;
-        return ex / layer_height;
-    }
-}
+
 #[test]
 #[should_panic]
 fn no_home_test() {
