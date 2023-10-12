@@ -3,66 +3,9 @@ use nalgebra::{Point3, Rotation3, Vector3};
 pub trait Translate {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32);
 }
-impl Vertex {
-    // SAFETY: self.prev needs to be a raw pointer to a Node::Vertex
-    unsafe fn prev_vrtx_raw(&self) -> *mut Vertex {
-        let prev = self.prev.unwrap();
-        (*prev).vertex_mut_raw()
-    }
-}
+
 impl Translate for Vertex {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        let init_dist = self.dist();
-        let init_flow = {
-            if self.extrusion_move() {
-                self.flow()
-            } else {
-                0.0
-            }
-        };
-        {
-            if self.prev.is_none() {
-                let init_dist = self.dist();
-                self.from.x += dx;
-                self.from.y += dy;
-                self.from.z += dz;
-                let new_dist = self.dist();
-                let mut scale = new_dist / init_dist;
-                if scale.is_infinite() || scale.is_nan() {
-                    scale = 0.0;
-                }
-                self.to.e *= scale;
-                return;
-            }
-            let prev = self.prev.unwrap();
-            let test = unsafe { (*prev).to() };
-            let test2 = self.from();
-
-            assert!(test == test2, "{:#?}\r\n{:#?}", test, test2);
-            // SAFETY: prev needs to be a raw pointer to a Node::Vertex
-            unsafe {
-                // FIXME: it might not be safe to use a mut pointer here,
-                // need to check the nomicon
-                let v = self.prev_vrtx_raw();
-                let prev_dist = (*v).dist();
-                (*v).to.x += dx;
-                (*v).to.y += dy;
-                (*v).to.z += dz;
-                let new_prev_dist = (*v).dist();
-                let mut scale = new_prev_dist / prev_dist;
-                if scale.is_infinite() || scale.is_nan() {
-                    scale = 0.0;
-                }
-                (*v).to.e *= scale;
-                self.from = (*v).to.clone();
-            }
-        }
-        let new_dist = self.dist();
-        let mut scale = new_dist / init_dist;
-        if scale.is_infinite() || scale.is_nan() {
-            scale = 0.0;
-        }
-        self.to.e = init_flow * scale;
     }
 }
 #[test]
@@ -72,7 +15,6 @@ fn translate_unit_test() {
     for node in gcode.nodes.nodes.iter_mut() {
         node.translate(10.0, 10.0, 10.0);
     }
-    gcode.nodes.update(None, Pos::unhomed());
     panic!("{:#?}", gcode.nodes);
 }
 impl Translate for Shape {

@@ -5,11 +5,21 @@ mod emit;
 mod parse;
 mod transform;
 //mod gui;
-use parse::{Node, Parsed, Pos, Vertex};
+use parse::{Node, Parsed, Pos, Vertex, file_reader::{Line, clean_line, split_line}};
 
 
 fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
-    let nodes = crate::parse::file_reader::parse_file(path)?;
+    let nodes = match crate::parse::file_reader::parse_file(path){
+        Ok(v) => v,
+        // this is for running unit tests
+        Err(_) => path
+            .lines()
+            .map(|s| clean_line(s))
+            .filter(|s| s.len() > 0)
+            .map(|s| split_line(s))
+            .map(|v| Line::build(v))
+            .collect(),
+    };
     Ok(Parsed::build(nodes))
 }
 /*
@@ -139,7 +149,6 @@ fn filter_test() {
     use crate::emit::Emit;
     let mut gcode = read("test.gcode").expect("failed to parse gcode");
     filter(&mut gcode, |v| (v.from.x - v.to.x) > (v.from.y - v.to.y));
-    gcode.nodes.update(None, Pos::unhomed());
     let gcode = gcode.emit(false);
     use std::fs::File;
     use std::io::prelude::*;
@@ -159,7 +168,7 @@ fn filter_map(gcode: &mut Parsed, filter: fn(&Vertex) -> bool, map: fn(&mut Vert
             }
         }
     }
-    gcode.nodes.update(None, Pos::unhomed());
+
 }
 fn map(gcode: &mut Parsed, map: fn(&mut Vertex)) {
     for node in gcode.nodes.nodes.iter_mut() {
@@ -341,7 +350,7 @@ mod integration_tests {
         let _ = f.write_all(&snd.emit(false).as_bytes());
         let a: std::collections::HashSet<String> = p_init.emit(false).lines().map(|s| s.to_string()).collect();
         let b: std::collections::HashSet<String> = snd.emit(false).lines().map(|s| s.to_string()).collect();
-        panic!("{:?}", a.difference(&b));
+        panic!("{:#?}\r\n\r\n{:#?}", a.difference(&b), b.difference(&a));
         assert!(a.difference(&b).collect::<Vec<_>>().len() < 1, "{:?}", a.difference(&b));
     }
     #[test]

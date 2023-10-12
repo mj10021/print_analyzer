@@ -91,10 +91,10 @@ pub enum Line {
     Raw(String),
 }
 impl Line {
-    fn build(mut line: Vec<Word>) -> Line {
+    pub fn build(mut line: Vec<Word>) -> Line {
         let Word(letter, num) = line[0];
         if num == std::f32::NEG_INFINITY {
-            let mut out = String::from(letter);
+            let mut out = String::new();
             for Word(letter, _) in line {
                 out.push(letter);
             }
@@ -133,7 +133,7 @@ pub fn parse_file(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
 }
 
 // remove whitespace and comments and make everything uppercase
-fn clean_line(line: &str) -> String {
+pub fn clean_line(line: &str) -> String {
     line.split(';')
         .next()
         .unwrap()
@@ -144,7 +144,7 @@ fn clean_line(line: &str) -> String {
 }
 
 // splits a valid gcode line into a vec of gcode words
-fn split_line(line: String) -> Vec<Word> {
+pub fn split_line(line: String) -> Vec<Word> {
     // HACK: checks if line should be passed for raw string line
     // and makes a Word for each char in the string
     if line.chars().filter(|&c| !c.is_ascii_alphanumeric() && c != '-' && c != '.').collect::<Vec<_>>().len() > 0 {

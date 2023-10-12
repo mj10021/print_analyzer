@@ -25,7 +25,7 @@ impl Emit for Line {
         match self {
             Line::G1(_) => panic!("g1 struct only for parsing, should not be emitted"),
             Line::OtherInstruction(ins) => ins.emit(debug),
-            Line::Raw(string) => string.clone(),
+            Line::Raw(string) => string.clone() + "\n",
             Line::G28 => "G28\n".to_string(),
             Line::M82 => "M82\n".to_string(),
             Line::M83 => "M83\n".to_string(),
@@ -56,14 +56,6 @@ impl Emit for Pos {
 }
 impl Emit for Vertex {
     fn emit(&self, debug: bool) -> String {
-        if self.to.x == 0.0
-            && self.to.y == 0.0
-            && self.to.z == 0.0
-            && self.to.e == 0.0
-            && self.id == 0
-        {
-            return "G28\n".to_string();
-        }
         let mut out = String::from("G1 ");
         if self.from.x != self.to.x {
             assert!(self.to.x.is_finite() && !self.to.x.is_nan(), "{:#?}", self);
