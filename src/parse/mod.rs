@@ -185,11 +185,6 @@ impl std::fmt::Debug for Vertex {
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line, Pos),
-    Shape(Shape),
-    Layer(Layer),
-    Change(Vec<Node>),
-    PrePrint(Vec<Node>),
-    PostPrint(Vec<Node>),
 }
 impl Node {
     pub fn vertex(&self) -> &Vertex {
@@ -207,7 +202,6 @@ impl Node {
     pub fn is_change(&self) -> bool {
         match self {
             Node::Vertex(v) => v.change_move(),
-            Node::Change(_) => true,
             _ => false,
         }
     }
@@ -475,9 +469,6 @@ impl State for Node {
         match self {
             Node::Vertex(v) => v.from.clone(),
             Node::NonMove(_, p) => p.clone(),
-            Node::Shape(s) => s.nodes.nodes.front().unwrap().from(),
-            Node::Layer(l) => l.nodes.nodes.front().unwrap().from(),
-            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => nodes[0].from(),
         }
     }
     fn to(&self) -> Pos {
