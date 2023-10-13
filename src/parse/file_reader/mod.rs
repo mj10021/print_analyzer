@@ -82,6 +82,7 @@ impl G1 {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Line {
     G1(G1),
+    FeedrateChange(f32),
     G28,
     M82,
     M83,
@@ -107,7 +108,14 @@ impl Line {
                 let _ = line.remove(0);
                 Line::build(line)
             }
-            ('G', 1) => Line::G1(G1::build(line)),
+            ('G', 1) => {
+                if line.len() == 1{
+                    if let Word('F', param) = line[0] {
+                        return Line::FeedrateChange(param);
+                    }
+                }
+                Line::G1(G1::build(line))
+            },
             ('G', 28) => Line::G28,
             ('M', 82) => Line::M82,
             ('M', 83) => Line::M83,
@@ -163,17 +171,4 @@ pub fn split_line(line: String) -> Vec<Word> {
         .rev()
         .map(|s| Word::from(s))
         .collect()
-}
-
-#[cfg(test)]
-#[test]
-
-fn read_file() {
-    let file = "test.gcode";
-    let x = parse_file(file).expect("asdf");
-    let mut test = String::new();
-    for i in 0..100 {
-        test += &(format!("{:?}\n", x[i]));
-    }
-    panic!("{:?}", test);
 }

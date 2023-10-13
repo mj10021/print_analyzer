@@ -2,17 +2,16 @@ use std::collections::linked_list::CursorMut;
 
 use crate::parse::*;
 use nalgebra::{Point3, Rotation3, Vector3};
-pub trait Translate {
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32);
-}
 
 impl Vertex {
+    // FIXME: flow is wrong
     // translates the previous vertex
     fn translate(&mut self, dx: f32, dy: f32, dz: f32, prev: *mut Vertex) {
 
         let to_init = self.dist();
         let from_init = unsafe{(*prev).dist()};
 
+        // SAFETY: prev must point to (finish this)
         unsafe {
             (*prev).to.x += dx;
             (*prev).to.y += dy;
@@ -33,56 +32,6 @@ impl Vertex {
 
     }
 }
-#[test]
-fn translate_unit_test() {
-    let mut gcode = crate::read("G28\nG1 X10 Y10 Z10 E10 F1000\nG1 X20 Y20 Z20 E20 F1000\n")
-        .expect("failed to read file");
-    let mut cur = gcode.nodes.nodes.cursor_front_mut();
-    let mut prev = NodeList::move_next_extrusion(&mut cur).expect("no start extrusion");
-
-    while let Ok(curr) = NodeList::move_next_extrusion(&mut cur) {
-        if let Some(node) = cur.current() {
-            node.translate(10.0, 10.0, 10.0, &mut cur);
-        }
-        // do the stuff here
-        prev = curr;
-        cur.move_next();
-
-    }
-    panic!("{:#?}", gcode.nodes);
-}
-impl Translate for Node {
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        match self {
-            Node::Layer(l) => {
-                let mut cur = l.nodes.nodes.cursor_front_mut();
-                let mut prev = NodeList::move_next_vertex(&mut cur).expect("no start vertex");
-                // fixme: shouldn't i translate all nodes here and not just vertices?
-                while let Ok(curr) = NodeList::move_next_vertex(&mut cur) {
-                    if let Some(Node::Vertex(v)) = cur.current() {
-                        v.translate(dx, dy, dz, prev);
-                        prev = curr;
-                    }
-                }
-            }
-            Node::Shape(s) => {
-                let mut cur = s.nodes.nodes.cursor_front_mut();
-                let mut prev = NodeList::move_next_vertex(&mut cur).expect("no start vertex");
-                while let Ok(curr) = NodeList::move_next_vertex(&mut cur) {
-                    if let Some(Node::Vertex(v)) = cur.current() {
-                        v.translate(dx, dy, dz, prev);
-                        prev = curr;
-                    }
-                }
-            }
-            Node::Vertex(v) => {
-                v.translate(dx, dy, dz);
-            }
-            // FIXME: layer changes and shape changes probably also need to get translated
-            Node::PrePrint(_) | Node::PostPrint(_) | Node::Change(_) | Node::NonMove(_, _) => {}
-        }
-    }
-}
 
 #[test]
 fn translate_test() {
@@ -90,8 +39,25 @@ fn translate_test() {
     use std::fs::File;
     use std::io::Write;
     let mut gcode = crate::read("test.gcode").expect("failed to read file");
-    for node in gcode.nodes.nodes.iter_mut() {
-        node.translate(10.0, 10.0, 10.0);
+    let mut cur = gcode.nodes.nodes.cursor_front_mut();
+    let _ = NodeList::move_next_vertex(&mut cur);
+    let _ = NodeList::move_next_vertex(&mut cur);
+    let _ = NodeList::move_next_vertex(&mut cur);
+    while cur.peek_next().is_some() {
+        let at_v = {
+            let mut out = false;
+            if let Some(Node::Vertex(_)) = cur.current() {
+                out = true;
+            }
+            out
+        };
+        if at_v {
+            let (dx, dy, dz) = (10.0, 10.0, 10.0);
+            let prev = NodeList::peek_prev_vertex(&mut cur);
+            let Some(Node::Vertex(v)) = cur.current() else {todo!()};
+            v.translate(dx, dy, dz, prev)
+        }
+        cur.move_next();
     }
     let gcode = gcode.emit(false);
     let mut file = File::create("test_translate.gcode").expect("failed to create file");
@@ -99,77 +65,7 @@ fn translate_test() {
         .expect("failed to write file");
 }
 
-trait Rotate {
-    fn rotate(&mut self, angle: f32, axis: &Axis);
-}
-enum Axis {
-    X,
-    Y,
-    Z,
-}
-impl Rotate for Vertex {
-    fn rotate(&mut self, angle: f32, axis: &Axis) {
-        let axis = match axis {
-            Axis::X => Vector3::x_axis(),
-            Axis::Y => Vector3::y_axis(),
-            Axis::Z => Vector3::z_axis(),
-        };
-        let xi = self.to.x;
-        let yi = self.to.y;
-        let zi = self.to.z;
-        let pt = Point3::new(xi, yi, zi);
-        let rot = Rotation3::from_axis_angle(&axis, angle);
-        let pt = rot * pt;
-        let dx = pt.x - xi;
-        let dy = pt.y - yi;
-        let dz = pt.z - zi;
-        self.translate(dx, dy, dz);
-    }
-}
 
-impl Rotate for Shape {
-    fn rotate(&mut self, angle: f32, axis: &Axis) {
-        for node in self.nodes.nodes.iter_mut() {
-            node.rotate(angle, axis);
-        }
-    }
-}
-impl Rotate for Layer {
-    fn rotate(&mut self, angle: f32, axis: &Axis) {
-        for node in self.nodes.nodes.iter_mut() {
-            node.rotate(angle, axis);
-        }
-    }
-}
-impl Rotate for Node {
-    fn rotate(&mut self, angle: f32, axis: &Axis) {
-        match self {
-            Node::Layer(l) => {
-                l.rotate(angle, axis);
-            }
-            Node::Shape(s) => {
-                s.rotate(angle, axis);
-            }
-            Node::Vertex(v) => {
-                v.rotate(angle, axis);
-            }
-            Node::Change(_) | Node::NonMove(_, _) | Node::PostPrint(_) | Node::PrePrint(_) => {}
-        }
-    }
-}
-#[test]
-fn rotate_test() {
-    use crate::emit::Emit;
-    use std::fs::File;
-    use std::io::Write;
-    let mut gcode = crate::read("test.gcode").expect("failed to read file");
-    for node in gcode.nodes.nodes.iter_mut() {
-        node.rotate(0.5, &Axis::Z);
-    }
-    let mut file = File::create("test_rotate.gcode").expect("failed to create file");
-    file.write_all(gcode.emit(false).as_bytes())
-        .expect("failed to write file");
-}
 
 trait SubDivide {
     fn subdivide(&self, max_length: f32);

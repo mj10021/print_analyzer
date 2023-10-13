@@ -24,6 +24,7 @@ impl Emit for Line {
     fn emit(&self, debug: bool) -> String {
         match self {
             Line::G1(_) => panic!("g1 struct only for parsing, should not be emitted"),
+            Line::FeedrateChange(val) => format!("G1 F{}\n", val),
             Line::OtherInstruction(ins) => ins.emit(debug),
             Line::Raw(string) => string.clone() + "\n",
             Line::G28 => "G28\n".to_string(),
@@ -84,57 +85,12 @@ impl Emit for Vertex {
         out
     }
 }
-impl Emit for Shape {
-    fn emit(&self, debug: bool) -> String {
-        let mut out = String::from("; START SHAPE\n");
-        for node in self.nodes.nodes.iter() {
-            out += &node.emit(debug);
-        }
-        out += "; END SHAPE\n";
-        out
-    }
-}
-impl Emit for Layer {
-    fn emit(&self, debug: bool) -> String {
-        let mut out = String::from("; START LAYER\n");
-        for node in self.nodes.nodes.iter() {
-            out += &node.emit(debug);
-        }
-        out += "; END LAYER\n";
-        out
-    }
-}
+
 impl Emit for Node {
     fn emit(&self, debug: bool) -> String {
         match self {
             Node::Vertex(v) => v.emit(debug),
             Node::NonMove(line, _) => line.emit(debug),
-            Node::Shape(s) => s.emit(debug),
-            Node::Layer(l) => l.emit(debug),
-            Node::Change(nodes) => {
-                let mut out = String::from("; START CHANGE\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END CHANGE\n";
-                out
-            }
-            Node::PrePrint(nodes) => {
-                let mut out = String::from("; START PREPRINT\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END PREPRINT\n";
-                out
-            }
-            Node::PostPrint(nodes) => {
-                let mut out = String::from("; START POSTPRINT\n");
-                for node in nodes {
-                    out += &node.emit(debug);
-                }
-                out += "; END POSTPRINT\n";
-                out
-            }
         }
     }
 }

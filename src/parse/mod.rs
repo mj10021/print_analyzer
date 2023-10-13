@@ -226,30 +226,6 @@ impl Node {
             _ => panic!("not a vertex"),
         }
     }
-    pub fn shape(&self) -> &Shape {
-        match self {
-            Node::Shape(s) => s,
-            _ => panic!("not a shape"),
-        }
-    }
-    pub fn layer(&self) -> &Layer {
-        match self {
-            Node::Layer(l) => l,
-            _ => panic!("not a layer"),
-        }
-    }
-    pub fn layer_mut(&mut self) -> &mut Layer {
-        match self {
-            Node::Layer(l) => l,
-            _ => panic!("not a layer"),
-        }
-    }
-    pub fn vert_to(&self) -> Pos {
-        match self {
-            Node::Vertex(v) => v.to.clone(),
-            _ => panic!("not a vertex"),
-        }
-    }
 }
 
 
@@ -263,49 +239,30 @@ impl NodeList {
     fn new() -> NodeList {
         NodeList{nodes: LinkedList::new()}
     }
-    pub fn move_next_vertex(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, &str> {
-        let mut out: *mut Vertex;
-        // find the next extrusion, starting with the current node 
-        loop {
-            if let Some(Node::Vertex(v)) = cur.current() {
-                out = v as *mut Vertex;
-                break;
-            }
-            if cur.peek_next().is_none() {
-                return Err("end of list");
-            }
-            cur.move_next();
-        }
-        // return a raw pointer extrusion moved to
-        Ok(out)
-    }
 
-    pub fn move_next_extrusion(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, &str> {
-        let mut out: *mut Vertex;
-        // find the next extrusion, starting with the current node 
+    pub fn move_next_vertex(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, String> {
+        // find the next extrusion, starting with the next node
+        cur.move_next();
+        assert!(cur.current().is_some()); 
         loop {
             if let Some(Node::Vertex(v)) = cur.current() {
-                if v.extrusion_move() {
-                    out = v as *mut Vertex;
-                    break;
-                }
+                return Ok(v as *mut Vertex);
             }
             if cur.peek_next().is_none() {
-                return Err("end of list");
+                return Err("end of list".to_string());
             }
             cur.move_next();
         }
         // return a raw pointer extrusion moved to
-        Ok(out)
     }
-    pub fn get_prev_extrusion(cur: &mut CursorMut<Node>) -> *mut Vertex {
-        let mut id: i32;
-        let mut out: *mut Vertex;
+    pub fn peek_prev_vertex(cur: &mut CursorMut<Node>) -> *mut Vertex {
+        let mut id = -1;
+        let out: *mut Vertex;
         // need to start from a valid extrusion node
         assert!( {
             let mut ret = false;
             if let Some(Node::Vertex(v)) = cur.current() {
-                ret = v.extrusion_move();
+                ret = true;
                 id = v.id;
             }
             // if the previous vertex is in a different layer or shape,
@@ -316,10 +273,8 @@ impl NodeList {
         // find the previous extrusion 
         loop {
             if let Some(Node::Vertex(v)) = cur.current() {
-                if v.extrusion_move() {
-                    out = v as *mut Vertex;
-                    break;
-                }
+                out = v as *mut Vertex;
+                break;
             }
             assert!(cur.peek_prev().is_some(), "no previous extrusion"); 
             cur.move_prev();
@@ -327,80 +282,20 @@ impl NodeList {
         // now move back to the original node
         loop {
             if let Some(Node::Vertex(v)) = cur.current() {
+                assert!(id > 0, "no id set");
                 if v.id == id {
                     break;
                 }
             }
+            cur.move_next();
         }
         // and return a raw pointer to the prev extrusion
         out
     }
 
-    fn build_shapes(&mut self) {
-        let mut cur = self.nodes.cursor_front_mut();
-        // keep walking forward through the print nodes until an extrusion node is reached
-        // and then keep popping nodes into the shape list until a change node is reached
-        loop {
-            if cur.current().is_none() {
-                break;
-            }
-            // pop off the first node
-            let node = cur.remove_current().unwrap();
-            // unwrap the node and check if it is an extrusion move
-            let start = node.is_extrusion();
-            if start {
-                let start = node.from();
-                let mut end = node.to();
-                let mut shape = Shape::new();
-                shape.nodes.nodes.push_back(node);
-                loop {
-                    if cur.current().is_none() {
-                        break;
-                    }
-                    let node = cur.remove_current().unwrap();
-                    // if a shape or layer change is detected,
-                    // reinsert the current node in the main list and
-                    // exit the loop
-                    if node.is_change() {
-                        cur.insert_before(node);
-                        break;
-                    }
-                    end = node.to();
-                    shape.nodes.nodes.push_back(node);
-                }
-                if shape.nodes.nodes.len() > 0 {
-                    // shape closed if the start and end are < 0.1mm apart
-                    shape.closed = start.dist(&end) < 0.1;
-                    cur.insert_before(Node::Shape(shape));
-                }
-            } else {
-                cur.insert_before(node);
-            }
-        }
-    }
+
 }
 
-fn get_nodes(nodes: LinkedList<Node>) -> Vec<Node> {
-    let mut out = Vec::new();
-    for node in nodes {
-        match node {
-            Node::NonMove(_, _) => out.push(node),
-            Node::Vertex(_) => {
-                out.push(node);
-            }
-            Node::Shape(s) => {
-                out.append(&mut get_nodes(s.nodes.nodes));
-            }
-            Node::Layer(l) => {
-                out.append(&mut get_nodes(l.nodes.nodes));
-            }
-            Node::PrePrint(mut v) | Node::Change(mut v) | Node::PostPrint(mut v) => {
-                out.append(&mut v);
-            }
-        }
-    }
-    out
-}
 #[test]
 fn layer_test() {
     let test = "
@@ -475,11 +370,6 @@ impl State for Node {
         match self {
             Node::Vertex(v) => v.to.clone(),
             Node::NonMove(_, p) => p.clone(),
-            Node::Shape(s) => s.nodes.nodes.back().unwrap().to(),
-            Node::Layer(l) => l.nodes.nodes.back().unwrap().to(),
-            Node::Change(nodes) | Node::PostPrint(nodes) | Node::PrePrint(nodes) => {
-                nodes[nodes.len() - 1].to()
-            }
         }
     }
 }
@@ -524,6 +414,7 @@ impl Parsed {
                     parsed.nodes.push_back(Node::NonMove(Line::G91, last_pos));
                 }
                 Line::G28 => {
+                    assert!(!homed, "homing from previously homed state");
                     last_pos = Vertex::home().to();
                     parsed.nodes.push_back(Node::NonMove(Line::G28, last_pos));
                     homed = true;
@@ -534,6 +425,12 @@ impl Parsed {
                     last_pos = node.to();
                     g1_moves += 1;
                     parsed.nodes.push_back(node);
+                }
+                Line::FeedrateChange(val) => {
+                    // update state with new feedrate
+                    last_pos.f = val;
+                    parsed.nodes.push_back(Node::NonMove(line, last_pos))
+
                 }
                 Line::OtherInstruction(_)
                 | Line::Raw(_) => {
