@@ -1,45 +1,79 @@
+use std::collections::linked_list::CursorMut;
+
 use crate::parse::*;
 use nalgebra::{Point3, Rotation3, Vector3};
 pub trait Translate {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32);
 }
 
-impl Translate for Vertex {
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
+impl Vertex {
+    // translates the previous vertex
+    fn translate(&mut self, dx: f32, dy: f32, dz: f32, prev: *mut Vertex) {
+
+        let to_init = self.dist();
+        let from_init = unsafe{(*prev).dist()};
+
+        unsafe {
+            (*prev).to.x += dx;
+            (*prev).to.y += dy;
+            (*prev).to.z += dz;
+            let new_dist = (*prev).dist();
+            let scale = new_dist / from_init;
+            let new_e = (*prev).to.e * scale;
+            (*prev).to.e = new_e;
+        }
+ 
+        self.from.x += dx;
+        self.from.y += dy;
+        self.from.z += dz;
+        let new_dist = self.dist();
+        let scale = new_dist / from_init;
+        let new_e = self.to.e * scale;
+        self.to.e = new_e;
+
     }
 }
 #[test]
 fn translate_unit_test() {
     let mut gcode = crate::read("G28\nG1 X10 Y10 Z10 E10 F1000\nG1 X20 Y20 Z20 E20 F1000\n")
         .expect("failed to read file");
-    for node in gcode.nodes.nodes.iter_mut() {
-        node.translate(10.0, 10.0, 10.0);
+    let mut cur = gcode.nodes.nodes.cursor_front_mut();
+    let mut prev = NodeList::move_next_extrusion(&mut cur).expect("no start extrusion");
+
+    while let Ok(curr) = NodeList::move_next_extrusion(&mut cur) {
+        if let Some(node) = cur.current() {
+            node.translate(10.0, 10.0, 10.0, &mut cur);
+        }
+        // do the stuff here
+        prev = curr;
+        cur.move_next();
+
     }
     panic!("{:#?}", gcode.nodes);
-}
-impl Translate for Shape {
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        for node in self.nodes.nodes.iter_mut() {
-            node.translate(dx, dy, dz);
-        }
-    }
-}
-
-impl Translate for Layer {
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
-        for node in self.nodes.nodes.iter_mut() {
-            node.translate(dx, dy, dz);
-        }
-    }
 }
 impl Translate for Node {
     fn translate(&mut self, dx: f32, dy: f32, dz: f32) {
         match self {
             Node::Layer(l) => {
-                l.translate(dx, dy, dz);
+                let mut cur = l.nodes.nodes.cursor_front_mut();
+                let mut prev = NodeList::move_next_vertex(&mut cur).expect("no start vertex");
+                // fixme: shouldn't i translate all nodes here and not just vertices?
+                while let Ok(curr) = NodeList::move_next_vertex(&mut cur) {
+                    if let Some(Node::Vertex(v)) = cur.current() {
+                        v.translate(dx, dy, dz, prev);
+                        prev = curr;
+                    }
+                }
             }
             Node::Shape(s) => {
-                s.translate(dx, dy, dz);
+                let mut cur = s.nodes.nodes.cursor_front_mut();
+                let mut prev = NodeList::move_next_vertex(&mut cur).expect("no start vertex");
+                while let Ok(curr) = NodeList::move_next_vertex(&mut cur) {
+                    if let Some(Node::Vertex(v)) = cur.current() {
+                        v.translate(dx, dy, dz, prev);
+                        prev = curr;
+                    }
+                }
             }
             Node::Vertex(v) => {
                 v.translate(dx, dy, dz);

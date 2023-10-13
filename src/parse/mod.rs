@@ -1,4 +1,5 @@
 use std::collections::LinkedList;
+use std::collections::linked_list::CursorMut;
 use std::f32::{EPSILON, NEG_INFINITY};
 
 pub mod file_reader;
@@ -267,6 +268,78 @@ pub struct NodeList {
 impl NodeList {
     fn new() -> NodeList {
         NodeList{nodes: LinkedList::new()}
+    }
+    pub fn move_next_vertex(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, &str> {
+        let mut out: *mut Vertex;
+        // find the next extrusion, starting with the current node 
+        loop {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                out = v as *mut Vertex;
+                break;
+            }
+            if cur.peek_next().is_none() {
+                return Err("end of list");
+            }
+            cur.move_next();
+        }
+        // return a raw pointer extrusion moved to
+        Ok(out)
+    }
+
+    pub fn move_next_extrusion(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, &str> {
+        let mut out: *mut Vertex;
+        // find the next extrusion, starting with the current node 
+        loop {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if v.extrusion_move() {
+                    out = v as *mut Vertex;
+                    break;
+                }
+            }
+            if cur.peek_next().is_none() {
+                return Err("end of list");
+            }
+            cur.move_next();
+        }
+        // return a raw pointer extrusion moved to
+        Ok(out)
+    }
+    pub fn get_prev_extrusion(cur: &mut CursorMut<Node>) -> *mut Vertex {
+        let mut id: i32;
+        let mut out: *mut Vertex;
+        // need to start from a valid extrusion node
+        assert!( {
+            let mut ret = false;
+            if let Some(Node::Vertex(v)) = cur.current() {
+                ret = v.extrusion_move();
+                id = v.id;
+            }
+            // if the previous vertex is in a different layer or shape,
+            // we dont wan't to modify it implicity
+            ret
+        });
+        cur.move_prev();
+        // find the previous extrusion 
+        loop {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if v.extrusion_move() {
+                    out = v as *mut Vertex;
+                    break;
+                }
+            }
+            assert!(cur.peek_prev().is_some(), "no previous extrusion"); 
+            cur.move_prev();
+        }
+        // now move back to the original node
+        loop {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if v.id == id {
+                    break;
+                }
+            }
+        }
+        // and return a raw pointer to the prev extrusion
+        out
     }
 
     fn build_shapes(&mut self) {

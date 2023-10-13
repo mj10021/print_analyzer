@@ -350,7 +350,6 @@ mod integration_tests {
         let _ = f.write_all(&snd.emit(false).as_bytes());
         let a: std::collections::HashSet<String> = p_init.emit(false).lines().map(|s| s.to_string()).collect();
         let b: std::collections::HashSet<String> = snd.emit(false).lines().map(|s| s.to_string()).collect();
-        panic!("{:#?}\r\n\r\n{:#?}", a.difference(&b), b.difference(&a));
         assert!(a.difference(&b).collect::<Vec<_>>().len() < 1, "{:?}", a.difference(&b));
     }
     #[test]
