@@ -99,7 +99,7 @@ impl Line {
             for Word(letter, _) in line {
                 out.push(letter);
             }
-            return Line::Raw(out); 
+            return Line::Raw(out);
         }
         let num = num.round() as i32;
         match (letter, num) {
@@ -109,13 +109,13 @@ impl Line {
                 Line::build(line)
             }
             ('G', 1) => {
-                if line.len() == 1{
+                if line.len() == 1 {
                     if let Word('F', param) = line[0] {
                         return Line::FeedrateChange(param);
                     }
                 }
                 Line::G1(G1::build(line))
-            },
+            }
             ('G', 28) => Line::G28,
             ('M', 82) => Line::M82,
             ('M', 83) => Line::M83,
@@ -126,7 +126,7 @@ impl Line {
     }
 }
 
-// opens a gcode file and returns 
+// opens a gcode file and returns
 // a Vec of Line for each line in the file
 pub fn parse_file(path: &str) -> Result<Vec<Line>, Box<dyn std::error::Error>> {
     let out = String::from_utf8(std::fs::read(path)?)
@@ -155,15 +155,20 @@ pub fn clean_line(line: &str) -> String {
 pub fn split_line(line: String) -> Vec<Word> {
     // HACK: checks if line should be passed for raw string line
     // and makes a Word for each char in the string
-    if line.chars().filter(|&c| !c.is_ascii_alphanumeric() && c != '-' && c != '.').collect::<Vec<_>>().len() > 0 {
+    if line
+        .chars()
+        .filter(|&c| !c.is_ascii_alphanumeric() && c != '-' && c != '.')
+        .collect::<Vec<_>>()
+        .len()
+        > 0
+    {
         let mut out = Vec::new();
         for char in line.chars() {
             out.push(Word(char, std::f32::NEG_INFINITY));
         }
         return out;
     }
-    line
-        .chars()
+    line.chars()
         .rev()
         .collect::<String>()
         .split_inclusive(|c: char| c.is_ascii_alphabetic())

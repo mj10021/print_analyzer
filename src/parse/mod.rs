@@ -1,5 +1,5 @@
-use std::collections::LinkedList;
 use std::collections::linked_list::CursorMut;
+use std::collections::LinkedList;
 use std::f32::{EPSILON, NEG_INFINITY};
 
 pub mod file_reader;
@@ -70,12 +70,11 @@ trait Move {
 impl Vertex {
     // the input g1 gets dropped here and should never be needed again
     fn build(g1_moves: i32, from: Pos, g1: G1) -> Vertex {
-
         let mut vrtx = Vertex {
             id: g1_moves,
             label: Label::Uninitialized,
             to: Pos::build(&from, &g1),
-            from
+            from,
         };
         // label the vertex based on the from and to fields
         vrtx.label();
@@ -228,22 +227,22 @@ impl Node {
     }
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct NodeList {
     pub nodes: LinkedList<Node>,
 }
 
-
 impl NodeList {
     fn new() -> NodeList {
-        NodeList{nodes: LinkedList::new()}
+        NodeList {
+            nodes: LinkedList::new(),
+        }
     }
 
     pub fn move_next_vertex(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, String> {
         // find the next extrusion, starting with the next node
         cur.move_next();
-        assert!(cur.current().is_some()); 
+        assert!(cur.current().is_some());
         loop {
             if let Some(Node::Vertex(v)) = cur.current() {
                 return Ok(v as *mut Vertex);
@@ -259,7 +258,7 @@ impl NodeList {
         let mut id = -1;
         let out: *mut Vertex;
         // need to start from a valid extrusion node
-        assert!( {
+        assert!({
             let mut ret = false;
             if let Some(Node::Vertex(v)) = cur.current() {
                 ret = true;
@@ -270,13 +269,13 @@ impl NodeList {
             ret
         });
         cur.move_prev();
-        // find the previous extrusion 
+        // find the previous extrusion
         loop {
             if let Some(Node::Vertex(v)) = cur.current() {
                 out = v as *mut Vertex;
                 break;
             }
-            assert!(cur.peek_prev().is_some(), "no previous extrusion"); 
+            assert!(cur.peek_prev().is_some(), "no previous extrusion");
             cur.move_prev();
         }
         // now move back to the original node
@@ -292,8 +291,6 @@ impl NodeList {
         // and return a raw pointer to the prev extrusion
         out
     }
-
-
 }
 
 #[test]
@@ -430,10 +427,8 @@ impl Parsed {
                     // update state with new feedrate
                     last_pos.f = val;
                     parsed.nodes.push_back(Node::NonMove(line, last_pos))
-
                 }
-                Line::OtherInstruction(_)
-                | Line::Raw(_) => {
+                Line::OtherInstruction(_) | Line::Raw(_) => {
                     parsed.nodes.push_back(Node::NonMove(line, last_pos))
                 }
             }
@@ -445,8 +440,12 @@ impl Parsed {
             rel_e,
         }
     }
-    fn delete() { todo!() }
-    fn insert() { todo!() }
+    fn delete() {
+        todo!()
+    }
+    fn insert() {
+        todo!()
+    }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Label {
@@ -485,19 +484,19 @@ fn parsed_test() {
 #[cfg(test)]
 
 const TEST_INPUT: &str = "G28\nnG1 X0 Y0 Z0 E0 F0\n
-G1 X10\n
-G1 Z10\n
-M324 S2345 Y245\n
-G1 E10\n
-;G28  home all without mesh bed level\n
-G29 ; mesh bed leveling \n
-M204 T2500 ; restore travel acceleration\n
-M104 S220 ; set extruder temp\n
-G92 E0\n
-G1 X5\n
-asdfasdfasdf\n
-asdfafasdf\n
-";
+                            G1 X10\n
+                            G1 Z10\n
+                            M324 S2345 Y245\n
+                            G1 E10\n
+                            ;G28  home all without mesh bed level\n
+                            G29 ; mesh bed leveling \n
+                            M204 T2500 ; restore travel acceleration\n
+                            M104 S220 ; set extruder temp\n
+                            G92 E0\n
+                            G1 X5\n
+                            asdfasdfasdf\n
+                            asdfafasdf\n
+                            ";
 
 const TEST_G1_ONLY: &str = "G28\n\
                             G1 X0 Y0 Z0 E0 F0\n\
