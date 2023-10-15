@@ -1,5 +1,3 @@
-use std::collections::linked_list::CursorMut;
-
 use crate::parse::*;
 
 impl Vertex {

@@ -2,11 +2,13 @@ use std::collections::linked_list::CursorMut;
 use std::collections::LinkedList;
 use std::f32::{EPSILON, NEG_INFINITY};
 
+use bevy::ecs::component::Component;
+
 pub mod file_reader;
 use self::file_reader::*;
 
 // state tracking struct for vertices
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Component, Debug, PartialEq)]
 pub struct Pos {
     // abs x, y, z and rel e
     pub x: f32,
@@ -186,6 +188,18 @@ pub enum Node {
     NonMove(Line, Pos),
 }
 impl Node {
+    fn from(&self) -> Pos {
+        match self {
+            Node::Vertex(v) => v.from.clone(),
+            Node::NonMove(_, p) => p.clone(),
+        }
+    }
+    fn to(&self) -> Pos {
+        match self {
+            Node::Vertex(v) => v.to.clone(),
+            Node::NonMove(_, p) => p.clone(),
+        }
+    }
     pub fn vertex(&self) -> &Vertex {
         match self {
             Node::Vertex(v) => v,
@@ -293,83 +307,6 @@ impl NodeList {
     }
 }
 
-#[test]
-fn layer_test() {
-    let test = "
-    G28
-    G1 f123
-    G1 X100 Y100 Z0.2
-    G1 X110 Y100 E1.1
-    G1 X110 Y110 E1.1
-    G1 X100 Y110 E1.1
-    G1 X100 Y100 E1.1
-    g1 f234
-    G1 X100 Y105 E-0.05
-    G1 X100 Y100 Z0.4
-    ";
-    let parsed = crate::read(test).expect("asdf");
-    panic!("{:?}", parsed.nodes);
-}
-#[derive(Debug, PartialEq)]
-pub struct Shape {
-    pub nodes: NodeList,
-    pub closed: bool,
-    pub planar: bool,
-    pub len: f32,
-}
-impl Shape {
-    fn new() -> Shape {
-        Shape {
-            nodes: NodeList::new(),
-            closed: false,
-            planar: false,
-            len: 0.0,
-        }
-    }
-    fn z(&self) -> f32 {
-        if !self.planar {
-            return -1.0;
-        }
-        let Some(Node::Vertex(v)) = self.nodes.nodes.front() else {
-            panic!("invalid node in shape");
-        };
-        v.to.z
-    }
-}
-#[derive(Debug, PartialEq)]
-pub struct Layer {
-    pub id: i32,
-    pub nodes: NodeList,
-}
-
-impl Layer {
-    fn start() -> Layer {
-        Layer {
-            id: 0,
-            nodes: NodeList::new(),
-        }
-    }
-}
-
-pub trait State {
-    fn from(&self) -> Pos;
-    fn to(&self) -> Pos;
-}
-
-impl State for Node {
-    fn from(&self) -> Pos {
-        match self {
-            Node::Vertex(v) => v.from.clone(),
-            Node::NonMove(_, p) => p.clone(),
-        }
-    }
-    fn to(&self) -> Pos {
-        match self {
-            Node::Vertex(v) => v.to.clone(),
-            Node::NonMove(_, p) => p.clone(),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq)]
 pub struct Parsed {

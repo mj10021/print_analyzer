@@ -1,38 +1,47 @@
-use kiss3d::{light::Light, camera};
-use kiss3d::window::Window;
-use kiss3d::scene::SceneNode;
-use nalgebra::{UnitQuaternion, Vector3, Translation3};
-use crate::parse::{Node, Parsed};
-#[test]
-fn test() {
-    let gcode = Parsed::build("test.gcode").expect("failed to parse");
-    let mut temp: Vec<(f32, f32, f32)> = Vec::new();
-    for node in gcode.nodes {
-        if let Node::Vertex(v) = node {
-            if v.id > -10 {
-                temp.push((v.to.x, v.to.y, v.to.z));
-            }
-        }
-    }
+use bevy::prelude::*;
+use bevy_mod_picking::*;
 
-    let mut window = Window::new("Kiss3d: cube");
-    let mut v: Vec<SceneNode> = Vec::new();
+struct Point {
+    position: Vec3,
+    original_color: Color,
+}
 
-    for (x, y, z) in temp {
-        let mut temp = window.add_sphere(0.2);
-        temp.set_local_translation(Translation3::new(x, y, z));
-        v.push(temp);
-    }
+fn main() {
+    App::new()
+        .add_systems(Update, hello_world)
+        .run();
+}
 
-    for mut s in v {
-        s.set_color(0.0, 1.0, 0.0);
-    }
+fn hello_world() {
+    println!("hello world!");
+}
+#[derive(Component)]
+struct Person;
 
+#[derive(Component)]
+struct Name(String);
 
+fn add_people(mut commands: Commands) {
+    commands.spawn((Person, Name("Elaina Proctor".to_string())));
+    commands.spawn((Person, Name("Renzo Hume".to_string())));
+    commands.spawn((Person, Name("Zayna Nieves".to_string())));
+}
 
-    window.set_light(Light::StickToCamera);
-
-
-    while window.render() {
+fn greet_people(query: Query<&Name, With<Person>>) {
+    for name in &query {
+        println!("hello {}!", name.0);
     }
 }
+
+fn main() {
+    App::new()
+        .add_systems(Startup, add_people)
+        .add_systems(Update, (hello_world, greet_people))
+        .run();
+}
+
+#[test]
+fn test() {
+    main();
+}
+

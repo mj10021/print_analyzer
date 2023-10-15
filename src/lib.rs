@@ -4,7 +4,7 @@
 mod emit;
 mod parse;
 mod transform;
-//mod gui;
+mod gui;
 use parse::{
     file_reader::{clean_line, split_line, Line},
     Node, Parsed, Pos, Vertex,
