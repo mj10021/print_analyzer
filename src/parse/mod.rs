@@ -58,7 +58,7 @@ fn pre_home(p: Pos) -> bool {
     }
     false
 }
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Vertex {
     pub id: i32,
     pub label: Label,
@@ -182,7 +182,7 @@ impl std::fmt::Debug for Vertex {
 }
 // Nodes are designed to contain all of the information needed to generate g-gcode
 // Each node represents one line of g-code
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     Vertex(Vertex),
     NonMove(Line, Pos),
@@ -252,7 +252,25 @@ impl NodeList {
             nodes: LinkedList::new(),
         }
     }
-
+    pub fn move_to_id(cur: &mut CursorMut<Node>, id: i32) {
+        // if cursor is at end of list, loop around to the front of the list
+        if cur.current().is_none() {
+            cur.move_next();
+        }
+        // keep track of the first node to detect infinte loop
+        let start = cur.current().unwrap() as *const Node;
+        loop {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if v.id == id {
+                    break;
+                }
+            }
+            cur.move_next();
+            if cur.current().is_some() {
+                assert!(cur.current().unwrap() as *const Node != start, "looped around list");
+            }
+        }
+    }
     pub fn move_next_vertex(cur: &mut CursorMut<Node>) -> Result<*mut Vertex, String> {
         // find the next extrusion, starting with the next node
         cur.move_next();
@@ -268,6 +286,7 @@ impl NodeList {
         }
         // return a raw pointer extrusion moved to
     }
+    /// return a raw mut pointer to the previous vertex and return to original position
     pub fn peek_prev_vertex(cur: &mut CursorMut<Node>) -> *mut Vertex {
         let mut id = -1;
         let out: *mut Vertex;
@@ -377,11 +396,34 @@ impl Parsed {
             rel_e,
         }
     }
-    fn delete() {
-        todo!()
+    pub fn hole_delete(&mut self, id: i32) {
+        let mut cur = self.nodes.nodes.cursor_front_mut();
+        while cur.peek_next().is_some() {
+            // i need to get the prev and set e to 0 and set curr e to 0 to make a hole
+            if let Some(Node::Vertex(v)) = cur.current() {
+
+            }
+        }
+
     }
-    fn insert() {
-        todo!()
+    pub fn merge_delete(&mut self, id: i32) {
+        let mut cur = self.nodes.nodes.cursor_front_mut();
+    }
+    pub fn insert(&mut self, after: i32, body: String) {
+        let mut cur = self.nodes.nodes.cursor_front_mut();
+    }
+    pub fn divide(&mut self, id: i32, count: i32) {
+        let mut cur = self.nodes.nodes.cursor_front_mut();
+    }
+    pub fn translate(&mut self, id: i32, x: f32, y: f32, z: f32, e: f32, f: f32) {
+        let mut cur = self.nodes.nodes.cursor_front_mut();
+        while cur.peek_next().is_some() {
+            if let Some(Node::Vertex(v)) = cur.current() {
+                if v.id == id {
+                    break;
+                }
+            }
+        }
     }
 }
 #[derive(Copy, Clone, Debug, PartialEq)]

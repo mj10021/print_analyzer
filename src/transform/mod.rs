@@ -1,8 +1,13 @@
+use std::collections::linked_list::CursorMut;
+
 use crate::parse::*;
 
+
+
 impl Vertex {
+    // FIXME: i shoudl write a version that just takes a cursor
     // translates the previous vertex
-    fn translate(&mut self, dx: f32, dy: f32, dz: f32, prev: *mut Vertex) {
+    pub fn translate_unsafe(&mut self, dx: f32, dy: f32, dz: f32, prev: *mut Vertex) {
         let to_init = self.dist();
         let from_init = unsafe { (*prev).dist() };
 
@@ -54,7 +59,7 @@ fn translate_test() {
             let Some(Node::Vertex(v)) = cur.current() else {
                 todo!()
             };
-            v.translate(dx, dy, dz, prev)
+            v.translate_unsafe(dx, dy, dz, prev)
         }
         cur.move_next();
     }

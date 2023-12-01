@@ -1,16 +1,18 @@
 #![feature(linked_list_cursors)]
 #![allow(dead_code)]
 
-mod emit;
+pub mod emit;
 mod parse;
 mod transform;
 mod gui;
 use parse::{
     file_reader::{clean_line, split_line, Line},
-    Node, Parsed, Pos, Vertex,
+    Pos, Vertex,
 };
+pub use parse::{Node, NodeList, Parsed};
+use std::collections::linked_list::CursorMut;
 
-fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
+pub fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
     let nodes = match crate::parse::file_reader::parse_file(path) {
         Ok(v) => v,
         // this is for running unit tests
@@ -24,7 +26,74 @@ fn read(path: &str) -> Result<Parsed, Box<dyn std::error::Error>> {
     };
     Ok(Parsed::build(nodes))
 }
-
+pub fn translate(gcode: &mut Parsed, vertex_id: i32, params: (f32, f32, f32)) {
+    let (dx, dy, dz) = params;
+    // move to requested node
+    let mut cur = gcode.nodes.nodes.cursor_front_mut();
+    loop {
+        assert!(cur.current().is_some(), "end of list");
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.id == vertex_id {
+                break;
+            }
+        }
+        cur.move_next();
+    }
+    // translate from that node
+    let prev = NodeList::peek_prev_vertex(&mut cur);
+    let cur = cur.current().unwrap().vertex_mut();
+    cur.translate_unsafe(dx, dy, dz, prev);
+}
+pub fn hole_delete(gcode: &mut Parsed, vertex_id: i32) {
+    // move to requested node
+    let mut cur = gcode.nodes.nodes.cursor_front_mut();
+    loop {
+        assert!(cur.current().is_some(), "end of list");
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.id == vertex_id {
+                break;
+            }
+        }
+        cur.move_next();
+    }
+    // translate from that node
+    let prev = NodeList::peek_prev_vertex(&mut cur);
+    unsafe { (*prev).to.e  = 0.0} ;
+    let cur = cur.current().unwrap().vertex_mut();
+    cur.from.e = 0.0;
+    cur.to.e = 0.0;   
+}
+pub fn merge_delete(gcode: &mut Parsed, vertex_id: i32) {
+    // move to requested node
+    let mut cur = gcode.nodes.nodes.cursor_front_mut();
+    loop {
+        assert!(cur.current().is_some(), "end of list");
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.id == vertex_id {
+                break;
+            }
+        }
+        cur.move_next();
+    }
+    let prev = NodeList::peek_prev_vertex(&mut cur);
+    // now i pop the current node and then move until the next vertex
+    cur.remove_current();
+    loop {
+        // FIXME: I need to add a check to see if i'm at the last node here
+        if let Some(Node::Vertex(v)) = cur.current() { break; }
+        assert!(cur.peek_next().is_some());
+        cur.move_next();
+    }
+    let cur = cur.current().unwrap().vertex_mut();
+    // FIXME: prob should double check this
+    unsafe { 
+        let prev_flow = (*prev).flow();
+        (*prev).to = cur.from.clone();
+        let new_dist = (*prev).dist();
+        (*prev).to.e = prev_flow * new_dist;
+        cur.from = (*prev).to;
+    }
+}
 fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
     let location = Pos {
         x: location.0,
@@ -45,6 +114,20 @@ fn erode(gcode: &mut Parsed, location: (f32, f32, f32), radius: f32) {
         }
     }
 }
+
+pub fn select_vertex_loop(cur: &mut CursorMut<Node>) -> Vec<i32> {
+    let mut out: Vec<i32> = Vec::new();
+    loop {
+        if let Some(Node::Vertex(v)) = cur.current() {
+            if v.extrusion_move() {
+                out.push(v.id);
+            } else { break; }
+        }
+        cur.move_next();
+    }
+    out
+}
+
 #[test]
 fn erode_test() {
     use crate::emit::Emit;
